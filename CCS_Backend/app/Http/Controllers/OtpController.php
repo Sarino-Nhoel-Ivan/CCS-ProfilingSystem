@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Faculty;
+use App\Models\Student;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -10,29 +12,46 @@ use Illuminate\Support\Facades\Mail;
 class OtpController extends Controller
 {
     /**
-     * Generate a 6-digit OTP, cache it for 10 minutes, and email it.
-     * Called BEFORE final registration, just to verify the email belongs to the user.
+     * Send OTP to the given email.
+     * role = 'faculty' | 'student'
+     * Faculty: email must be @pnc.edu.com and not already registered.
+     * Student: any valid email, not already registered in students table.
      */
     public function send(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
+            'email' => 'required|email|max:255',
+            'role'  => 'required|in:faculty,student',
         ]);
 
         $email = strtolower(trim($request->email));
+        $role  = $request->role;
 
-        // Check email not already taken
+        // Faculty email domain check
+        if ($role === 'faculty' && !preg_match('/^[a-zA-Z0-9._%+\-]+@pnc\.edu\.com$/', $email)) {
+            return response()->json([
+                'message' => 'Faculty email must be a valid @pnc.edu.com address (e.g. faculty1.username@pnc.edu.com).',
+            ], 422);
+        }
+
+        // Check not already registered in users table
         if (User::where('email', $email)->exists()) {
             return response()->json(['message' => 'This email address is already registered.'], 422);
         }
 
-        // Generate OTP
-        $otp = (string) random_int(100000, 999999);
+        // For faculty, also check faculties table
+        if ($role === 'faculty' && Faculty::where('email', $email)->exists()) {
+            return response()->json(['message' => 'This faculty email is already registered.'], 422);
+        }
 
-        // Store in cache for 10 minutes (key scoped to email)
+        // For student, also check students table
+        if ($role === 'student' && Student::where('email', $email)->exists()) {
+            return response()->json(['message' => 'This email address is already associated with a student account.'], 422);
+        }
+
+        $otp = (string) random_int(100000, 999999);
         Cache::put("otp:{$email}", $otp, now()->addMinutes(10));
 
-        // Send email
         try {
             Mail::html($this->buildEmailHtml($otp), function ($message) use ($email) {
                 $message->to($email)
@@ -40,7 +59,6 @@ class OtpController extends Controller
             });
         } catch (\Throwable $e) {
             \Log::error('OTP mail error: ' . $e->getMessage());
-            // In dev mode with MAIL_MAILER=log, this still works (logged)
         }
 
         return response()->json(['message' => 'OTP sent to your email. Valid for 10 minutes.']);
@@ -67,7 +85,6 @@ class OtpController extends Controller
             return response()->json(['message' => 'Incorrect OTP. Please try again.'], 422);
         }
 
-        // Mark email as verified in cache so register endpoint can trust it
         Cache::put("otp_verified:{$email}", true, now()->addMinutes(15));
         Cache::forget("otp:{$email}");
 

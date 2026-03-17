@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const API = 'http://localhost:8000/api';
 
-/* ─── helpers ─────────────────────────────── */
+/* ─── shared UI helpers ─────────────────────────────────────── */
 const Input = ({ icon, ...props }) => (
   <div className="relative">
     {icon && (
@@ -20,28 +20,20 @@ const Input = ({ icon, ...props }) => (
 );
 
 const Select = ({ children, ...props }) => (
-  <select
-    {...props}
-    className="w-full bg-slate-800/60 border border-slate-700 text-slate-200 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all"
-  >
+  <select {...props} className="w-full bg-slate-800/60 border border-slate-700 text-slate-200 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all">
     {children}
   </select>
 );
 
 const Label = ({ children }) => (
-  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-    {children}
-  </label>
+  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{children}</label>
 );
 
-const FieldGroup = ({ label, children }) => (
-  <div>
-    <Label>{label}</Label>
-    {children}
-  </div>
+const Field = ({ label, children }) => (
+  <div><Label>{label}</Label>{children}</div>
 );
 
-const SectionHeading = ({ icon, title }) => (
+const Section = ({ icon, title }) => (
   <div className="flex items-center gap-2 mb-4 mt-6 first:mt-0">
     <span className="text-base">{icon}</span>
     <span className="text-xs font-bold uppercase tracking-widest text-brand-400">{title}</span>
@@ -49,62 +41,69 @@ const SectionHeading = ({ icon, title }) => (
   </div>
 );
 
-const ErrorBox = ({ msg }) =>
-  msg ? (
-    <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl px-4 py-3">
-      <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-      </svg>
-      {msg}
-    </div>
-  ) : null;
-
-/* ─── ROLE ICONS ───── */
-const ROLE_ICON = {
-  admin:   'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
-  student: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
-  faculty: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
-};
+const ErrorBox = ({ msg }) => msg ? (
+  <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl px-4 py-3">
+    <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>
+    {msg}
+  </div>
+) : null;
 
 /* ════════════════════════════════════════════
    MAIN COMPONENT
 ════════════════════════════════════════════ */
 const SignUp = ({ onSignUp, onGoToLogin }) => {
-  /* step: 'form' | 'otp' */
-  const [step,  setStep]  = useState('form');
-  const [error, setError] = useState('');
-  const [info,  setInfo]  = useState('');
+  const [step, setStep]       = useState('form'); // 'form' | 'otp'
+  const [error, setError]     = useState('');
+  const [info, setInfo]       = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPw,  setShowPw]  = useState(false);
+  const [showPw, setShowPw]   = useState(false);
+  const [courses, setCourses] = useState([]);
 
   /* ── form state ── */
   const [form, setForm] = useState({
     role: 'student',
+    // student identifier
+    student_number: '',
     // account
-    email: '', password: '', confirm: '',
+    email: '', password: '', password_confirmation: '',
     // personal
     first_name: '', middle_name: '', last_name: '', suffix: '',
     gender: '', civil_status: '', nationality: 'Filipino',
     religion: '', birth_date: '', place_of_birth: '',
     // contact
-    contact_number: '', present_address: '',
+    contact_number: '',
+    street: '', barangay: '', city: '', province: '', zip_code: '',
     // enrollment
     program: 'Information Technology', year_level: '1st Year',
+    student_type: 'Regular', enrollment_status: 'Enrolled',
+    date_enrolled: new Date().toISOString().split('T')[0],
+    course_id: '',
     // education background
     last_school_attended: '', last_year_attended: '', lrn: '',
     // family
     father_name: '', father_occupation: '',
     mother_name: '', mother_occupation: '', guardian_contact: '',
+    // faculty-specific
+    position: '', employment_status: 'Regular',
+    hire_date: '', contact_number_faculty: '', office_location: '', department_id: '',
   });
 
   /* OTP state */
-  const [otp, setOtp]             = useState(['', '', '', '', '', '']);
-  const [otpVerified, setOtpVerified] = useState(false);
+  const [otp, setOtp]               = useState(['', '', '', '', '', '']);
   const [resendTimer, setResendTimer] = useState(0);
 
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setError(''); };
 
-  /* ── countdown timer for resend ── */
+  // Fetch courses on mount
+  useEffect(() => {
+    fetch(`${API}/courses`, { headers: { Accept: 'application/json' } })
+      .then(r => r.json())
+      .then(data => Array.isArray(data) && setCourses(data))
+      .catch(() => {});
+  }, []);
+
   const startTimer = () => {
     setResendTimer(60);
     const id = setInterval(() => {
@@ -112,16 +111,22 @@ const SignUp = ({ onSignUp, onGoToLogin }) => {
     }, 1000);
   };
 
-  /* ─────────── STEP 1: send OTP ─────────── */
+  /* ─── send OTP ─── */
   const handleSendOtp = async () => {
     setError(''); setInfo('');
     if (!form.email) { setError('Please enter your email address first.'); return; }
+
+    if (form.role === 'faculty' && !/^[a-zA-Z0-9._%+\-]+@pnc\.edu\.com$/.test(form.email)) {
+      setError('Faculty email must be a valid @pnc.edu.com address (e.g. faculty1.username@pnc.edu.com).');
+      return;
+    }
+
     setLoading(true);
     try {
       const res  = await fetch(`${API}/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ email: form.email }),
+        body: JSON.stringify({ email: form.email, role: form.role }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.message || 'Failed to send OTP.'); return; }
@@ -135,20 +140,17 @@ const SignUp = ({ onSignUp, onGoToLogin }) => {
     }
   };
 
-  /* ─────────── OTP input handling ─────────── */
+  /* ─── OTP input handling ─── */
   const handleOtpChange = (i, val) => {
     if (!/^\d?$/.test(val)) return;
-    const next = [...otp];
-    next[i] = val;
-    setOtp(next);
+    const next = [...otp]; next[i] = val; setOtp(next);
     if (val && i < 5) document.getElementById(`otp-${i + 1}`)?.focus();
   };
-
   const handleOtpKey = (i, e) => {
     if (e.key === 'Backspace' && !otp[i] && i > 0) document.getElementById(`otp-${i - 1}`)?.focus();
   };
 
-  /* ─────────── STEP 2: verify OTP ─────────── */
+  /* ─── verify OTP then register ─── */
   const handleVerifyOtp = async () => {
     setError('');
     const code = otp.join('');
@@ -162,9 +164,7 @@ const SignUp = ({ onSignUp, onGoToLogin }) => {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.message || 'Invalid OTP.'); return; }
-      setOtpVerified(true);
       setInfo('✅ Email verified! Submitting your registration...');
-      // auto-submit registration
       await handleRegister();
     } catch {
       setError('Could not reach the server.');
@@ -173,30 +173,52 @@ const SignUp = ({ onSignUp, onGoToLogin }) => {
     }
   };
 
-  /* ─────────── FINAL: register ─────────── */
+  /* ─── final register call ─── */
   const handleRegister = async () => {
     setLoading(true);
     try {
-      const payload = {
-        name:      `${form.first_name} ${form.last_name}`,
-        email:     form.email,
-        password:  form.password,
-        role:      form.role,
-        ...(form.role === 'student' ? {
+      let payload;
+      if (form.role === 'student') {
+        payload = {
+          role: 'student',
+          student_number: form.student_number,
+          email: form.email,
+          password: form.password,
+          password_confirmation: form.password_confirmation,
           first_name: form.first_name, middle_name: form.middle_name,
           last_name: form.last_name, suffix: form.suffix,
           gender: form.gender, civil_status: form.civil_status,
           nationality: form.nationality, religion: form.religion,
           birth_date: form.birth_date, place_of_birth: form.place_of_birth,
-          contact_number: form.contact_number, present_address: form.present_address,
+          contact_number: form.contact_number,
+          street: form.street, barangay: form.barangay,
+          city: form.city, province: form.province, zip_code: form.zip_code,
           program: form.program, year_level: form.year_level,
+          student_type: form.student_type, enrollment_status: form.enrollment_status,
+          date_enrolled: form.date_enrolled,
+          course_id: form.course_id,
           last_school_attended: form.last_school_attended,
           last_year_attended: form.last_year_attended, lrn: form.lrn,
           father_name: form.father_name, father_occupation: form.father_occupation,
           mother_name: form.mother_name, mother_occupation: form.mother_occupation,
           guardian_contact: form.guardian_contact,
-        } : {}),
-      };
+        };
+      } else {
+        payload = {
+          role: 'faculty',
+          first_name: form.first_name, middle_name: form.middle_name,
+          last_name: form.last_name,
+          email: form.email,
+          password: form.password,
+          password_confirmation: form.password_confirmation,
+          position: form.position,
+          employment_status: form.employment_status,
+          hire_date: form.hire_date,
+          contact_number: form.contact_number_faculty,
+          office_location: form.office_location,
+          department_id: form.department_id,
+        };
+      }
 
       const res  = await fetch(`${API}/auth/register`, {
         method: 'POST',
@@ -222,43 +244,41 @@ const SignUp = ({ onSignUp, onGoToLogin }) => {
     }
   };
 
-  /* ─────────── STEP 1 SUBMIT (form validation) ─────────── */
+  /* ─── form submit (validation + trigger OTP) ─── */
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (!form.password || form.password.length < 6) { setError('Password must be at least 6 characters.'); return; }
-    if (form.password !== form.confirm)              { setError('Passwords do not match.'); return; }
+    if (form.password.length < 8) { setError('Password must be at least 8 characters.'); return; }
+    if (form.password !== form.password_confirmation) { setError('Passwords do not match.'); return; }
 
     if (form.role === 'student') {
-      if (!form.first_name || !form.last_name)     { setError('First and last name are required.'); return; }
-      if (!form.gender)                             { setError('Please select your gender.'); return; }
-      if (!form.civil_status)                       { setError('Please select your civil status.'); return; }
-      if (!form.birth_date)                         { setError('Date of birth is required.'); return; }
-      if (!form.contact_number)                     { setError('Contact number is required.'); return; }
+      if (!/^(22|23|24)\d{5}$/.test(form.student_number)) {
+        setError('Student number must start with 22, 23, or 24 followed by 5 digits (e.g. 2201535).');
+        return;
+      }
+      if (!form.first_name || !form.last_name) { setError('First and last name are required.'); return; }
+      if (!form.gender)       { setError('Please select your gender.'); return; }
+      if (!form.civil_status) { setError('Please select your civil status.'); return; }
+      if (!form.birth_date)   { setError('Date of birth is required.'); return; }
+      if (!form.contact_number) { setError('Contact number is required.'); return; }
+      if (!form.city)         { setError('City is required.'); return; }
+      if (!form.course_id)    { setError('Please select a course.'); return; }
     }
 
-    // For students → go to OTP step; otherwise register directly
-    if (form.role === 'student') {
-      await handleSendOtp();
-    } else {
-      setLoading(true);
-      try {
-        const res  = await fetch(`${API}/auth/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ name: form.first_name + ' ' + form.last_name || form.email.split('@')[0], email: form.email, password: form.password, role: form.role }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setError(data.errors ? Object.values(data.errors).flat().join(' ') : (data.message || 'Registration failed.'));
-        } else {
-          localStorage.setItem('auth_token', data.token);
-          onSignUp(data.user);
-        }
-      } catch { setError('Could not connect to the server.'); }
-      finally  { setLoading(false); }
+    if (form.role === 'faculty') {
+      if (!form.first_name || !form.last_name) { setError('First and last name are required.'); return; }
+      if (!/^[a-zA-Z0-9._%+\-]+@pnc\.edu\.com$/.test(form.email)) {
+        setError('Faculty email must be a valid @pnc.edu.com address.');
+        return;
+      }
+      if (!form.position)           { setError('Position is required.'); return; }
+      if (!form.employment_status)  { setError('Employment status is required.'); return; }
+      if (!form.hire_date)          { setError('Hire date is required.'); return; }
+      if (!form.department_id)      { setError('Department ID is required.'); return; }
     }
+
+    await handleSendOtp();
   };
 
   /* ═══════════════ RENDER ═══════════════ */
@@ -273,7 +293,7 @@ const SignUp = ({ onSignUp, onGoToLogin }) => {
           {/* Logo */}
           <div className="flex flex-col items-center mb-6">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-500 to-amber-400 flex items-center justify-center shadow-[0_0_30px_rgba(242,101,34,0.4)] mb-3">
-              <img src="/ccs_logo.jpg" alt="CCS" className="w-10 h-10 object-contain rounded-xl" onError={e => { e.target.style.display='none'; }} />
+              <img src="/ccs_logo.jpg" alt="CCS" className="w-10 h-10 object-contain rounded-xl" onError={e => { e.target.style.display = 'none'; }} />
             </div>
             <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand-400 to-amber-400 tracking-tight">
               {step === 'otp' ? 'Verify Your Email' : 'Create Account'}
@@ -281,7 +301,7 @@ const SignUp = ({ onSignUp, onGoToLogin }) => {
             <p className="text-slate-400 text-sm mt-1">CCS Profiling System</p>
           </div>
 
-          {/* ─────────── OTP STEP ─────────── */}
+          {/* ─── OTP STEP ─── */}
           {step === 'otp' && (
             <div className="text-center space-y-6">
               <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/50">
@@ -296,15 +316,9 @@ const SignUp = ({ onSignUp, onGoToLogin }) => {
               )}
               <ErrorBox msg={error} />
 
-              {/* OTP boxes */}
               <div className="flex justify-center gap-3">
                 {otp.map((digit, i) => (
-                  <input
-                    key={i}
-                    id={`otp-${i}`}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
+                  <input key={i} id={`otp-${i}`} type="text" inputMode="numeric" maxLength={1}
                     value={digit}
                     onChange={e => handleOtpChange(i, e.target.value)}
                     onKeyDown={e => handleOtpKey(i, e)}
@@ -313,210 +327,214 @@ const SignUp = ({ onSignUp, onGoToLogin }) => {
                 ))}
               </div>
 
-              <button
-                onClick={handleVerifyOtp}
-                disabled={loading || otp.join('').length < 6}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white font-semibold text-sm tracking-wide shadow-lg shadow-brand-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Verifying...</>
-                ) : 'Verify & Create Account'}
+              <button onClick={handleVerifyOtp} disabled={loading || otp.join('').length < 6}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white font-semibold text-sm tracking-wide shadow-lg shadow-brand-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                {loading
+                  ? <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Verifying...</>
+                  : 'Verify & Create Account'
+                }
               </button>
 
               <div className="flex items-center justify-between text-xs">
                 <button onClick={() => { setStep('form'); setOtp(['','','','','','']); setError(''); setInfo(''); }}
-                  className="text-slate-400 hover:text-slate-200 transition-colors">
-                  ← Back to form
-                </button>
-                {resendTimer > 0 ? (
-                  <span className="text-slate-500">Resend in {resendTimer}s</span>
-                ) : (
-                  <button onClick={handleSendOtp} disabled={loading}
-                    className="text-brand-400 hover:text-brand-300 font-semibold transition-colors disabled:opacity-50">
-                    Resend OTP
-                  </button>
-                )}
+                  className="text-slate-400 hover:text-slate-200 transition-colors">← Back to form</button>
+                {resendTimer > 0
+                  ? <span className="text-slate-500">Resend in {resendTimer}s</span>
+                  : <button onClick={handleSendOtp} disabled={loading}
+                      className="text-brand-400 hover:text-brand-300 font-semibold transition-colors disabled:opacity-50">Resend OTP</button>
+                }
               </div>
             </div>
           )}
 
-          {/* ─────────── FORM STEP ─────────── */}
+          {/* ─── FORM STEP ─── */}
           {step === 'form' && (
             <form onSubmit={handleFormSubmit} className="space-y-4">
 
-              {/* Role selector */}
+              {/* Role selector — admin excluded */}
               <div>
-                <Label>Select Role</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {['admin','student','faculty'].map(r => (
-                    <button key={r} type="button" onClick={() => set('role', r)}
+                <Label>Register as</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { key: 'student', label: 'Student', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+                    { key: 'faculty', label: 'Faculty', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
+                  ].map(r => (
+                    <button key={r.key} type="button" onClick={() => set('role', r.key)}
                       className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border transition-all duration-200 ${
-                        form.role === r
+                        form.role === r.key
                           ? 'bg-brand-600/20 border-brand-500 text-brand-400 shadow-[0_0_12px_rgba(242,101,34,0.2)]'
                           : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:border-slate-600'
                       }`}>
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={ROLE_ICON[r]} />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={r.icon} />
                       </svg>
-                      <span className="text-xs font-medium capitalize">{r}</span>
+                      <span className="text-xs font-medium capitalize">{r.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* ── STUDENT FIELDS ── */}
+              {/* ══ STUDENT FIELDS ══ */}
               {form.role === 'student' && (
                 <>
-                  {/* Personal Info */}
-                  <SectionHeading icon="👤" title="Personal Information" />
+                  <Section icon="🎓" title="Student Identifier" />
+                  <Field label="Student Number *">
+                    <Input placeholder="e.g. 2201535 (starts with 22, 23, or 24)"
+                      value={form.student_number} onChange={e => set('student_number', e.target.value)}
+                      maxLength={7} required />
+                  </Field>
+                  <p className="text-xs text-slate-500 -mt-2">Must start with 22, 23, or 24 followed by 5 digits.</p>
+
+                  <Section icon="👤" title="Personal Information" />
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <FieldGroup label="First Name *">
-                      <Input placeholder="Juan" value={form.first_name} onChange={e => set('first_name', e.target.value)} required />
-                    </FieldGroup>
-                    <FieldGroup label="Middle Name">
-                      <Input placeholder="Santos" value={form.middle_name} onChange={e => set('middle_name', e.target.value)} />
-                    </FieldGroup>
-                    <FieldGroup label="Last Name *">
-                      <Input placeholder="dela Cruz" value={form.last_name} onChange={e => set('last_name', e.target.value)} required />
-                    </FieldGroup>
+                    <Field label="First Name *"><Input placeholder="Juan" value={form.first_name} onChange={e => set('first_name', e.target.value)} required /></Field>
+                    <Field label="Middle Name"><Input placeholder="Santos" value={form.middle_name} onChange={e => set('middle_name', e.target.value)} /></Field>
+                    <Field label="Last Name *"><Input placeholder="dela Cruz" value={form.last_name} onChange={e => set('last_name', e.target.value)} required /></Field>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <FieldGroup label="Suffix">
+                    <Field label="Suffix">
                       <Select value={form.suffix} onChange={e => set('suffix', e.target.value)}>
-                        <option value="">None</option>
-                        <option>Jr.</option><option>Sr.</option><option>II</option><option>III</option>
+                        <option value="">None</option><option>Jr.</option><option>Sr.</option><option>II</option><option>III</option>
                       </Select>
-                    </FieldGroup>
-                    <FieldGroup label="Gender *">
+                    </Field>
+                    <Field label="Gender *">
                       <Select value={form.gender} onChange={e => set('gender', e.target.value)} required>
-                        <option value="">Select</option>
-                        <option>Male</option><option>Female</option>
+                        <option value="">Select</option><option>Male</option><option>Female</option>
                       </Select>
-                    </FieldGroup>
-                    <FieldGroup label="Civil Status *">
+                    </Field>
+                    <Field label="Civil Status *">
                       <Select value={form.civil_status} onChange={e => set('civil_status', e.target.value)} required>
-                        <option value="">Select</option>
-                        <option>Single</option><option>Married</option><option>Widowed</option><option>Separated</option>
+                        <option value="">Select</option><option>Single</option><option>Married</option><option>Widowed</option><option>Separated</option>
                       </Select>
-                    </FieldGroup>
-                    <FieldGroup label="Nationality *">
+                    </Field>
+                    <Field label="Nationality *">
                       <Input placeholder="Filipino" value={form.nationality} onChange={e => set('nationality', e.target.value)} required />
-                    </FieldGroup>
+                    </Field>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <FieldGroup label="Date of Birth *">
-                      <Input type="date" value={form.birth_date} onChange={e => set('birth_date', e.target.value)} required />
-                    </FieldGroup>
-                    <FieldGroup label="Place of Birth">
-                      <Input placeholder="City, Province" value={form.place_of_birth} onChange={e => set('place_of_birth', e.target.value)} />
-                    </FieldGroup>
-                    <FieldGroup label="Religion">
-                      <Input placeholder="e.g. Catholic" value={form.religion} onChange={e => set('religion', e.target.value)} />
-                    </FieldGroup>
+                    <Field label="Date of Birth *"><Input type="date" value={form.birth_date} onChange={e => set('birth_date', e.target.value)} required /></Field>
+                    <Field label="Place of Birth"><Input placeholder="City, Province" value={form.place_of_birth} onChange={e => set('place_of_birth', e.target.value)} /></Field>
+                    <Field label="Religion"><Input placeholder="e.g. Catholic" value={form.religion} onChange={e => set('religion', e.target.value)} /></Field>
                   </div>
 
-                  {/* Contact Info */}
-                  <SectionHeading icon="📞" title="Contact Information" />
+                  <Section icon="📞" title="Contact & Address" />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <FieldGroup label="Mobile Number *">
-                      <Input type="tel" placeholder="09XXXXXXXXX" value={form.contact_number} onChange={e => set('contact_number', e.target.value)} required />
-                    </FieldGroup>
-                    <FieldGroup label="Present Address">
-                      <Input placeholder="Street, Barangay, City" value={form.present_address} onChange={e => set('present_address', e.target.value)} />
-                    </FieldGroup>
+                    <Field label="Mobile Number *"><Input type="tel" placeholder="09XXXXXXXXX" value={form.contact_number} onChange={e => set('contact_number', e.target.value)} required /></Field>
+                    <Field label="City *"><Input placeholder="City" value={form.city} onChange={e => set('city', e.target.value)} required /></Field>
+                    <Field label="Street"><Input placeholder="Street" value={form.street} onChange={e => set('street', e.target.value)} /></Field>
+                    <Field label="Barangay"><Input placeholder="Barangay" value={form.barangay} onChange={e => set('barangay', e.target.value)} /></Field>
+                    <Field label="Province"><Input placeholder="Province" value={form.province} onChange={e => set('province', e.target.value)} /></Field>
+                    <Field label="Zip Code"><Input placeholder="0000" value={form.zip_code} onChange={e => set('zip_code', e.target.value)} maxLength={10} /></Field>
                   </div>
 
-                  {/* Enrollment */}
-                  <SectionHeading icon="🎓" title="Enrollment Details" />
+                  <Section icon="🎓" title="Enrollment Details" />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <FieldGroup label="Program *">
+                    <Field label="Program *">
                       <Select value={form.program} onChange={e => set('program', e.target.value)} required>
-                        <option>Information Technology</option>
-                        <option>Computer Science</option>
+                        <option>Information Technology</option><option>Computer Science</option>
                       </Select>
-                    </FieldGroup>
-                    <FieldGroup label="Year Level *">
+                    </Field>
+                    <Field label="Year Level *">
                       <Select value={form.year_level} onChange={e => set('year_level', e.target.value)} required>
-                        <option>1st Year</option><option>2nd Year</option>
-                        <option>3rd Year</option><option>4th Year</option>
+                        <option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option>
                       </Select>
-                    </FieldGroup>
+                    </Field>
+                    <Field label="Course *">
+                      <Select value={form.course_id} onChange={e => set('course_id', e.target.value)} required>
+                        <option value="">-- Select Course --</option>
+                        {courses.map(c => (
+                          <option key={c.id} value={c.id}>{c.course_code} — {c.course_name}</option>
+                        ))}
+                      </Select>
+                      {courses.length === 0 && (
+                        <p className="text-xs text-amber-400 mt-1.5">No courses available yet. Contact admin.</p>
+                      )}
+                    </Field>
+                    <Field label="Student Type *">
+                      <Select value={form.student_type} onChange={e => set('student_type', e.target.value)} required>
+                        <option>Regular</option><option>Irregular</option><option>Returnee</option><option>Shiftee</option><option>Transferee</option>
+                      </Select>
+                    </Field>
+                    <Field label="Date Enrolled *"><Input type="date" value={form.date_enrolled} onChange={e => set('date_enrolled', e.target.value)} required /></Field>
                   </div>
 
-                  {/* Educational Background */}
-                  <SectionHeading icon="🏫" title="Educational Background" />
+                  <Section icon="🏫" title="Educational Background" />
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <FieldGroup label="Last School Attended">
-                      <Input placeholder="School Name" value={form.last_school_attended} onChange={e => set('last_school_attended', e.target.value)} />
-                    </FieldGroup>
-                    <FieldGroup label="Last Year Attended">
-                      <Input placeholder="e.g. 2024" value={form.last_year_attended} onChange={e => set('last_year_attended', e.target.value)} />
-                    </FieldGroup>
-                    <FieldGroup label="LRN">
-                      <Input placeholder="12-digit LRN" value={form.lrn} onChange={e => set('lrn', e.target.value)} />
-                    </FieldGroup>
+                    <Field label="Last School Attended"><Input placeholder="School Name" value={form.last_school_attended} onChange={e => set('last_school_attended', e.target.value)} /></Field>
+                    <Field label="Last Year Attended"><Input placeholder="e.g. 2024" value={form.last_year_attended} onChange={e => set('last_year_attended', e.target.value)} /></Field>
+                    <Field label="LRN"><Input placeholder="12-digit LRN" value={form.lrn} onChange={e => set('lrn', e.target.value)} maxLength={12} /></Field>
                   </div>
 
-                  {/* Family Background */}
-                  <SectionHeading icon="👨‍👩‍👦" title="Family Background" />
+                  <Section icon="👨‍👩‍👦" title="Family Background" />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <FieldGroup label="Father's Name">
-                      <Input placeholder="Full Name" value={form.father_name} onChange={e => set('father_name', e.target.value)} />
-                    </FieldGroup>
-                    <FieldGroup label="Father's Occupation">
-                      <Input placeholder="Occupation" value={form.father_occupation} onChange={e => set('father_occupation', e.target.value)} />
-                    </FieldGroup>
-                    <FieldGroup label="Mother's Name">
-                      <Input placeholder="Full Name" value={form.mother_name} onChange={e => set('mother_name', e.target.value)} />
-                    </FieldGroup>
-                    <FieldGroup label="Mother's Occupation">
-                      <Input placeholder="Occupation" value={form.mother_occupation} onChange={e => set('mother_occupation', e.target.value)} />
-                    </FieldGroup>
-                    <FieldGroup label="Guardian Contact No.">
-                      <Input type="tel" placeholder="09XXXXXXXXX" value={form.guardian_contact} onChange={e => set('guardian_contact', e.target.value)} />
-                    </FieldGroup>
+                    <Field label="Father's Name"><Input placeholder="Full Name" value={form.father_name} onChange={e => set('father_name', e.target.value)} /></Field>
+                    <Field label="Father's Occupation"><Input placeholder="Occupation" value={form.father_occupation} onChange={e => set('father_occupation', e.target.value)} /></Field>
+                    <Field label="Mother's Name"><Input placeholder="Full Name" value={form.mother_name} onChange={e => set('mother_name', e.target.value)} /></Field>
+                    <Field label="Mother's Occupation"><Input placeholder="Occupation" value={form.mother_occupation} onChange={e => set('mother_occupation', e.target.value)} /></Field>
+                    <Field label="Guardian Contact No."><Input type="tel" placeholder="09XXXXXXXXX" value={form.guardian_contact} onChange={e => set('guardian_contact', e.target.value)} /></Field>
                   </div>
                 </>
               )}
 
-              {/* ── NON-STUDENT NAME FIELD ── */}
-              {form.role !== 'student' && (
-                <FieldGroup label="Full Name">
-                  <Input
-                    icon="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    type="text" placeholder="Juan dela Cruz"
-                    value={form.first_name}
-                    onChange={e => set('first_name', e.target.value)}
-                    required
-                  />
-                </FieldGroup>
+              {/* ══ FACULTY FIELDS ══ */}
+              {form.role === 'faculty' && (
+                <>
+                  <Section icon="👤" title="Personal Information" />
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <Field label="First Name *"><Input placeholder="Juan" value={form.first_name} onChange={e => set('first_name', e.target.value)} required /></Field>
+                    <Field label="Middle Name"><Input placeholder="Santos" value={form.middle_name} onChange={e => set('middle_name', e.target.value)} /></Field>
+                    <Field label="Last Name *"><Input placeholder="dela Cruz" value={form.last_name} onChange={e => set('last_name', e.target.value)} required /></Field>
+                  </div>
+
+                  <Section icon="🏢" title="Faculty Details" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Field label="Position *"><Input placeholder="e.g. Instructor I" value={form.position} onChange={e => set('position', e.target.value)} required /></Field>
+                    <Field label="Employment Status *">
+                      <Select value={form.employment_status} onChange={e => set('employment_status', e.target.value)} required>
+                        <option>Regular</option><option>Part-time</option><option>Contractual</option>
+                      </Select>
+                    </Field>
+                    <Field label="Hire Date *"><Input type="date" value={form.hire_date} onChange={e => set('hire_date', e.target.value)} required /></Field>
+                    <Field label="Department ID *">
+                      <Input placeholder="Department ID (number)" type="number" min="1"
+                        value={form.department_id} onChange={e => set('department_id', e.target.value)} required />
+                    </Field>
+                    <Field label="Contact Number"><Input type="tel" placeholder="09XXXXXXXXX" value={form.contact_number_faculty} onChange={e => set('contact_number_faculty', e.target.value)} /></Field>
+                    <Field label="Office Location"><Input placeholder="e.g. Faculty Room 2" value={form.office_location} onChange={e => set('office_location', e.target.value)} /></Field>
+                  </div>
+                </>
               )}
 
-              {/* ── ACCOUNT SECTION ── */}
-              <SectionHeading icon="🔐" title="Account Credentials" />
-              <FieldGroup label="Email Address *">
+              {/* ══ ACCOUNT CREDENTIALS (both roles) ══ */}
+              <Section icon="🔐" title="Account Credentials" />
+
+              <Field label={form.role === 'faculty' ? 'Faculty Email * (@pnc.edu.com)' : 'Personal Email *'}>
                 <Input
                   icon="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"
-                  type="email" placeholder={form.role === 'student' ? 'youremail@gmail.com' : 'admin@ccs.edu'}
+                  type="email"
+                  placeholder={form.role === 'faculty' ? 'faculty1.username@pnc.edu.com' : 'youremail@gmail.com'}
                   value={form.email}
                   onChange={e => set('email', e.target.value)}
                   required
                 />
-              </FieldGroup>
+                {form.role === 'faculty' && (
+                  <p className="text-xs text-slate-500 mt-1.5">Must be a valid <span className="text-brand-400">@pnc.edu.com</span> address.</p>
+                )}
+                {form.role === 'student' && (
+                  <p className="text-xs text-slate-500 mt-1.5">Used for OTP verification only. Login uses your student number.</p>
+                )}
+              </Field>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <FieldGroup label="Password *">
+                <Field label="Password * (min. 8 chars)">
                   <div className="relative">
                     <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                     </span>
-                    <input
-                      type={showPw ? 'text' : 'password'}
-                      placeholder="Min. 6 characters"
-                      value={form.password}
-                      onChange={e => set('password', e.target.value)}
+                    <input type={showPw ? 'text' : 'password'} placeholder="Min. 8 characters"
+                      value={form.password} onChange={e => set('password', e.target.value)}
                       className="w-full bg-slate-800/60 border border-slate-700 text-slate-200 placeholder-slate-500 text-sm rounded-xl pl-10 pr-12 py-3 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all"
-                      required
-                    />
+                      required autoComplete="new-password" />
                     <button type="button" onClick={() => setShowPw(p => !p)}
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -527,39 +545,37 @@ const SignUp = ({ onSignUp, onGoToLogin }) => {
                       </svg>
                     </button>
                   </div>
-                </FieldGroup>
-                <FieldGroup label="Confirm Password *">
+                </Field>
+                <Field label="Confirm Password *">
                   <div className="relative">
                     <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
                     </span>
-                    <input
-                      type={showPw ? 'text' : 'password'}
-                      placeholder="Re-enter password"
-                      value={form.confirm}
-                      onChange={e => set('confirm', e.target.value)}
+                    <input type={showPw ? 'text' : 'password'} placeholder="Re-enter password"
+                      value={form.password_confirmation} onChange={e => set('password_confirmation', e.target.value)}
                       className="w-full bg-slate-800/60 border border-slate-700 text-slate-200 placeholder-slate-500 text-sm rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all"
-                      required
-                    />
+                      required autoComplete="new-password" />
                   </div>
-                </FieldGroup>
+                </Field>
               </div>
 
-              {/* OTP note for students */}
-              {form.role === 'student' && (
-                <div className="flex items-start gap-2 bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs rounded-xl px-4 py-3">
-                  <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  A 6-digit OTP will be sent to your Gmail for verification before your account is created.
-                </div>
-              )}
+              {/* OTP note */}
+              <div className="flex items-start gap-2 bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs rounded-xl px-4 py-3">
+                <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                {form.role === 'student'
+                  ? 'A 6-digit OTP will be sent to your email for verification. Your login will use your student number.'
+                  : 'A 6-digit OTP will be sent to your @pnc.edu.com email for verification.'
+                }
+              </div>
 
               <ErrorBox msg={error} />
 
               <button type="submit" disabled={loading}
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white font-semibold text-sm tracking-wide shadow-lg shadow-brand-500/30 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2">
-                {loading ? (
-                  <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Please wait...</>
-                ) : (form.role === 'student' ? 'Continue — Verify Email' : 'Create Account')}
+                {loading
+                  ? <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Please wait...</>
+                  : 'Continue — Verify Email'
+                }
               </button>
             </form>
           )}

@@ -23,7 +23,7 @@ class FacultyFactory extends Factory
             'position' => fake()->randomElement(['Instructor I', 'Instructor II', 'Assistant Professor', 'Associate Professor', 'Professor']),
             'employment_status' => fake()->randomElement(['Regular', 'Part-time', 'Contractual']),
             'hire_date' => fake()->dateTimeBetween('-10 years', 'now')->format('Y-m-d'),
-            'email' => fake()->unique()->safeEmail(),
+            'email' => 'faculty' . fake()->unique()->numberBetween(1, 9999) . '.' . strtolower(fake()->lastName()) . '@pnc.edu.com',
             'contact_number' => fake()->phoneNumber(),
             'office_location' => 'Faculty Room ' . fake()->numberBetween(1, 5),
             'department_id' => \App\Models\Department::factory(),

@@ -24,6 +24,7 @@ class User extends Authenticatable
         'password',
         'role',
         'student_id',
+        'faculty_id',
     ];
 
     /**

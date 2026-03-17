@@ -20,6 +20,7 @@ class StudentController extends Controller
     public function store(Request $request)
     {
         $validatedData = $request->validate([
+            'student_number'           => 'required|string|max:20|unique:students,student_number|regex:/^(22|23|24)\d{5}$/',
             'first_name'               => 'required|string|max:255',
             'middle_name'              => 'nullable|string|max:255',
             'last_name'                => 'required|string|max:255',
@@ -66,6 +67,7 @@ class StudentController extends Controller
     public function update(Request $request, Student $student)
     {
         $validatedData = $request->validate([
+            'student_number'           => 'required|string|max:20|regex:/^(22|23|24)\d{5}$/|unique:students,student_number,' . $student->id,
             'first_name'               => 'required|string|max:255',
             'middle_name'              => 'nullable|string|max:255',
             'last_name'                => 'required|string|max:255',

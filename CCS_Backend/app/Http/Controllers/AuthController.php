@@ -12,21 +12,124 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    // The one fixed admin email — only this address can hold the admin role
+    const ADMIN_EMAIL = 'admin@ccs.pnc.edu.com';
+
     /**
-     * Register a new user.
-     * For students, accepts full profile fields and checks OTP verification.
+     * Register a new faculty or student account.
+     * Admin accounts are seeded only — registration is blocked for admin role.
      */
     public function register(Request $request)
     {
-        $roleRules = [
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:6',
-            'role'     => 'required|in:admin,student,faculty',
-        ];
+        $role = $request->input('role');
 
-        // Extra student fields
-        $studentRules = [
+        if ($role === 'admin') {
+            return response()->json(['message' => 'Admin accounts cannot be registered through this endpoint.'], 403);
+        }
+
+        if ($role === 'faculty') {
+            return $this->registerFaculty($request);
+        }
+
+        if ($role === 'student') {
+            return $this->registerStudent($request);
+        }
+
+        return response()->json(['message' => 'Invalid role. Must be faculty or student.'], 422);
+    }
+
+    /**
+     * Faculty registration.
+     * Email must match @pnc.edu.com domain.
+     * OTP is sent to their faculty email.
+     */
+    private function registerFaculty(Request $request)
+    {
+        $validated = $request->validate([
+            'first_name'        => 'required|string|max:100',
+            'middle_name'       => 'nullable|string|max:100',
+            'last_name'         => 'required|string|max:100',
+            'email'             => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                'unique:users,email',
+                'unique:faculties,email',
+                'regex:/^[a-zA-Z0-9._%+\-]+@pnc\.edu\.com$/',
+            ],
+            'password'          => 'required|string|min:8|confirmed',
+            'position'          => 'required|string|max:100',
+            'employment_status' => 'required|in:Regular,Part-time,Contractual',
+            'hire_date'         => 'required|date|before_or_equal:today',
+            'contact_number'    => 'nullable|string|max:20|regex:/^[0-9+\-\s()]+$/',
+            'office_location'   => 'nullable|string|max:100',
+            'department_id'     => 'required|exists:departments,id',
+        ], [
+            'email.regex' => 'Faculty email must be a valid @pnc.edu.com address (e.g. faculty1.username@pnc.edu.com).',
+        ]);
+
+        // Require OTP verification on the faculty email
+        $email = strtolower(trim($validated['email']));
+        if (!Cache::get("otp_verified:{$email}")) {
+            return response()->json([
+                'message' => 'Email address has not been verified. Please complete OTP verification first.',
+            ], 422);
+        }
+        Cache::forget("otp_verified:{$email}");
+
+        $faculty = Faculty::create([
+            'first_name'        => $validated['first_name'],
+            'middle_name'       => $validated['middle_name'] ?? null,
+            'last_name'         => $validated['last_name'],
+            'email'             => $email,
+            'position'          => $validated['position'],
+            'employment_status' => $validated['employment_status'],
+            'hire_date'         => $validated['hire_date'],
+            'contact_number'    => $validated['contact_number'] ?? null,
+            'office_location'   => $validated['office_location'] ?? null,
+            'department_id'     => $validated['department_id'],
+        ]);
+
+        $user = User::create([
+            'name'       => trim($validated['first_name'] . ' ' . $validated['last_name']),
+            'email'      => $email,
+            'password'   => Hash::make($validated['password']),
+            'role'       => 'faculty',
+            'faculty_id' => $faculty->id,
+        ]);
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'user'  => [
+                'id'         => $user->id,
+                'name'       => $user->name,
+                'email'      => $user->email,
+                'role'       => $user->role,
+                'faculty_id' => $user->faculty_id,
+            ],
+            'token' => $token,
+        ], 201);
+    }
+
+    /**
+     * Student registration.
+     * Login identifier is student_number (must start with 22, 23, or 24).
+     * OTP is sent to their personal email (not used for login).
+     */
+    private function registerStudent(Request $request)
+    {
+        $validated = $request->validate([
+            'student_number'       => [
+                'required',
+                'string',
+                'max:20',
+                'unique:students,student_number',
+                'regex:/^(22|23|24)\d{5}$/',
+            ],
+            'email'                => 'required|string|email|max:255|unique:students,email',
+            'password'             => 'required|string|min:8|confirmed',
             'first_name'           => 'required|string|max:100',
             'last_name'            => 'required|string|max:100',
             'middle_name'          => 'nullable|string|max:100',
@@ -35,146 +138,179 @@ class AuthController extends Controller
             'civil_status'         => 'required|string|max:50',
             'nationality'          => 'required|string|max:100',
             'religion'             => 'nullable|string|max:100',
-            'birth_date'           => 'required|date',
+            'birth_date'           => 'required|date|before:today',
             'place_of_birth'       => 'nullable|string|max:200',
-            'contact_number'       => 'required|string|max:20',
-            'present_address'      => 'nullable|string|max:300',
+            'contact_number'       => 'required|string|max:20|regex:/^[0-9+\-\s()]+$/',
+            'street'               => 'nullable|string|max:255',
+            'barangay'             => 'nullable|string|max:100',
+            'city'                 => 'required|string|max:100',
+            'province'             => 'nullable|string|max:100',
+            'zip_code'             => 'nullable|string|max:10|regex:/^\d+$/',
             'program'              => 'required|in:Information Technology,Computer Science',
-            'year_level'           => 'required|string|max:20',
+            'year_level'           => 'required|in:1st Year,2nd Year,3rd Year,4th Year',
+            'student_type'         => 'required|in:Regular,Irregular,Returnee,Shiftee,Transferee',
+            'enrollment_status'    => 'required|in:Enrolled,Not Enrolled',
+            'date_enrolled'        => 'required|date|before_or_equal:today',
+            'course_id'            => 'nullable|exists:courses,id',
+            'department_id'        => 'nullable|exists:departments,id',
+            'lrn'                  => 'nullable|string|max:12|regex:/^\d{0,12}$/',
             'last_school_attended' => 'nullable|string|max:200',
             'last_year_attended'   => 'nullable|string|max:10',
-            'lrn'                  => 'nullable|string|max:30',
-            // Family
             'father_name'          => 'nullable|string|max:200',
             'father_occupation'    => 'nullable|string|max:200',
             'mother_name'          => 'nullable|string|max:200',
             'mother_occupation'    => 'nullable|string|max:200',
-            'guardian_contact'     => 'nullable|string|max:20',
-        ];
-
-        $rules = ($request->role === 'student')
-            ? array_merge($roleRules, $studentRules)
-            : $roleRules;
-
-        $validated = $request->validate($rules);
-
-        // ── For students, require OTP verification ──────────────────
-        if ($validated['role'] === 'student') {
-            $email = strtolower(trim($validated['email']));
-            if (!Cache::get("otp_verified:{$email}")) {
-                return response()->json([
-                    'message' => 'Email address has not been verified. Please complete OTP verification.',
-                ], 422);
-            }
-            Cache::forget("otp_verified:{$email}");
-        }
-
-        // ── Create User ─────────────────────────────────────────────
-        $user = User::create([
-            'name'     => $validated['name'],
-            'email'    => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'role'     => $validated['role'],
+            'guardian_contact'     => 'nullable|string|max:20|regex:/^[0-9+\-\s()]+$/',
+        ], [
+            'student_number.regex'   => 'Student number must start with 22, 23, or 24 followed by 5 digits (e.g. 2201535).',
+            'student_number.unique'  => 'This student number is already registered.',
+            'contact_number.regex'   => 'Contact number may only contain digits, spaces, +, -, and parentheses.',
+            'guardian_contact.regex' => 'Guardian contact may only contain digits, spaces, +, -, and parentheses.',
+            'zip_code.regex'         => 'Zip code must contain digits only.',
+            'lrn.regex'              => 'LRN must contain digits only.',
         ]);
 
-        // ── Auto-create Faculty record ──────────────────────────────
-        if ($validated['role'] === 'faculty') {
-            $nameParts = explode(' ', trim($validated['name']), 2);
-            $dept = \App\Models\Department::first();
-            Faculty::create([
-                'first_name'        => $nameParts[0],
-                'last_name'         => $nameParts[1] ?? $nameParts[0],
-                'email'             => $validated['email'],
-                'position'          => 'Faculty Member',
-                'employment_status' => 'Full-Time',
-                'hire_date'         => now()->toDateString(),
-                'department_id'     => $dept?->id,
-            ]);
+        // Require OTP verification on the student's personal email
+        $email = strtolower(trim($validated['email']));
+        if (!Cache::get("otp_verified:{$email}")) {
+            return response()->json([
+                'message' => 'Email address has not been verified. Please complete OTP verification first.',
+            ], 422);
         }
+        Cache::forget("otp_verified:{$email}");
 
-        // ── Auto-create Student record with full details ────────────
-        if ($validated['role'] === 'student') {
-            $course = \App\Models\Course::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($validated['program']) . '%'])->first()
-                   ?? \App\Models\Course::first();
-            $dept   = \App\Models\Department::first();
+        // Resolve department from the selected course
+        $course = $validated['course_id']
+            ? \App\Models\Course::find($validated['course_id'])
+            : null;
 
-            $student = Student::create([
-                'first_name'           => $validated['first_name'],
-                'middle_name'          => $validated['middle_name']    ?? null,
-                'last_name'            => $validated['last_name'],
-                'suffix'               => $validated['suffix']          ?? null,
-                'email'                => $validated['email'],
-                'gender'               => $validated['gender'],
-                'birth_date'           => $validated['birth_date'],
-                'place_of_birth'       => $validated['place_of_birth'] ?? null,
-                'nationality'          => $validated['nationality'],
-                'civil_status'         => $validated['civil_status'],
-                'religion'             => $validated['religion']        ?? null,
-                'contact_number'       => $validated['contact_number'],
-                'street'               => $validated['present_address'] ?? null,
-                'program'              => $validated['program'],
-                'year_level'           => $validated['year_level'],
-                'student_type'         => 'Regular',
-                'enrollment_status'    => 'Enrolled',
-                'date_enrolled'        => now()->toDateString(),
-                'last_school_attended' => $validated['last_school_attended'] ?? null,
-                'last_year_attended'   => $validated['last_year_attended']   ?? null,
-                'lrn'                  => $validated['lrn']                  ?? null,
-                'course_id'            => $course?->id,
-                'department_id'        => $dept?->id,
-            ]);
+        $student = Student::create([
+            'student_number'       => $validated['student_number'],
+            'first_name'           => $validated['first_name'],
+            'middle_name'          => $validated['middle_name']    ?? null,
+            'last_name'            => $validated['last_name'],
+            'suffix'               => $validated['suffix']          ?? null,
+            'email'                => $email,
+            'gender'               => $validated['gender'],
+            'birth_date'           => $validated['birth_date'],
+            'place_of_birth'       => $validated['place_of_birth'] ?? null,
+            'nationality'          => $validated['nationality'],
+            'civil_status'         => $validated['civil_status'],
+            'religion'             => $validated['religion']        ?? null,
+            'contact_number'       => $validated['contact_number'],
+            'street'               => $validated['street']          ?? null,
+            'barangay'             => $validated['barangay']        ?? null,
+            'city'                 => $validated['city'],
+            'province'             => $validated['province']        ?? null,
+            'zip_code'             => $validated['zip_code']        ?? null,
+            'program'              => $validated['program'],
+            'year_level'           => $validated['year_level'],
+            'student_type'         => $validated['student_type'],
+            'enrollment_status'    => $validated['enrollment_status'],
+            'date_enrolled'        => $validated['date_enrolled'],
+            'course_id'            => $course?->id,
+            'department_id'        => $course?->department_id ?? ($validated['department_id'] ?? null),
+            'lrn'                  => $validated['lrn']             ?? null,
+            'last_school_attended' => $validated['last_school_attended'] ?? null,
+            'last_year_attended'   => $validated['last_year_attended']   ?? null,
+        ]);
 
-            // Store guardian/family data if provided
-            $guardians = [];
-            if ($validated['father_name'] ?? null) {
-                $guardians[] = [
-                    'full_name'      => $validated['father_name'],
-                    'relationship'   => 'Father',
-                    'occupation'     => $validated['father_occupation'] ?? null,
-                    'contact_number' => null,
-                ];
-            }
-            if ($validated['mother_name'] ?? null) {
-                $guardians[] = [
-                    'full_name'      => $validated['mother_name'],
-                    'relationship'   => 'Mother',
-                    'occupation'     => $validated['mother_occupation'] ?? null,
-                    'contact_number' => $validated['guardian_contact']  ?? null,
-                ];
-            }
-            foreach ($guardians as $g) {
+        // Store guardian/family data if provided
+        foreach ([
+            ['full_name' => $validated['father_name'] ?? null, 'relationship' => 'Father', 'occupation' => $validated['father_occupation'] ?? null, 'contact_number' => null],
+            ['full_name' => $validated['mother_name'] ?? null, 'relationship' => 'Mother', 'occupation' => $validated['mother_occupation'] ?? null, 'contact_number' => $validated['guardian_contact'] ?? null],
+        ] as $g) {
+            if ($g['full_name']) {
                 $student->guardians()->create($g);
             }
-
-            // Link user to student record
-            $user->update(['student_id' => $student->id]);
         }
+
+        // User login uses student_number as the identifier stored in `name`, email is personal
+        $user = User::create([
+            'name'       => $validated['student_number'], // used as login identifier
+            'email'      => $email,
+            'password'   => Hash::make($validated['password']),
+            'role'       => 'student',
+            'student_id' => $student->id,
+        ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'user'  => [
-                'id'         => $user->id,
-                'name'       => $user->name,
-                'email'      => $user->email,
-                'role'       => $user->role,
-                'student_id' => $user->student_id ?? null,
+                'id'             => $user->id,
+                'student_number' => $validated['student_number'],
+                'email'          => $user->email,
+                'role'           => $user->role,
+                'student_id'     => $user->student_id,
             ],
             'token' => $token,
         ], 201);
     }
 
     /**
-     * Login an existing user.
+     * Login.
+     * - Admin: email + password (only ADMIN_EMAIL allowed)
+     * - Faculty: email (@pnc.edu.com) + password
+     * - Student: student_number + password
      */
     public function login(Request $request)
     {
+        // Determine login type: student_number or email
+        $isStudentLogin = $request->filled('student_number') && !$request->filled('email');
+
+        if ($isStudentLogin) {
+            return $this->loginStudent($request);
+        }
+
+        return $this->loginByEmail($request);
+    }
+
+    private function loginStudent(Request $request)
+    {
         $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required',
+            'student_number' => [
+                'required',
+                'string',
+                'max:20',
+                'regex:/^(22|23|24)\d{5}$/',
+            ],
+            'password' => 'required|string',
+        ], [
+            'student_number.regex' => 'Student number must start with 22, 23, or 24 followed by 5 digits.',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        // student_number is stored in users.name for student accounts
+        $user = User::where('role', 'student')->where('name', $request->student_number)->first();
+
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            throw ValidationException::withMessages([
+                'student_number' => ['Invalid student number or password.'],
+            ]);
+        }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'user'  => [
+                'id'             => $user->id,
+                'student_number' => $user->name,
+                'role'           => $user->role,
+                'student_id'     => $user->student_id,
+            ],
+            'token' => $token,
+        ]);
+    }
+
+    private function loginByEmail(Request $request)
+    {
+        $request->validate([
+            'email'    => 'required|email',
+            'password' => 'required|string',
+        ]);
+
+        $email = strtolower(trim($request->email));
+        $user  = User::where('email', $email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
@@ -182,22 +318,30 @@ class AuthController extends Controller
             ]);
         }
 
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        // Resolve student_id if student
-        $studentId = null;
-        if ($user->role === 'student') {
-            $student   = \App\Models\Student::where('email', $user->email)->first();
-            $studentId = $student?->id;
+        // Admin can only log in with the fixed admin email
+        if ($user->role === 'admin' && $email !== strtolower(self::ADMIN_EMAIL)) {
+            throw ValidationException::withMessages([
+                'email' => ['Unauthorized access.'],
+            ]);
         }
+
+        // Faculty must use @pnc.edu.com email
+        if ($user->role === 'faculty' && !preg_match('/^[a-zA-Z0-9._%+\-]+@pnc\.edu\.com$/', $email)) {
+            throw ValidationException::withMessages([
+                'email' => ['Faculty must log in with their @pnc.edu.com email address.'],
+            ]);
+        }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'user'  => [
                 'id'         => $user->id,
-                'name'       => $user->name,
+                'name'       => $user->role !== 'student' ? $user->name : null,
                 'email'      => $user->email,
                 'role'       => $user->role,
-                'student_id' => $studentId,
+                'student_id' => $user->student_id,
+                'faculty_id' => $user->faculty_id,
             ],
             'token' => $token,
         ]);

@@ -23,6 +23,7 @@ class StudentFactory extends Factory
         $section = $yearPrefix . $programCode . '-' . fake()->randomElement(['A', 'B', 'C', 'D', 'E']);
 
         return [
+            'student_number' => fake()->randomElement(['22', '23', '24']) . fake()->numerify('#####'),
             'first_name' => fake()->firstName(),
             'middle_name' => fake()->optional()->lastName(),
             'last_name' => fake()->lastName(),
