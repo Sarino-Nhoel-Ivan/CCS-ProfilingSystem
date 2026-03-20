@@ -3,63 +3,47 @@
 namespace App\Http\Controllers;
 
 use App\Models\AcademicHistory;
+use App\Models\Student;
 use Illuminate\Http\Request;
 
 class AcademicHistoryController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Student $student)
     {
-        //
+        return response()->json($student->academicHistories()->orderBy('school_year')->orderBy('semester')->get());
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function store(Request $request, Student $student)
     {
-        //
+        $data = $request->validate([
+            'school_year'      => 'required|string|max:20',
+            'semester'         => 'required|string|max:50',
+            'gpa'              => 'nullable|numeric|min:1|max:5',
+            'academic_standing'=> 'required|string|max:100',
+            'total_units'      => 'required|integer|min:0',
+            'completed_units'  => 'required|integer|min:0',
+        ]);
+        $record = $student->academicHistories()->create($data);
+        return response()->json($record, 201);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function update(Request $request, Student $student, AcademicHistory $academicHistory)
     {
-        //
+        $data = $request->validate([
+            'school_year'      => 'required|string|max:20',
+            'semester'         => 'required|string|max:50',
+            'gpa'              => 'nullable|numeric|min:1|max:5',
+            'academic_standing'=> 'required|string|max:100',
+            'total_units'      => 'required|integer|min:0',
+            'completed_units'  => 'required|integer|min:0',
+        ]);
+        $academicHistory->update($data);
+        return response()->json($academicHistory);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(AcademicHistory $academicHistory)
+    public function destroy(Student $student, AcademicHistory $academicHistory)
     {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(AcademicHistory $academicHistory)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, AcademicHistory $academicHistory)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(AcademicHistory $academicHistory)
-    {
-        //
+        $academicHistory->delete();
+        return response()->json(null, 204);
     }
 }

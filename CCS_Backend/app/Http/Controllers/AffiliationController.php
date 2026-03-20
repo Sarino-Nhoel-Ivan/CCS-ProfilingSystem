@@ -3,63 +3,47 @@
 namespace App\Http\Controllers;
 
 use App\Models\Affiliation;
+use App\Models\Student;
 use Illuminate\Http\Request;
 
 class AffiliationController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Student $student)
     {
-        //
+        return response()->json($student->affiliations);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function store(Request $request, Student $student)
     {
-        //
+        $data = $request->validate([
+            'organization_name' => 'required|string|max:255',
+            'position'          => 'required|string|max:255',
+            'date_joined'       => 'required|date',
+            'date_ended'        => 'nullable|date|after_or_equal:date_joined',
+            'status'            => 'required|string|max:50',
+            'adviser_name'      => 'nullable|string|max:255',
+        ]);
+        $record = $student->affiliations()->create($data);
+        return response()->json($record, 201);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function update(Request $request, Student $student, Affiliation $affiliation)
     {
-        //
+        $data = $request->validate([
+            'organization_name' => 'required|string|max:255',
+            'position'          => 'required|string|max:255',
+            'date_joined'       => 'required|date',
+            'date_ended'        => 'nullable|date|after_or_equal:date_joined',
+            'status'            => 'required|string|max:50',
+            'adviser_name'      => 'nullable|string|max:255',
+        ]);
+        $affiliation->update($data);
+        return response()->json($affiliation);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Affiliation $affiliation)
+    public function destroy(Student $student, Affiliation $affiliation)
     {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Affiliation $affiliation)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Affiliation $affiliation)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Affiliation $affiliation)
-    {
-        //
+        $affiliation->delete();
+        return response()->json(null, 204);
     }
 }

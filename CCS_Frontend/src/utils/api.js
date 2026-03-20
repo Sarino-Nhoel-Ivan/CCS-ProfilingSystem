@@ -9,7 +9,14 @@ export const fetchApi = async (endpoint, options = {}) => {
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
     const data = await response.json().catch(() => null);
-    if (!response.ok) throw new Error(data?.message || `API Error: ${response.status} ${response.statusText}`);
+    if (!response.ok) {
+      // Laravel validation errors come back as { errors: { field: ['msg'] } }
+      if (data?.errors) {
+        const first = Object.values(data.errors).flat()[0];
+        throw new Error(first || data.message || `Error ${response.status}`);
+      }
+      throw new Error(data?.message || `API Error: ${response.status} ${response.statusText}`);
+    }
     return data;
   } catch (error) {
     console.error(`Fetch API Error on ${endpoint}:`, error);
@@ -38,6 +45,39 @@ export const api = {
 
     // Skills (full sync)
     syncSkills: (studentId, skills) => fetchApi(`/students/${studentId}/skills`, { method: 'PUT', body: JSON.stringify({ skills }) }),
+
+    // Affiliations
+    getAffiliations: (studentId) => fetchApi(`/students/${studentId}/affiliations`),
+    addAffiliation: (studentId, data) => fetchApi(`/students/${studentId}/affiliations`, { method: 'POST', body: JSON.stringify(data) }),
+    updateAffiliation: (studentId, affiliationId, data) => fetchApi(`/students/${studentId}/affiliations/${affiliationId}`, { method: 'PUT', body: JSON.stringify(data) }),
+    deleteAffiliation: (studentId, affiliationId) => fetchApi(`/students/${studentId}/affiliations/${affiliationId}`, { method: 'DELETE' }),
+
+    // Guardians
+    getGuardians: (studentId) => fetchApi(`/students/${studentId}/guardians`),
+    addGuardian: (studentId, data) => fetchApi(`/students/${studentId}/guardians`, { method: 'POST', body: JSON.stringify(data) }),
+    updateGuardian: (studentId, guardianId, data) => fetchApi(`/students/${studentId}/guardians/${guardianId}`, { method: 'PUT', body: JSON.stringify(data) }),
+    deleteGuardian: (studentId, guardianId) => fetchApi(`/students/${studentId}/guardians/${guardianId}`, { method: 'DELETE' }),
+
+    // Academic Histories
+    getAcademicHistories: (studentId) => fetchApi(`/students/${studentId}/academic-histories`),
+    addAcademicHistory: (studentId, data) => fetchApi(`/students/${studentId}/academic-histories`, { method: 'POST', body: JSON.stringify(data) }),
+    updateAcademicHistory: (studentId, historyId, data) => fetchApi(`/students/${studentId}/academic-histories/${historyId}`, { method: 'PUT', body: JSON.stringify(data) }),
+    deleteAcademicHistory: (studentId, historyId) => fetchApi(`/students/${studentId}/academic-histories/${historyId}`, { method: 'DELETE' }),
+
+    // Profile Photo
+    uploadPhoto: (studentId, file) => {
+      const form = new FormData();
+      form.append('photo', file);
+      return fetch(`${API_BASE_URL}/students/${studentId}/photo`, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' },
+        body: form,
+      }).then(async r => {
+        const data = await r.json().catch(() => null);
+        if (!r.ok) throw new Error(data?.message || 'Upload failed');
+        return data;
+      });
+    },
   },
   departments: {
     getAll: () => fetchApi('/departments'),

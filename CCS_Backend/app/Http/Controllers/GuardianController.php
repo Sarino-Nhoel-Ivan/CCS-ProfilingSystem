@@ -2,64 +2,48 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Student;
 use App\Models\Guardian;
 use Illuminate\Http\Request;
 
 class GuardianController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Student $student)
     {
-        //
+        return response()->json($student->guardians);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function store(Request $request, Student $student)
     {
-        //
+        $data = $request->validate([
+            'full_name'      => 'required|string|max:255',
+            'relationship'   => 'required|string|max:100',
+            'occupation'     => 'nullable|string|max:255',
+            'contact_number' => 'nullable|string|max:50',
+            'email'          => 'nullable|email|max:255',
+            'address'        => 'nullable|string|max:500',
+        ]);
+        $guardian = $student->guardians()->create($data);
+        return response()->json($guardian, 201);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function update(Request $request, Student $student, Guardian $guardian)
     {
-        //
+        $data = $request->validate([
+            'full_name'      => 'required|string|max:255',
+            'relationship'   => 'required|string|max:100',
+            'occupation'     => 'nullable|string|max:255',
+            'contact_number' => 'nullable|string|max:50',
+            'email'          => 'nullable|email|max:255',
+            'address'        => 'nullable|string|max:500',
+        ]);
+        $guardian->update($data);
+        return response()->json($guardian);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Guardian $guardian)
+    public function destroy(Student $student, Guardian $guardian)
     {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Guardian $guardian)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Guardian $guardian)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Guardian $guardian)
-    {
-        //
+        $guardian->delete();
+        return response()->json(null, 204);
     }
 }

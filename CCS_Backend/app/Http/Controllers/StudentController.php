@@ -6,6 +6,7 @@ use App\Models\Student;
 use App\Models\MedicalHistory;
 use App\Models\Violation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class StudentController extends Controller
 {
@@ -67,30 +68,30 @@ class StudentController extends Controller
     public function update(Request $request, Student $student)
     {
         $validatedData = $request->validate([
-            'student_number'           => 'required|string|max:20|regex:/^(22|23|24)\d{5}$/|unique:students,student_number,' . $student->id,
-            'first_name'               => 'required|string|max:255',
+            'student_number'           => ['sometimes', 'required', 'string', 'max:20', 'regex:/^(22|23|24)\d{5}$/', 'unique:students,student_number,' . $student->id],
+            'first_name'               => 'sometimes|required|string|max:255',
             'middle_name'              => 'nullable|string|max:255',
-            'last_name'                => 'required|string|max:255',
+            'last_name'                => 'sometimes|required|string|max:255',
             'suffix'                   => 'nullable|string|max:50',
-            'gender'                   => 'required|string|max:50',
-            'birth_date'               => 'required|date',
-            'place_of_birth'           => 'required|string|max:255',
-            'nationality'              => 'required|string|max:100',
-            'civil_status'             => 'required|string|max:50',
+            'gender'                   => 'sometimes|required|string|max:50',
+            'birth_date'               => 'sometimes|required|date',
+            'place_of_birth'           => 'sometimes|required|string|max:255',
+            'nationality'              => 'nullable|string|max:100',
+            'civil_status'             => 'nullable|string|max:50',
             'religion'                 => 'nullable|string|max:100',
-            'email'                    => 'required|email|max:255|unique:students,email,' . $student->id,
-            'contact_number'           => 'required|string|max:50',
+            'email'                    => 'sometimes|required|email|max:255|unique:students,email,' . $student->id,
+            'contact_number'           => 'sometimes|required|string|max:50',
             'alternate_contact_number' => 'nullable|string|max:50',
             'street'                   => 'nullable|string|max:255',
             'barangay'                 => 'nullable|string|max:255',
-            'city'                     => 'required|string|max:255',
+            'city'                     => 'sometimes|required|string|max:255',
             'province'                 => 'nullable|string|max:255',
             'zip_code'                 => 'nullable|string|max:20',
-            'year_level'               => 'required|string|max:50',
+            'year_level'               => 'sometimes|required|string|max:50',
             'section'                  => 'nullable|string|max:50',
-            'student_type'             => 'required|string|max:50',
-            'enrollment_status'        => 'required|string|max:50',
-            'date_enrolled'            => 'required|date',
+            'student_type'             => 'sometimes|required|string|max:50',
+            'enrollment_status'        => 'sometimes|required|string|max:50',
+            'date_enrolled'            => 'sometimes|required|date',
             'program'                  => 'nullable|string|max:255',
             'course_id'                => 'nullable|exists:courses,id',
             'department_id'            => 'nullable|exists:departments,id',
@@ -100,7 +101,7 @@ class StudentController extends Controller
             'honors_received'          => 'nullable|string',
         ]);
         $student->update($validatedData);
-        return response()->json($student);
+        return response()->json($student->fresh());
     }
 
     public function destroy(Student $student)
@@ -240,6 +241,47 @@ class StudentController extends Controller
             fclose($file);
         };
         return response()->stream($callback, 200, $headers);
+    }
+
+    // ─── Profile Photo ───────────────────────────────────────────
+
+    public function uploadPhoto(Request $request, Student $student)
+    {
+        $request->validate([
+            'photo' => [
+                'required',
+                'file',
+                'max:10240',
+                function ($attribute, $value, $fail) {
+                    // Validate by reading magic bytes — no re-encoding
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    $mime  = finfo_file($finfo, $value->getRealPath());
+                    finfo_close($finfo);
+                    $allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+                    if (!in_array($mime, $allowed)) {
+                        $fail('The photo must be a JPEG, PNG, WebP, or GIF image.');
+                    }
+                },
+            ],
+        ]);
+
+        // Delete old photo if exists
+        if ($student->profile_photo) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($student->profile_photo);
+        }
+
+        // Store the raw file bytes without any processing
+        $file      = $request->file('photo');
+        $ext       = strtolower($file->getClientOriginalExtension()) ?: 'jpg';
+        $filename  = \Illuminate\Support\Str::random(40) . '.' . $ext;
+        $file->storeAs('profile_photos', $filename, 'public');
+
+        $student->update(['profile_photo' => 'profile_photos/' . $filename]);
+
+        return response()->json([
+            'profile_photo' => 'profile_photos/' . $filename,
+            'updated_at'    => $student->fresh()->updated_at,
+        ]);
     }
 
     // ─── Advanced Search ─────────────────────────────────────────────────────

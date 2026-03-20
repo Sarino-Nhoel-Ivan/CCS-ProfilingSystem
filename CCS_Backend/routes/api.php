@@ -39,6 +39,25 @@ Route::put('/students/{student}/violations/{violation}',         [StudentControl
 Route::delete('/students/{student}/violations/{violation}',      [StudentController::class, 'destroyViolation']);
 
 Route::put('/students/{student}/skills',                         [StudentController::class, 'syncSkills']);
+Route::post('/students/{student}/photo',                         [StudentController::class, 'uploadPhoto']);
+
+// Affiliations
+Route::get('/students/{student}/affiliations',                   [\App\Http\Controllers\AffiliationController::class, 'index']);
+Route::post('/students/{student}/affiliations',                  [\App\Http\Controllers\AffiliationController::class, 'store']);
+Route::put('/students/{student}/affiliations/{affiliation}',     [\App\Http\Controllers\AffiliationController::class, 'update']);
+Route::delete('/students/{student}/affiliations/{affiliation}',  [\App\Http\Controllers\AffiliationController::class, 'destroy']);
+
+// Guardians
+Route::get('/students/{student}/guardians',                      [\App\Http\Controllers\GuardianController::class, 'index']);
+Route::post('/students/{student}/guardians',                     [\App\Http\Controllers\GuardianController::class, 'store']);
+Route::put('/students/{student}/guardians/{guardian}',           [\App\Http\Controllers\GuardianController::class, 'update']);
+Route::delete('/students/{student}/guardians/{guardian}',        [\App\Http\Controllers\GuardianController::class, 'destroy']);
+
+// Academic Histories
+Route::get('/students/{student}/academic-histories',                          [\App\Http\Controllers\AcademicHistoryController::class, 'index']);
+Route::post('/students/{student}/academic-histories',                         [\App\Http\Controllers\AcademicHistoryController::class, 'store']);
+Route::put('/students/{student}/academic-histories/{academicHistory}',        [\App\Http\Controllers\AcademicHistoryController::class, 'update']);
+Route::delete('/students/{student}/academic-histories/{academicHistory}',     [\App\Http\Controllers\AcademicHistoryController::class, 'destroy']);
 
 Route::apiResource('courses',     \App\Http\Controllers\CourseController::class);
 Route::apiResource('departments', \App\Http\Controllers\DepartmentController::class);

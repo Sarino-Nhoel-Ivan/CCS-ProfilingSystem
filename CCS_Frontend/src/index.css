@@ -13,3 +13,51 @@
   --color-brand-900: #7c2a0f;
   --color-brand-950: #431205;
 }
+
+/* ── Profile photo — preserve quality ── */
+.sd-dark img[alt="Profile"],
+.sd-light img[alt="Profile"] {
+  image-rendering: auto;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.sd-dark ::-webkit-scrollbar,
+.sd-dark::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.sd-dark ::-webkit-scrollbar-track,
+.sd-dark::-webkit-scrollbar-track {
+  background: #0f172a; /* slate-950 */
+}
+.sd-dark ::-webkit-scrollbar-thumb,
+.sd-dark::-webkit-scrollbar-thumb {
+  background: #334155; /* slate-700 */
+  border-radius: 9999px;
+}
+.sd-dark ::-webkit-scrollbar-thumb:hover,
+.sd-dark::-webkit-scrollbar-thumb:hover {
+  background: #f26522; /* brand-500 */
+}
+
+/* ── Scrollbar — light theme ── */
+.sd-light ::-webkit-scrollbar,
+.sd-light::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.sd-light ::-webkit-scrollbar-track,
+.sd-light::-webkit-scrollbar-track {
+  background: #f1f5f9; /* slate-100 */
+}
+.sd-light ::-webkit-scrollbar-thumb,
+.sd-light::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* slate-300 */
+  border-radius: 9999px;
+}
+.sd-light ::-webkit-scrollbar-thumb:hover,
+.sd-light::-webkit-scrollbar-thumb:hover {
+  background: #f26522; /* brand-500 */
+}
