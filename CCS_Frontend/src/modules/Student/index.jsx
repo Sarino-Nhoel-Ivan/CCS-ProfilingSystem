@@ -200,6 +200,9 @@ const StudentModule = () => {
                             <p className={`text-xs ${labelText}`}>
                               {student.program || 'N/A'} - {student.year_level || 'N/A'}
                             </p>
+                            <p className={`text-xs ${labelText}`}>
+                              {student.student_number ? `No. ${student.student_number}` : `ID: ${student.id}`}
+                            </p>
                           </div>
                         </div>
                         <div className="text-right">

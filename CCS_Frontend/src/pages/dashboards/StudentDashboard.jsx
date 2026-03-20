@@ -205,6 +205,9 @@ const StudentDashboard = ({ user, onLogout }) => {
             </h2>
             <p className="text-brand-400 font-medium mt-0.5 text-sm capitalize">{user?.role}</p>
             <p className="text-slate-400 text-sm mt-0.5">{user?.email}</p>
+            {user?.student_number && (
+              <p className="text-slate-500 text-xs mt-0.5">Student No. {user.student_number}</p>
+            )}
             {s && (
               <div className="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
                 <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
@@ -292,6 +295,7 @@ const StudentDashboard = ({ user, onLogout }) => {
 
             {/* 5. Enrollment Details */}
             <SectionCard title="Enrollment Details" icon="🎓">
+              <Row label="Student Number"    value={val(s?.student_number)} />
               <Row label="College"           value="College of Computing Studies" />
               <Row label="Program"           value={val(s?.program)} />
               <Row label="Year Level"        value={val(s?.year_level)} />

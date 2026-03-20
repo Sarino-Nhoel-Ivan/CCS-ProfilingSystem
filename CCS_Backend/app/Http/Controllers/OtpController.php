@@ -27,13 +27,6 @@ class OtpController extends Controller
         $email = strtolower(trim($request->email));
         $role  = $request->role;
 
-        // Faculty email domain check
-        if ($role === 'faculty' && !preg_match('/^[a-zA-Z0-9._%+\-]+@pnc\.edu\.com$/', $email)) {
-            return response()->json([
-                'message' => 'Faculty email must be a valid @pnc.edu.com address (e.g. faculty1.username@pnc.edu.com).',
-            ], 422);
-        }
-
         // Check not already registered in users table
         if (User::where('email', $email)->exists()) {
             return response()->json(['message' => 'This email address is already registered.'], 422);

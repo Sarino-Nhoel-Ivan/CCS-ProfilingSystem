@@ -121,14 +121,14 @@ const Login = ({ onLogin, onGoToSignUp }) => {
                   type={isStudent ? 'text' : 'email'}
                   value={identifier}
                   onChange={e => { setIdentifier(e.target.value); setError(''); }}
-                  placeholder={isStudent ? 'e.g. 2201535' : role === 'admin' ? 'admin@ccs.pnc.edu.com' : 'faculty1.username@pnc.edu.com'}
+                  placeholder={isStudent ? 'e.g. 2201535' : role === 'admin' ? 'admin@ccs.pnc.edu.com' : 'yourpersonalemail@gmail.com'}
                   maxLength={isStudent ? 7 : undefined}
                   className="w-full bg-slate-800/60 border border-slate-700 text-slate-200 placeholder-slate-500 text-sm rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all"
                   autoComplete="username"
                 />
               </div>
               {role === 'faculty' && (
-                <p className="text-xs text-slate-500 mt-1.5">Use your <span className="text-brand-400">@pnc.edu.com</span> faculty email.</p>
+                <p className="text-xs text-slate-500 mt-1.5">Use the personal email you registered with.</p>
               )}
               {role === 'admin' && (
                 <p className="text-xs text-slate-500 mt-1.5">Admin access is restricted to the registered admin email.</p>
@@ -165,8 +165,8 @@ const Login = ({ onLogin, onGoToSignUp }) => {
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl px-4 py-3">
-                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-center gap-3 bg-red-500/20 border-2 border-red-500/60 text-red-300 text-sm rounded-xl px-4 py-3.5 font-medium shadow-lg shadow-red-500/10">
+                <svg className="w-5 h-5 shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 {error}

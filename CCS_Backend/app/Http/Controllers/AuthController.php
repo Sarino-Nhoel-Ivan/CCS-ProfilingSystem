@@ -40,8 +40,7 @@ class AuthController extends Controller
 
     /**
      * Faculty registration.
-     * Email must match @pnc.edu.com domain.
-     * OTP is sent to their faculty email.
+     * Any valid personal email — OTP sent there, same email used for login.
      */
     private function registerFaculty(Request $request)
     {
@@ -49,15 +48,7 @@ class AuthController extends Controller
             'first_name'        => 'required|string|max:100',
             'middle_name'       => 'nullable|string|max:100',
             'last_name'         => 'required|string|max:100',
-            'email'             => [
-                'required',
-                'string',
-                'email',
-                'max:255',
-                'unique:users,email',
-                'unique:faculties,email',
-                'regex:/^[a-zA-Z0-9._%+\-]+@pnc\.edu\.com$/',
-            ],
+            'email'             => 'required|string|email|max:255|unique:users,email|unique:faculties,email',
             'password'          => 'required|string|min:8|confirmed',
             'position'          => 'required|string|max:100',
             'employment_status' => 'required|in:Regular,Part-time,Contractual',
@@ -65,8 +56,6 @@ class AuthController extends Controller
             'contact_number'    => 'nullable|string|max:20|regex:/^[0-9+\-\s()]+$/',
             'office_location'   => 'nullable|string|max:100',
             'department_id'     => 'required|exists:departments,id',
-        ], [
-            'email.regex' => 'Faculty email must be a valid @pnc.edu.com address (e.g. faculty1.username@pnc.edu.com).',
         ]);
 
         // Require OTP verification on the faculty email
@@ -91,13 +80,16 @@ class AuthController extends Controller
             'department_id'     => $validated['department_id'],
         ]);
 
-        $user = User::create([
+        \DB::table('users')->insert([
             'name'       => trim($validated['first_name'] . ' ' . $validated['last_name']),
             'email'      => $email,
             'password'   => Hash::make($validated['password']),
             'role'       => 'faculty',
             'faculty_id' => $faculty->id,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
+        $user = User::where('email', $email)->first();
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -226,13 +218,16 @@ class AuthController extends Controller
         }
 
         // User login uses student_number as the identifier stored in `name`, email is personal
-        $user = User::create([
+        \DB::table('users')->insert([
             'name'       => $validated['student_number'], // used as login identifier
             'email'      => $email,
             'password'   => Hash::make($validated['password']),
             'role'       => 'student',
             'student_id' => $student->id,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
+        $user = User::where('email', $email)->first();
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -322,13 +317,6 @@ class AuthController extends Controller
         if ($user->role === 'admin' && $email !== strtolower(self::ADMIN_EMAIL)) {
             throw ValidationException::withMessages([
                 'email' => ['Unauthorized access.'],
-            ]);
-        }
-
-        // Faculty must use @pnc.edu.com email
-        if ($user->role === 'faculty' && !preg_match('/^[a-zA-Z0-9._%+\-]+@pnc\.edu\.com$/', $email)) {
-            throw ValidationException::withMessages([
-                'email' => ['Faculty must log in with their @pnc.edu.com email address.'],
             ]);
         }
 

@@ -42,11 +42,11 @@ const Section = ({ icon, title }) => (
 );
 
 const ErrorBox = ({ msg }) => msg ? (
-  <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl px-4 py-3">
-    <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <div className="flex items-start gap-3 bg-red-500/20 border-2 border-red-500/60 text-red-300 text-sm rounded-xl px-4 py-3.5 font-medium shadow-lg shadow-red-500/10">
+    <svg className="w-5 h-5 shrink-0 mt-0.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
     </svg>
-    {msg}
+    <span>{msg}</span>
   </div>
 ) : null;
 
@@ -115,11 +115,6 @@ const SignUp = ({ onSignUp, onGoToLogin }) => {
   const handleSendOtp = async () => {
     setError(''); setInfo('');
     if (!form.email) { setError('Please enter your email address first.'); return; }
-
-    if (form.role === 'faculty' && !/^[a-zA-Z0-9._%+\-]+@pnc\.edu\.com$/.test(form.email)) {
-      setError('Faculty email must be a valid @pnc.edu.com address (e.g. faculty1.username@pnc.edu.com).');
-      return;
-    }
 
     setLoading(true);
     try {
@@ -262,16 +257,13 @@ const SignUp = ({ onSignUp, onGoToLogin }) => {
       if (!form.civil_status) { setError('Please select your civil status.'); return; }
       if (!form.birth_date)   { setError('Date of birth is required.'); return; }
       if (!form.contact_number) { setError('Contact number is required.'); return; }
+      if (!/^09\d{9}$/.test(form.contact_number)) { setError('Mobile number must be 11 digits starting with 09 (e.g. 09XXXXXXXXX).'); return; }
       if (!form.city)         { setError('City is required.'); return; }
       if (!form.course_id)    { setError('Please select a course.'); return; }
     }
 
     if (form.role === 'faculty') {
       if (!form.first_name || !form.last_name) { setError('First and last name are required.'); return; }
-      if (!/^[a-zA-Z0-9._%+\-]+@pnc\.edu\.com$/.test(form.email)) {
-        setError('Faculty email must be a valid @pnc.edu.com address.');
-        return;
-      }
       if (!form.position)           { setError('Position is required.'); return; }
       if (!form.employment_status)  { setError('Employment status is required.'); return; }
       if (!form.hire_date)          { setError('Hire date is required.'); return; }
@@ -380,8 +372,9 @@ const SignUp = ({ onSignUp, onGoToLogin }) => {
                   <Section icon="🎓" title="Student Identifier" />
                   <Field label="Student Number *">
                     <Input placeholder="e.g. 2201535 (starts with 22, 23, or 24)"
-                      value={form.student_number} onChange={e => set('student_number', e.target.value)}
-                      maxLength={7} required />
+                      value={form.student_number}
+                      onChange={e => set('student_number', e.target.value.replace(/\D/g, '').slice(0, 7))}
+                      inputMode="numeric" maxLength={7} required />
                   </Field>
                   <p className="text-xs text-slate-500 -mt-2">Must start with 22, 23, or 24 followed by 5 digits.</p>
 
@@ -412,19 +405,33 @@ const SignUp = ({ onSignUp, onGoToLogin }) => {
                     </Field>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <Field label="Date of Birth *"><Input type="date" value={form.birth_date} onChange={e => set('birth_date', e.target.value)} required /></Field>
+                    <Field label="Date of Birth *">
+                      <Input type="date" value={form.birth_date}
+                        max={new Date(new Date().setFullYear(new Date().getFullYear() - 5)).toISOString().split('T')[0]}
+                        onChange={e => set('birth_date', e.target.value)} required />
+                    </Field>
                     <Field label="Place of Birth"><Input placeholder="City, Province" value={form.place_of_birth} onChange={e => set('place_of_birth', e.target.value)} /></Field>
                     <Field label="Religion"><Input placeholder="e.g. Catholic" value={form.religion} onChange={e => set('religion', e.target.value)} /></Field>
                   </div>
 
                   <Section icon="📞" title="Contact & Address" />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <Field label="Mobile Number *"><Input type="tel" placeholder="09XXXXXXXXX" value={form.contact_number} onChange={e => set('contact_number', e.target.value)} required /></Field>
+                    <Field label="Mobile Number *">
+                      <Input type="tel" placeholder="09XXXXXXXXX"
+                        value={form.contact_number}
+                        onChange={e => set('contact_number', e.target.value.replace(/\D/g, '').slice(0, 11))}
+                        maxLength={11} required />
+                    </Field>
                     <Field label="City *"><Input placeholder="City" value={form.city} onChange={e => set('city', e.target.value)} required /></Field>
                     <Field label="Street"><Input placeholder="Street" value={form.street} onChange={e => set('street', e.target.value)} /></Field>
                     <Field label="Barangay"><Input placeholder="Barangay" value={form.barangay} onChange={e => set('barangay', e.target.value)} /></Field>
                     <Field label="Province"><Input placeholder="Province" value={form.province} onChange={e => set('province', e.target.value)} /></Field>
-                    <Field label="Zip Code"><Input placeholder="0000" value={form.zip_code} onChange={e => set('zip_code', e.target.value)} maxLength={10} /></Field>
+                    <Field label="Zip Code">
+                      <Input placeholder="0000"
+                        value={form.zip_code}
+                        onChange={e => set('zip_code', e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        maxLength={4} inputMode="numeric" />
+                    </Field>
                   </div>
 
                   <Section icon="🎓" title="Enrollment Details" />
@@ -455,14 +462,18 @@ const SignUp = ({ onSignUp, onGoToLogin }) => {
                         <option>Regular</option><option>Irregular</option><option>Returnee</option><option>Shiftee</option><option>Transferee</option>
                       </Select>
                     </Field>
-                    <Field label="Date Enrolled *"><Input type="date" value={form.date_enrolled} onChange={e => set('date_enrolled', e.target.value)} required /></Field>
+                    <Field label="Date Enrolled *">
+                      <Input type="date" value={form.date_enrolled}
+                        max={new Date().toISOString().split('T')[0]}
+                        onChange={e => set('date_enrolled', e.target.value)} required />
+                    </Field>
                   </div>
 
                   <Section icon="🏫" title="Educational Background" />
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <Field label="Last School Attended"><Input placeholder="School Name" value={form.last_school_attended} onChange={e => set('last_school_attended', e.target.value)} /></Field>
-                    <Field label="Last Year Attended"><Input placeholder="e.g. 2024" value={form.last_year_attended} onChange={e => set('last_year_attended', e.target.value)} /></Field>
-                    <Field label="LRN"><Input placeholder="12-digit LRN" value={form.lrn} onChange={e => set('lrn', e.target.value)} maxLength={12} /></Field>
+                    <Field label="Last Year Attended"><Input placeholder="e.g. 2024" value={form.last_year_attended} onChange={e => set('last_year_attended', e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" maxLength={4} /></Field>
+                    <Field label="LRN"><Input placeholder="12-digit LRN" value={form.lrn} onChange={e => set('lrn', e.target.value.replace(/\D/g, '').slice(0, 12))} inputMode="numeric" maxLength={12} /></Field>
                   </div>
 
                   <Section icon="👨‍👩‍👦" title="Family Background" />
@@ -471,7 +482,12 @@ const SignUp = ({ onSignUp, onGoToLogin }) => {
                     <Field label="Father's Occupation"><Input placeholder="Occupation" value={form.father_occupation} onChange={e => set('father_occupation', e.target.value)} /></Field>
                     <Field label="Mother's Name"><Input placeholder="Full Name" value={form.mother_name} onChange={e => set('mother_name', e.target.value)} /></Field>
                     <Field label="Mother's Occupation"><Input placeholder="Occupation" value={form.mother_occupation} onChange={e => set('mother_occupation', e.target.value)} /></Field>
-                    <Field label="Guardian Contact No."><Input type="tel" placeholder="09XXXXXXXXX" value={form.guardian_contact} onChange={e => set('guardian_contact', e.target.value)} /></Field>
+                    <Field label="Guardian Contact No.">
+                      <Input type="tel" placeholder="09XXXXXXXXX"
+                        value={form.guardian_contact}
+                        onChange={e => set('guardian_contact', e.target.value.replace(/\D/g, '').slice(0, 11))}
+                        maxLength={11} inputMode="numeric" />
+                    </Field>
                   </div>
                 </>
               )}
@@ -499,7 +515,7 @@ const SignUp = ({ onSignUp, onGoToLogin }) => {
                       <Input placeholder="Department ID (number)" type="number" min="1"
                         value={form.department_id} onChange={e => set('department_id', e.target.value)} required />
                     </Field>
-                    <Field label="Contact Number"><Input type="tel" placeholder="09XXXXXXXXX" value={form.contact_number_faculty} onChange={e => set('contact_number_faculty', e.target.value)} /></Field>
+                    <Field label="Contact Number"><Input type="tel" placeholder="09XXXXXXXXX" value={form.contact_number_faculty} onChange={e => set('contact_number_faculty', e.target.value.replace(/\D/g, '').slice(0, 11))} inputMode="numeric" maxLength={11} /></Field>
                     <Field label="Office Location"><Input placeholder="e.g. Faculty Room 2" value={form.office_location} onChange={e => set('office_location', e.target.value)} /></Field>
                   </div>
                 </>
@@ -508,17 +524,17 @@ const SignUp = ({ onSignUp, onGoToLogin }) => {
               {/* ══ ACCOUNT CREDENTIALS (both roles) ══ */}
               <Section icon="🔐" title="Account Credentials" />
 
-              <Field label={form.role === 'faculty' ? 'Faculty Email * (@pnc.edu.com)' : 'Personal Email *'}>
+              <Field label={form.role === 'faculty' ? 'Personal Email *' : 'Personal Email *'}>
                 <Input
                   icon="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"
                   type="email"
-                  placeholder={form.role === 'faculty' ? 'faculty1.username@pnc.edu.com' : 'youremail@gmail.com'}
+                  placeholder={form.role === 'faculty' ? 'yourpersonalemail@gmail.com' : 'youremail@gmail.com'}
                   value={form.email}
                   onChange={e => set('email', e.target.value)}
                   required
                 />
                 {form.role === 'faculty' && (
-                  <p className="text-xs text-slate-500 mt-1.5">Must be a valid <span className="text-brand-400">@pnc.edu.com</span> address.</p>
+                  <p className="text-xs text-slate-500 mt-1.5">OTP will be sent here. This email is also used to log in.</p>
                 )}
                 {form.role === 'student' && (
                   <p className="text-xs text-slate-500 mt-1.5">Used for OTP verification only. Login uses your student number.</p>
@@ -564,7 +580,7 @@ const SignUp = ({ onSignUp, onGoToLogin }) => {
                 <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 {form.role === 'student'
                   ? 'A 6-digit OTP will be sent to your email for verification. Your login will use your student number.'
-                  : 'A 6-digit OTP will be sent to your @pnc.edu.com email for verification.'
+                  : 'A 6-digit OTP will be sent to your personal email for verification. This email is also your login.'
                 }
               </div>
 
