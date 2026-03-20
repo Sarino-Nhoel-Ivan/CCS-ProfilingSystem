@@ -23,7 +23,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::get('/search', [\App\Http\Controllers\SearchController::class, 'index']);
 
-Route::get('/faculties/export/csv', [\App\Http\Controllers\FacultyController::class, 'export']);
+Route::get('/faculties/export/csv',        [\App\Http\Controllers\FacultyController::class, 'export']);
+Route::post('/faculties/{faculty}/photo',  [\App\Http\Controllers\FacultyController::class, 'uploadPhoto']);
 Route::get('/students/export/csv',  [StudentController::class, 'export']);
 Route::post('/students/advanced-search', [StudentController::class, 'advancedSearch']);
 

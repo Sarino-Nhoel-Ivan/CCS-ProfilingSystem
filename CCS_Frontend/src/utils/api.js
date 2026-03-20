@@ -91,6 +91,19 @@ export const api = {
     create: (data) => fetchApi('/faculties', { method: 'POST', body: JSON.stringify(data) }),
     update: (id, data) => fetchApi(`/faculties/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id) => fetchApi(`/faculties/${id}`, { method: 'DELETE' }),
+    uploadPhoto: (id, file) => {
+      const form = new FormData();
+      form.append('photo', file);
+      return fetch(`${API_BASE_URL}/faculties/${id}/photo`, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' },
+        body: form,
+      }).then(async r => {
+        const data = await r.json().catch(() => null);
+        if (!r.ok) throw new Error(data?.message || 'Upload failed');
+        return data;
+      });
+    },
   },
   subjects: {
     getAll: () => fetchApi('/subjects'),
