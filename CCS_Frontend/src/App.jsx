@@ -8,8 +8,11 @@ import InstructionModule from './modules/Instruction';
 import SchedulingModule from './modules/Scheduling';
 import EventsModule from './modules/Events';
 import SearchModule from './modules/Search';
-import Login from './pages/Login';
-import SignUp from './pages/SignUp';
+import StudentLogin from './pages/StudentLogin';
+import FacultyLogin from './pages/FacultyLogin';
+import AdminLogin from './pages/AdminLogin';
+import StudentSignUp from './pages/StudentSignUp';
+import FacultySignUp from './pages/FacultySignUp';
 import StudentDashboard from './pages/dashboards/StudentDashboard';
 import FacultyDashboard from './pages/dashboards/FacultyDashboard';
 import { DarkModeContext } from './context/DarkModeContext';
@@ -82,7 +85,7 @@ function App() {
   const navigate = useNavigate();
 
   const dashboardPath = (u) => {
-    if (!u) return '/login';
+    if (!u) return '/student/login';
     if (u.role === 'admin') return '/admin';
     if (u.role === 'faculty') return '/faculty';
     return '/student';
@@ -103,42 +106,76 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
+    const role = user?.role;
     setUser(null);
-    navigate('/login', { replace: true });
+    if (role === 'admin') navigate('/admin/login', { replace: true });
+    else if (role === 'faculty') navigate('/faculty/login', { replace: true });
+    else navigate('/student/login', { replace: true });
   };
 
   return (
     <Routes>
+      {/* Student routes */}
+      <Route path="/login" element={<Navigate to="/student/login" replace />} />
       <Route
-        path="/login"
+        path="/student/login"
         element={!user
-          ? <Login onLogin={handleLogin} onGoToSignUp={() => navigate('/signup')} />
+          ? <StudentLogin onLogin={handleLogin} onGoToSignUp={() => navigate('/student/signup')} />
           : <Navigate to={dashboardPath(user)} replace />}
       />
       <Route
-        path="/signup"
+        path="/student/signup"
         element={!user
-          ? <SignUp onSignUp={handleSignUp} onGoToLogin={() => navigate('/login')} />
+          ? <StudentSignUp onSignUp={handleSignUp} onGoToLogin={() => navigate('/student/login')} />
           : <Navigate to={dashboardPath(user)} replace />}
       />
+
+      {/* Faculty routes */}
+      <Route
+        path="/faculty/login"
+        element={!user
+          ? <FacultyLogin onLogin={handleLogin} onGoToSignUp={() => navigate('/faculty/signup')} />
+          : <Navigate to={dashboardPath(user)} replace />}
+      />
+      <Route
+        path="/faculty/signup"
+        element={!user
+          ? <FacultySignUp onSignUp={handleSignUp} onGoToLogin={() => navigate('/faculty/login')} />
+          : <Navigate to={dashboardPath(user)} replace />}
+      />
+
+      {/* Admin route (no signup) */}
+      <Route
+        path="/admin/login"
+        element={!user
+          ? <AdminLogin onLogin={handleLogin} />
+          : <Navigate to={dashboardPath(user)} replace />}
+      />
+
+      {/* Backward compat redirects */}
+      <Route path="/signup" element={<Navigate to="/student/signup" replace />} />
+
+      {/* Dashboards */}
       <Route
         path="/admin"
         element={user?.role === 'admin'
           ? <AdminLayout user={user} onLogout={handleLogout} />
-          : <Navigate to="/login" replace />}
+          : <Navigate to="/admin/login" replace />}
       />
       <Route
         path="/student"
         element={user?.role === 'student'
           ? <StudentDashboard user={user} onLogout={handleLogout} />
-          : <Navigate to="/login" replace />} 
+          : <Navigate to="/student/login" replace />}
       />
       <Route
         path="/faculty"
         element={user?.role === 'faculty'
           ? <FacultyDashboard user={user} onLogout={handleLogout} />
-          : <Navigate to="/login" replace />}
+          : <Navigate to="/faculty/login" replace />}
       />
+
+      {/* Catch-all */}
       <Route path="*" element={<Navigate to={dashboardPath(user)} replace />} />
     </Routes>
   );
