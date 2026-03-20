@@ -120,7 +120,7 @@ class AuthController extends Controller
                 'unique:students,student_number',
                 'regex:/^(22|23|24)\d{5}$/',
             ],
-            'email'                => 'required|string|email|max:255|unique:students,email',
+            'email'                => 'required|string|email|max:255|unique:students,email|unique:users,email',
             'password'             => 'required|string|min:8|confirmed',
             'first_name'           => 'required|string|max:100',
             'last_name'            => 'required|string|max:100',
@@ -172,9 +172,8 @@ class AuthController extends Controller
         Cache::forget("otp_verified:{$email}");
 
         // Resolve department from the selected course
-        $course = $validated['course_id']
-            ? \App\Models\Course::find($validated['course_id'])
-            : null;
+        $courseId = $validated['course_id'] ?? null;
+        $course   = $courseId ? \App\Models\Course::find($courseId) : null;
 
         $student = Student::create([
             'student_number'       => $validated['student_number'],
