@@ -450,9 +450,16 @@ const AffiliationModal = ({ studentId, record, onClose, onSaved }) => {
 /* ════════════════════════════════════════════════
    SKILLS MODAL
 ════════════════════════════════════════════════ */
+const LEVEL_META = {
+  Beginner:     { color: 'bg-sky-500/20 text-sky-300 border-sky-500/30',     bar: 'bg-sky-400',     pct: 25 },
+  Intermediate: { color: 'bg-amber-500/20 text-amber-300 border-amber-500/30', bar: 'bg-amber-400',   pct: 50 },
+  Advanced:     { color: 'bg-brand-500/20 text-brand-300 border-brand-500/30', bar: 'bg-brand-500',   pct: 75 },
+  Expert:       { color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', bar: 'bg-emerald-400', pct: 100 },
+};
+
 const SkillsModal = ({ studentId, currentSkills, onClose, onSaved }) => {
-  const dark = useTheme(); const i = mkInp(dark); const s = mkSel(dark);
-  const ii = i; const sl = s; // aliases used in nested JSX
+  const dark = useTheme();
+  const i = mkInp(dark); const sl = mkSel(dark);
   const [allSkills, setAllSkills] = useState([]);
   const [selected, setSelected] = useState(
     currentSkills.map(s => ({
@@ -466,6 +473,7 @@ const SkillsModal = ({ studentId, currentSkills, onClose, onSaved }) => {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState(null);
   const [search, setSearch] = useState('');
+  const [activeTab, setActiveTab] = useState('Academic');
 
   useEffect(() => { api.skills.getAll().then(setAllSkills).catch(() => {}); }, []);
 
@@ -491,73 +499,109 @@ const SkillsModal = ({ studentId, currentSkills, onClose, onSaved }) => {
     finally { setSaving(false); }
   };
 
-  const filtered = allSkills.filter(s => s.skill_name.toLowerCase().includes(search.toLowerCase()) || s.skill_category.toLowerCase().includes(search.toLowerCase()));
-  const categories = [...new Set(filtered.map(s => s.skill_category))];
+  const tabs = ['Academic', 'Non-Academic'];
+  const filtered = allSkills.filter(s =>
+    s.skill_category === activeTab &&
+    (s.skill_name.toLowerCase().includes(search.toLowerCase()) || s.skill_category.toLowerCase().includes(search.toLowerCase()))
+  );
 
   return (
-    <Modal title="Manage Skills" subtitle="Select skills and set your proficiency level" onClose={onClose}
-      footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>Save Skills</BtnPrimary></div>}>
+    <Modal title="Manage Skills" subtitle="Pick your skills and set your proficiency level" onClose={onClose}
+      footer={<div className="flex items-center justify-between w-full"><span className={`text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{selected.length} skill{selected.length !== 1 ? 's' : ''} selected</span><div className="flex gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>Save Skills</BtnPrimary></div></div>}>
       <ErrBox msg={err} />
-      <input value={search} onChange={e => setSearch(e.target.value)} className={`${i} mb-4`} placeholder="Search skills…" />
 
-      {/* Skill picker */}
-      <div className="space-y-4 mb-6 max-h-48 overflow-y-auto pr-1">
-        {categories.map(cat => (
-          <div key={cat}>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">{cat}</p>
-            <div className="flex flex-wrap gap-2">
-              {filtered.filter(s => s.skill_category === cat).map(skill => {
+      {/* Search */}
+      <div className="relative mb-4">
+        <svg className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${dark ? 'text-slate-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+        <input value={search} onChange={e => setSearch(e.target.value)} className={`${i} pl-9`} placeholder="Search skills…" />
+      </div>
+
+      {/* Category tabs */}
+      <div className={`flex gap-1 p-1 rounded-xl mb-4 ${dark ? 'bg-slate-900/60' : 'bg-slate-100'}`}>
+        {tabs.map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)}
+            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === tab ? 'bg-brand-500 text-white shadow' : dark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
+            {tab === 'Academic' ? '💻 Academic' : '🏅 Non-Academic'}
+          </button>
+        ))}
+      </div>
+
+      {/* Skill chips */}
+      <div className={`rounded-xl p-3 mb-5 min-h-[120px] max-h-52 overflow-y-auto ${dark ? 'bg-slate-900/40 border border-slate-700/40' : 'bg-slate-50 border border-slate-200'}`}>
+        {filtered.length === 0
+          ? <p className={`text-xs text-center py-8 ${dark ? 'text-slate-600' : 'text-slate-400'}`}>No skills found.</p>
+          : <div className="flex flex-wrap gap-2">
+              {filtered.map(skill => {
                 const isOn = selected.some(s => s.skill_id === skill.id);
+                const lvl = selected.find(s => s.skill_id === skill.id)?.skill_level;
+                const meta = LEVEL_META[lvl];
                 return (
                   <button key={skill.id} type="button" onClick={() => toggle(skill)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${isOn ? 'bg-brand-500/20 text-brand-300 border-brand-500/40' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500'}`}>
-                    {isOn && '✓ '}{skill.skill_name}
+                    className={`group flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 ${
+                      isOn
+                        ? 'bg-brand-500 text-white border-brand-600 shadow-md shadow-brand-500/20 scale-105'
+                        : dark ? 'bg-slate-800 text-slate-400 border-slate-700 hover:border-brand-500/50 hover:text-slate-200' : 'bg-white text-slate-600 border-slate-300 hover:border-brand-400 hover:text-slate-800'
+                    }`}>
+                    {isOn && <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
+                    {skill.skill_name}
+                    {meta && <span className={`text-[9px] px-1.5 py-0.5 rounded-full border font-bold ${meta.color}`}>{lvl}</span>}
                   </button>
                 );
               })}
             </div>
-          </div>
-        ))}
-        {categories.length === 0 && <p className="text-sm text-slate-500 text-center py-4">No skills found.</p>}
+        }
       </div>
 
       {/* Selected skill details */}
       {selected.length > 0 && (
         <div>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Selected Skills — Set Details</p>
-          <div className="space-y-3">
-            {selected.map(s => (
-              <div key={s.skill_id} className="p-4 rounded-xl bg-slate-800/60 border border-slate-700/60">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <span className="text-[10px] font-bold text-white bg-brand-500 px-2 py-0.5 rounded uppercase">{s.skill_category}</span>
-                    <p className="text-sm font-semibold text-slate-100 mt-1">{s.skill_name}</p>
+          <p className={`text-[10px] font-bold uppercase tracking-widest mb-3 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
+            Selected — Set Proficiency
+          </p>
+          <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+            {selected.map(s => {
+              const meta = LEVEL_META[s.skill_level];
+              return (
+                <div key={s.skill_id} className={`rounded-xl border overflow-hidden ${dark ? 'bg-slate-800/60 border-slate-700/60' : 'bg-white border-slate-200'}`}>
+                  <div className={`flex items-center justify-between px-4 py-2.5 ${dark ? 'bg-slate-900/40' : 'bg-slate-50'}`}>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${s.skill_category === 'Academic' ? 'bg-brand-500/20 text-brand-300 border-brand-500/30' : 'bg-purple-500/20 text-purple-300 border-purple-500/30'}`}>
+                        {s.skill_category === 'Academic' ? '💻' : '🏅'} {s.skill_category}
+                      </span>
+                      <span className={`text-sm font-semibold ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{s.skill_name}</span>
+                    </div>
+                    <button onClick={() => toggle({ id: s.skill_id })} className={`transition-colors ${dark ? 'text-slate-600 hover:text-red-400' : 'text-slate-300 hover:text-red-500'}`}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
                   </div>
-                  <button onClick={() => toggle({ id: s.skill_id })} className="text-slate-500 hover:text-red-400 transition-colors">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Proficiency Level">
-                    <Sel value={s.skill_level} onChange={e => updatePivot(s.skill_id, 'skill_level', e.target.value)} className={sl}>
-                      <option value="">Select level</option>
-                      <option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Expert</option>
-                    </Sel>
-                  </Field>
-                  <Field label="Certified?">
-                    <Sel value={s.certification ? 'yes' : 'no'} onChange={e => updatePivot(s.skill_id, 'certification', e.target.value === 'yes')} className={sl}>
-                      <option value="no">No</option><option value="yes">Yes</option>
-                    </Sel>
-                  </Field>
-                  {s.certification && (
-                    <>
-                      <Field label="Certification Name"><input value={s.certification_name} onChange={e => updatePivot(s.skill_id, 'certification_name', e.target.value)} className={ii} /></Field>
-                      <Field label="Certification Date"><input type="date" value={s.certification_date} onChange={e => updatePivot(s.skill_id, 'certification_date', e.target.value)} className={ii} /></Field>
-                    </>
+                  {/* Level bar */}
+                  {meta && (
+                    <div className={`h-1 ${dark ? 'bg-slate-700' : 'bg-slate-100'}`}>
+                      <div className={`h-full transition-all duration-500 ${meta.bar}`} style={{ width: `${meta.pct}%` }} />
+                    </div>
                   )}
+                  <div className="px-4 py-3 grid grid-cols-2 gap-3">
+                    <Field label="Proficiency Level">
+                      <Sel value={s.skill_level} onChange={e => updatePivot(s.skill_id, 'skill_level', e.target.value)} className={sl}>
+                        <option value="">Select level</option>
+                        <option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Expert</option>
+                      </Sel>
+                    </Field>
+                    <Field label="Certified?">
+                      <Sel value={s.certification ? 'yes' : 'no'} onChange={e => updatePivot(s.skill_id, 'certification', e.target.value === 'yes')} className={sl}>
+                        <option value="no">No</option><option value="yes">Yes</option>
+                      </Sel>
+                    </Field>
+                    {s.certification && (
+                      <>
+                        <Field label="Certification Name"><input value={s.certification_name} onChange={e => updatePivot(s.skill_id, 'certification_name', e.target.value)} className={i} /></Field>
+                        <Field label="Certification Date"><input type="date" value={s.certification_date} onChange={e => updatePivot(s.skill_id, 'certification_date', e.target.value)} className={i} /></Field>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -1002,39 +1046,105 @@ const StudentDashboard = ({ user, onLogout }) => {
 
     if (loadingProfile) return <Spinner />;
 
+    const academic    = s?.skills?.filter(sk => sk.skill_category === 'Academic')    ?? [];
+    const nonAcademic = s?.skills?.filter(sk => sk.skill_category === 'Non-Academic') ?? [];
+
+    const SkillCard = ({ skill }) => {
+      const meta = LEVEL_META[skill.pivot?.skill_level];
+      return (
+        <div className={`group relative rounded-2xl border overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${dark ? 'bg-slate-800/60 border-slate-700/50 hover:border-brand-500/40 hover:shadow-brand-500/10' : 'bg-white border-slate-200 hover:border-brand-400/50 hover:shadow-brand-500/10'}`}>
+          <div className={`h-1 w-full ${skill.skill_category === 'Academic' ? 'bg-gradient-to-r from-brand-500 to-amber-400' : 'bg-gradient-to-r from-purple-500 to-pink-400'}`} />
+          <div className="p-4">
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <h4 className={`font-bold text-sm leading-tight ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{skill.skill_name}</h4>
+              {skill.pivot?.certification && (
+                <span className="shrink-0 flex items-center gap-1 text-[9px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">
+                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  Certified
+                </span>
+              )}
+            </div>
+            {skill.description && <p className={`text-xs line-clamp-2 mb-3 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{skill.description}</p>}
+            {meta ? (
+              <div className="mt-auto">
+                <div className="flex items-center justify-between mb-1">
+                  <span className={`text-[10px] font-semibold ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Proficiency</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${meta.color}`}>{skill.pivot.skill_level}</span>
+                </div>
+                <div className={`h-1.5 rounded-full overflow-hidden ${dark ? 'bg-slate-700' : 'bg-slate-100'}`}>
+                  <div className={`h-full rounded-full transition-all duration-700 ${meta.bar}`} style={{ width: `${meta.pct}%` }} />
+                </div>
+              </div>
+            ) : (
+              <span className={`text-[10px] ${dark ? 'text-slate-600' : 'text-slate-400'}`}>No level set</span>
+            )}
+            {skill.pivot?.certification && skill.pivot?.certification_name && (
+              <p className={`text-[10px] mt-2 truncate ${dark ? 'text-slate-500' : 'text-slate-400'}`}>📜 {skill.pivot.certification_name}</p>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    const CategorySection = ({ title, emoji, skills, emptyMsg }) => (
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-base">{emoji}</span>
+          <h3 className={`text-xs font-black uppercase tracking-widest ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{title}</h3>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${dark ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>{skills.length}</span>
+          <div className={`flex-1 h-px ${dark ? 'bg-slate-700/60' : 'bg-slate-200'}`} />
+        </div>
+        {skills.length > 0
+          ? <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">{skills.map(sk => <SkillCard key={sk.id} skill={sk} />)}</div>
+          : <p className={`text-xs py-4 pl-1 ${dark ? 'text-slate-600' : 'text-slate-400'}`}>{emptyMsg}</p>
+        }
+      </div>
+    );
+
     return (
       <div className="space-y-5">
         {modal && <SkillsModal studentId={s?.id} currentSkills={s?.skills ?? []} onClose={() => setModal(false)} onSaved={() => { setModal(false); loadStudent(); }} />}
 
-        <SectionCard title="Skills & Certifications" icon="💡" action={s && <AddBtn onClick={() => setModal(true)} label="Manage Skills" />}>
-          {!s ? <EmptyState icon="🛠️" title="No profile linked." /> :
-           s.skills?.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {s.skills.map(skill => (
-                <div key={skill.id} className="border border-slate-700 bg-slate-800/50 p-4 rounded-xl flex flex-col gap-2">
-                  <span className="text-[10px] font-bold text-white bg-brand-500 px-2 py-0.5 rounded uppercase w-fit">{skill.skill_category}</span>
-                  <h4 className="font-bold text-sm text-slate-100">{skill.skill_name}</h4>
-                  {skill.description && <p className="text-xs text-slate-400 line-clamp-2">{skill.description}</p>}
-                  <div className="mt-auto pt-3 border-t border-slate-700 flex justify-between items-center">
-                    <span className="text-xs font-medium border border-slate-600 text-slate-400 px-2 py-1 rounded">Level: {skill.pivot?.skill_level || 'N/A'}</span>
-                    {skill.pivot?.certification && (
-                      <span className="text-xs flex items-center font-medium text-green-400">
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        Certified
-                      </span>
-                    )}
-                  </div>
-                  {skill.pivot?.certification && (
-                    <div className="text-xs text-slate-500">
-                      <p className="font-semibold text-slate-400">{skill.pivot.certification_name}</p>
-                      <p>Date: {skill.pivot.certification_date || '—'}</p>
-                    </div>
-                  )}
-                </div>
-              ))}
+        <div className={`rounded-2xl border p-5 flex items-center justify-between gap-4 ${dark ? 'bg-slate-800/50 border-slate-700/40' : 'bg-white border-slate-200 shadow-sm'}`}>
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${dark ? 'bg-brand-500/15' : 'bg-brand-50'}`}>💡</div>
+            <div>
+              <h2 className={`font-black text-base ${dark ? 'text-slate-100' : 'text-slate-800'}`}>Skills & Certifications</h2>
+              <p className={`text-xs mt-0.5 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
+                {s?.skills?.length ? `${s.skills.length} skill${s.skills.length !== 1 ? 's' : ''} · ${academic.length} academic · ${nonAcademic.length} non-academic` : 'No skills added yet'}
+              </p>
             </div>
-          ) : <EmptyState icon="🛠️" title="No skills recorded yet." sub="Click 'Manage Skills' to add your skills." />}
-        </SectionCard>
+          </div>
+          {s && (
+            <button onClick={() => setModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white transition-all duration-200 hover:scale-105 active:scale-95"
+              style={{ background: 'linear-gradient(135deg, #f26522, #e04f0f)', boxShadow: '0 4px 14px rgba(242,101,34,0.35)' }}>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" /></svg>
+              Manage Skills
+            </button>
+          )}
+        </div>
+
+        {!s ? <EmptyState icon="🛠️" title="No profile linked." /> : s.skills?.length === 0 ? (
+          <div className={`rounded-2xl border-2 border-dashed flex flex-col items-center justify-center py-16 gap-3 ${dark ? 'border-slate-700 bg-slate-800/20' : 'border-slate-200 bg-slate-50'}`}>
+            <div className="text-5xl">🛠️</div>
+            <p className={`font-bold text-sm ${dark ? 'text-slate-400' : 'text-slate-600'}`}>No skills recorded yet</p>
+            <p className={`text-xs ${dark ? 'text-slate-600' : 'text-slate-400'}`}>Click "Manage Skills" to add your academic and non-academic skills.</p>
+            <button onClick={() => setModal(true)}
+              className="mt-2 flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white transition-all hover:scale-105"
+              style={{ background: 'linear-gradient(135deg, #f26522, #e04f0f)', boxShadow: '0 4px 14px rgba(242,101,34,0.3)' }}>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" /></svg>
+              Add Skills
+            </button>
+          </div>
+        ) : (
+          <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-800/30 border-slate-700/40' : 'bg-white border-slate-200 shadow-sm'}`}>
+            <div className="p-5 space-y-7">
+              <CategorySection title="Academic Skills" emoji="💻" skills={academic} emptyMsg="No academic skills added." />
+              <CategorySection title="Non-Academic Skills" emoji="🏅" skills={nonAcademic} emptyMsg="No non-academic skills added." />
+            </div>
+          </div>
+        )}
       </div>
     );
   };

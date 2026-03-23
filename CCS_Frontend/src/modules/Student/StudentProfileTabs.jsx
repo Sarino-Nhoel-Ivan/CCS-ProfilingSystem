@@ -296,43 +296,74 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
             </div>
           </div>
 
-          {/* Skills & Certifications */}
+          {/* Affiliations */}
           <div className={`pt-4 border-t ${divider}`}>
-            <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Skills & Certifications</h3>
-            {student.skills && student.skills.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {student.skills.map(skill => (
-                  <div key={skill.id} className={`border p-4 rounded-xl ${skillCard}`}>
-                    <div className="mb-2">
-                      <span className="text-xs font-bold text-white bg-brand-500 px-2 py-0.5 rounded uppercase tracking-wider">{skill.skill_category}</span>
+            <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Affiliations & Organizations</h3>
+            {student.affiliations && student.affiliations.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {student.affiliations.map(aff => (
+                  <div key={aff.id} className={`border p-4 rounded-xl flex items-start space-x-4 ${affCard}`}>
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${affIcon}`}>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                     </div>
-                    <h4 className={`font-bold text-sm mb-1 ${boldText}`}>{skill.skill_name}</h4>
-                    <p className={`text-xs mb-3 line-clamp-2 ${subText}`}>{skill.description}</p>
-                    <div className={`mt-auto pt-3 border-t flex justify-between items-center ${skillFoot}`}>
-                      <span className={`text-xs font-medium border px-2 py-1 rounded ${skillLevel}`}>Level: {skill.pivot?.skill_level || 'N/A'}</span>
-                      {skill.pivot?.certification && (
-                        <span className={`text-xs flex items-center font-medium ${dark ? 'text-green-400' : 'text-green-600'}`}>
-                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                          Certified
-                        </span>
-                      )}
+                    <div>
+                      <h4 className={`font-bold text-sm ${boldText}`}>{aff.organization_name}</h4>
+                      <p className={`text-xs mb-1 ${subText}`}>{aff.position} • {aff.status}</p>
+                      <p className={`text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Joined: {aff.date_joined} {aff.date_ended ? `- Ended: ${aff.date_ended}` : ''}</p>
                     </div>
-                    {skill.pivot?.certification && (
-                      <div className={`mt-2 text-xs ${subText}`}>
-                        <p className="font-semibold">{skill.pivot.certification_name}</p>
-                        <p>Date: {skill.pivot.certification_date}</p>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
             ) : (
-              <p className={`text-sm italic ${subText}`}>No skills recorded.</p>
+              <p className={`text-sm italic ${subText}`}>No affiliations recorded.</p>
             )}
           </div>
 
+        </div>
+      )}
+
+      {/* Skills & Certifications Tab */}
+      {activeTab === 'skills_certifications' && (
+        <div className="space-y-6">
+          <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Skills & Certifications</h3>
+          {student.skills && student.skills.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {student.skills.map(skill => (
+                <div key={skill.id} className={`border p-4 rounded-xl ${skillCard}`}>
+                  <div className="mb-2">
+                    <span className="text-xs font-bold text-white bg-brand-500 px-2 py-0.5 rounded uppercase tracking-wider">{skill.skill_category}</span>
+                  </div>
+                  <h4 className={`font-bold text-sm mb-1 ${boldText}`}>{skill.skill_name}</h4>
+                  <p className={`text-xs mb-3 line-clamp-2 ${subText}`}>{skill.description}</p>
+                  <div className={`mt-auto pt-3 border-t flex justify-between items-center ${skillFoot}`}>
+                    <span className={`text-xs font-medium border px-2 py-1 rounded ${skillLevel}`}>Level: {skill.pivot?.skill_level || 'N/A'}</span>
+                    {skill.pivot?.certification && (
+                      <span className={`text-xs flex items-center font-medium ${dark ? 'text-green-400' : 'text-green-600'}`}>
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        Certified
+                      </span>
+                    )}
+                  </div>
+                  {skill.pivot?.certification && (
+                    <div className={`mt-2 text-xs ${subText}`}>
+                      <p className="font-semibold">{skill.pivot.certification_name}</p>
+                      <p>Date: {skill.pivot.certification_date}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className={`text-sm italic ${subText}`}>No skills recorded.</p>
+          )}
+        </div>
+      )}
+
+      {/* Academic History Tab */}
+      {activeTab === 'academic_history' && (
+        <div className="space-y-8">
           {/* Academic Background */}
-          <div className={`pt-4 border-t ${divider}`}>
+          <div>
             <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Academic Background</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className={`p-4 rounded-lg space-y-3 ${addrBox}`}>
@@ -351,7 +382,7 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
           </div>
 
           {/* Academic History */}
-          <div className={`pt-4 border-t ${divider}`}>
+          <div>
             <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Academic History</h3>
             {student.academic_histories && student.academic_histories.length > 0 ? (
               <div className="overflow-x-auto">
@@ -388,77 +419,55 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
               <p className={`text-sm italic ${subText}`}>No academic history recorded.</p>
             )}
           </div>
+        </div>
+      )}
 
-          {/* Affiliations */}
-          <div className={`pt-4 border-t ${divider}`}>
-            <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Affiliations & Organizations</h3>
-            {student.affiliations && student.affiliations.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {student.affiliations.map(aff => (
-                  <div key={aff.id} className={`border p-4 rounded-xl flex items-start space-x-4 ${affCard}`}>
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${affIcon}`}>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                    </div>
+      {/* Violations Tab */}
+      {activeTab === 'violations' && (
+        <div className="space-y-6">
+          <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Violations / Disciplinary Records</h3>
+          {student.violations && student.violations.length > 0 ? (
+            <div className="space-y-4">
+              {student.violations.map(v => (
+                <div key={v.id} className={`border p-4 rounded-xl ${
+                  v.severity_level === 'High'
+                    ? (dark ? 'border-red-800/50 bg-red-900/20' : 'border-red-200 bg-red-50/30')
+                    : v.severity_level === 'Medium'
+                    ? (dark ? 'border-yellow-800/50 bg-yellow-900/20' : 'border-yellow-200 bg-yellow-50/30')
+                    : (dark ? 'border-slate-700' : 'border-slate-200')
+                }`}>
+                  <div className="flex justify-between items-start mb-2">
                     <div>
-                      <h4 className={`font-bold text-sm ${boldText}`}>{aff.organization_name}</h4>
-                      <p className={`text-xs mb-1 ${subText}`}>{aff.position} • {aff.status}</p>
-                      <p className={`text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Joined: {aff.date_joined} {aff.date_ended ? `- Ended: ${aff.date_ended}` : ''}</p>
+                      <h4 className={`font-bold text-sm ${boldText}`}>{v.violation_type}</h4>
+                      <p className={`text-xs mt-1 ${subText}`}>Reported: {v.date_reported} by {v.reported_by}</p>
+                    </div>
+                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase tracking-wider ${
+                      v.severity_level === 'High'
+                        ? (dark ? 'bg-red-900/40 text-red-300' : 'bg-red-100 text-red-700')
+                        : v.severity_level === 'Medium'
+                        ? (dark ? 'bg-yellow-900/40 text-yellow-300' : 'bg-yellow-100 text-yellow-700')
+                        : (dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-700')
+                    }`}>{v.severity_level}</span>
+                  </div>
+                  <p className={`text-sm mt-3 mb-3 ${dark ? 'text-slate-300' : 'text-slate-700'}`}>{v.description}</p>
+                  <div className={`p-3 rounded border text-sm ${actionBox}`}>
+                    <p className={`font-semibold text-xs uppercase mb-1 ${boldText}`}>Action Taken</p>
+                    <p className={`mb-2 ${dark ? 'text-slate-400' : 'text-slate-600'}`}>{v.action_taken || 'Pending'}</p>
+                    <div className={`flex justify-between items-center text-xs border-t pt-2 ${dark ? 'border-slate-700 text-slate-500' : 'border-slate-50 text-slate-500'}`}>
+                      <span>Status: <strong className={v.status === 'Resolved' ? 'text-green-500' : 'text-yellow-500'}>{v.status}</strong></span>
+                      <span>Resolution Date: {v.resolution_date || 'N/A'}</span>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className={`text-sm italic ${subText}`}>No affiliations recorded.</p>
-            )}
-          </div>
-
-          {/* Violations */}
-          <div className={`pt-4 border-t ${divider}`}>
-            <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Violations / Disciplinary Records</h3>
-            {student.violations && student.violations.length > 0 ? (
-              <div className="space-y-4">
-                {student.violations.map(v => (
-                  <div key={v.id} className={`border p-4 rounded-xl ${
-                    v.severity_level === 'High'
-                      ? (dark ? 'border-red-800/50 bg-red-900/20' : 'border-red-200 bg-red-50/30')
-                      : v.severity_level === 'Medium'
-                      ? (dark ? 'border-yellow-800/50 bg-yellow-900/20' : 'border-yellow-200 bg-yellow-50/30')
-                      : (dark ? 'border-slate-700' : 'border-slate-200')
-                  }`}>
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h4 className={`font-bold text-sm ${boldText}`}>{v.violation_type}</h4>
-                        <p className={`text-xs mt-1 ${subText}`}>Reported: {v.date_reported} by {v.reported_by}</p>
-                      </div>
-                      <span className={`px-2 py-1 rounded text-xs font-bold uppercase tracking-wider ${
-                        v.severity_level === 'High'
-                          ? (dark ? 'bg-red-900/40 text-red-300' : 'bg-red-100 text-red-700')
-                          : v.severity_level === 'Medium'
-                          ? (dark ? 'bg-yellow-900/40 text-yellow-300' : 'bg-yellow-100 text-yellow-700')
-                          : (dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-700')
-                      }`}>{v.severity_level}</span>
-                    </div>
-                    <p className={`text-sm mt-3 mb-3 ${dark ? 'text-slate-300' : 'text-slate-700'}`}>{v.description}</p>
-                    <div className={`p-3 rounded border text-sm ${actionBox}`}>
-                      <p className={`font-semibold text-xs uppercase mb-1 ${boldText}`}>Action Taken</p>
-                      <p className={`mb-2 ${dark ? 'text-slate-400' : 'text-slate-600'}`}>{v.action_taken || 'Pending'}</p>
-                      <div className={`flex justify-between items-center text-xs border-t pt-2 ${dark ? 'border-slate-700 text-slate-500' : 'border-slate-50 text-slate-500'}`}>
-                        <span>Status: <strong className={v.status === 'Resolved' ? 'text-green-500' : 'text-yellow-500'}>{v.status}</strong></span>
-                        <span>Resolution Date: {v.resolution_date || 'N/A'}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className={`border p-6 rounded-xl text-center ${dark ? 'bg-green-900/20 border-green-800/40' : 'bg-green-50 border-green-100'}`}>
-                <svg className={`w-12 h-12 mx-auto mb-3 ${dark ? 'text-green-500' : 'text-green-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <h4 className={`text-lg font-bold mb-1 ${dark ? 'text-green-300' : 'text-green-800'}`}>Clean Record</h4>
-                <p className={`text-sm ${dark ? 'text-green-500' : 'text-green-600'}`}>This student has no recorded violations.</p>
-              </div>
-            )}
-          </div>
-
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className={`border p-6 rounded-xl text-center ${dark ? 'bg-green-900/20 border-green-800/40' : 'bg-green-50 border-green-100'}`}>
+              <svg className={`w-12 h-12 mx-auto mb-3 ${dark ? 'text-green-500' : 'text-green-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <h4 className={`text-lg font-bold mb-1 ${dark ? 'text-green-300' : 'text-green-800'}`}>Clean Record</h4>
+              <p className={`text-sm ${dark ? 'text-green-500' : 'text-green-600'}`}>This student has no recorded violations.</p>
+            </div>
+          )}
         </div>
       )}
 

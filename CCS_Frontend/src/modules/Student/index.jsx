@@ -94,8 +94,11 @@ const StudentModule = () => {
   };
 
   const tabs = [
-    { id: 'overview',         label: 'Overview' },
-    { id: 'personal_details', label: 'Personal Details' },
+    { id: 'overview',              label: 'Overview' },
+    { id: 'personal_details',      label: 'Personal Details' },
+    { id: 'skills_certifications', label: 'Skills & Certifications' },
+    { id: 'academic_history',      label: 'Academic History' },
+    { id: 'violations',            label: 'Violations' },
   ];
 
   return (
@@ -138,7 +141,7 @@ const StudentModule = () => {
 
         {/* Tabs */}
         <div className={`flex border-b px-6 pt-2 transition-colors duration-300 ${tabBar}`}>
-          {tabs.map((tab) => (
+          {tabs.filter(tab => selectedStudent || tab.id === 'overview' || tab.id === 'personal_details').map((tab) => (
             <button
               key={tab.id}
               onClick={() => {
