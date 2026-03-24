@@ -1093,65 +1093,158 @@ const StudentDashboard = ({ user, onLogout }) => {
      PANEL: ACADEMIC HISTORY
   ════════════════════════════════ */
   const AcademicPanel = () => {
-    const [modal, setModal] = useState(null); // null | 'add' | record
-    const [deleting, setDeleting] = useState(null);
     const s = student;
+    if (loadingProfile) return <Spinner />;
 
-    const del = async (id) => {
-      if (!window.confirm('Delete this academic record?')) return;
-      setDeleting(id);
-      try { await api.students.deleteAcademicHistory(s.id, id); await loadStudent(); }
-      catch { alert('Failed to delete.'); }
-      finally { setDeleting(null); }
+    // Group records by school year, sorted descending (most recent first)
+    const grouped = {};
+    (s?.academic_histories ?? []).forEach(ah => {
+      if (!grouped[ah.school_year]) grouped[ah.school_year] = [];
+      grouped[ah.school_year].push(ah);
+    });
+    const sortedYears = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+
+    const standingStyle = (standing) => {
+      if (standing === "Dean's List")        return dark ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'   : 'bg-amber-100 text-amber-700 border-amber-200';
+      if (standing === 'Good Standing')      return dark ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-emerald-100 text-emerald-700 border-emerald-200';
+      if (standing === 'Academic Probation') return dark ? 'bg-red-500/20 text-red-300 border-red-500/30'         : 'bg-red-100 text-red-700 border-red-200';
+      return dark ? 'bg-slate-700 text-slate-300 border-slate-600' : 'bg-slate-100 text-slate-600 border-slate-200';
     };
 
-    if (loadingProfile) return <Spinner />;
+    const standingIcon = (standing) => {
+      if (standing === "Dean's List")        return '🏆';
+      if (standing === 'Good Standing')      return '✅';
+      if (standing === 'Academic Probation') return '⚠️';
+      return '📋';
+    };
+
+    const gpaColor = (gpa) => {
+      if (!gpa) return dark ? 'text-slate-500' : 'text-slate-400';
+      if (gpa <= 1.5)  return dark ? 'text-amber-300' : 'text-amber-600';
+      if (gpa <= 2.0)  return dark ? 'text-emerald-300' : 'text-emerald-600';
+      if (gpa <= 3.0)  return dark ? 'text-blue-300' : 'text-blue-600';
+      return dark ? 'text-red-300' : 'text-red-600';
+    };
+
+    // Compute overall stats
+    const allRecords = s?.academic_histories ?? [];
+    const recordsWithGpa = allRecords.filter(r => r.gpa);
+    const avgGpa = recordsWithGpa.length
+      ? (recordsWithGpa.reduce((sum, r) => sum + parseFloat(r.gpa), 0) / recordsWithGpa.length).toFixed(2)
+      : null;
+    const totalCompleted = allRecords.reduce((sum, r) => sum + (r.completed_units || 0), 0);
+    const deansListCount = allRecords.filter(r => r.academic_standing === "Dean's List").length;
 
     return (
       <div className="space-y-5">
-        {modal && <AcademicModal studentId={s?.id} record={modal === 'add' ? null : modal} onClose={() => setModal(null)} onSaved={() => { setModal(null); loadStudent(); }} />}
 
-        <SectionCard title="Academic History" icon="📊" action={s && <AddBtn onClick={() => setModal('add')} label="Add Record" />}>
-          {!s ? <EmptyState icon="📚" title="No profile linked." /> :
-           s.academic_histories?.length > 0 ? (
-            <div className="overflow-x-auto -mx-5 -mb-5">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-slate-900/60 text-slate-500 text-xs uppercase tracking-wider">
-                    <th className="px-5 py-3 text-left font-semibold">School Year</th>
-                    <th className="px-5 py-3 text-left font-semibold">Semester</th>
-                    <th className="px-5 py-3 text-center font-semibold">GPA</th>
-                    <th className="px-5 py-3 text-left font-semibold">Standing</th>
-                    <th className="px-5 py-3 text-right font-semibold">Units</th>
-                    <th className="px-5 py-3 text-right font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-700/40">
-                  {s.academic_histories.map(ah => (
-                    <tr key={ah.id} className="hover:bg-slate-700/20 transition-colors">
-                      <td className="px-5 py-3.5 text-slate-200 font-medium">{ah.school_year}</td>
-                      <td className="px-5 py-3.5 text-slate-300">{ah.semester}</td>
-                      <td className="px-5 py-3.5 text-center font-bold text-brand-400">{ah.gpa ?? '—'}</td>
-                      <td className="px-5 py-3.5">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${ah.academic_standing === 'Good Standing' || ah.academic_standing === "Dean's List" ? 'bg-green-900/40 text-green-300' : 'bg-yellow-900/40 text-yellow-300'}`}>{ah.academic_standing}</span>
-                      </td>
-                      <td className="px-5 py-3.5 text-right text-slate-400">{ah.completed_units} / {ah.total_units}</td>
-                      <td className="px-5 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <BtnEdit onClick={() => setModal(ah)} />
-                          <BtnDanger onClick={() => del(ah.id)} disabled={deleting === ah.id}>
-                            {deleting === ah.id ? <div className="w-3 h-3 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" /> : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>}
-                          </BtnDanger>
+        {/* Notice banner — read-only */}
+        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-xs ${dark ? 'bg-blue-500/10 border-blue-500/20 text-blue-300' : 'bg-blue-50 border-blue-200 text-blue-700'}`}>
+          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Academic records are managed by the administration. Contact your registrar for any corrections.
+        </div>
+
+        {/* Summary stats */}
+        {allRecords.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: 'Semesters on Record', val: allRecords.length, icon: '📅', dc: 'from-blue-500/20 to-purple-500/10 border-blue-500/20', lc: 'bg-blue-50 border-blue-100' },
+              { label: 'Average GPA',          val: avgGpa ?? '—',    icon: '📊', dc: 'from-brand-500/20 to-amber-500/10 border-brand-500/20', lc: 'bg-orange-50 border-orange-100' },
+              { label: 'Units Completed',      val: totalCompleted,   icon: '📚', dc: 'from-emerald-500/20 to-teal-500/10 border-emerald-500/20', lc: 'bg-emerald-50 border-emerald-100' },
+              { label: "Dean's List",          val: deansListCount,   icon: '🏆', dc: 'from-amber-500/20 to-yellow-500/10 border-amber-500/20', lc: 'bg-amber-50 border-amber-100' },
+            ].map(st => (
+              <div key={st.label} className={`rounded-2xl border p-4 ${dark ? `bg-gradient-to-br ${st.dc}` : st.lc}`}>
+                <div className="text-xl mb-1">{st.icon}</div>
+                <div className={`text-2xl font-black ${dark ? 'text-white' : 'text-slate-800'}`}>{st.val}</div>
+                <div className={`text-[10px] mt-0.5 font-medium ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{st.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Records grouped by school year */}
+        {!s ? (
+          <EmptyState icon="📚" title="No profile linked." />
+        ) : sortedYears.length === 0 ? (
+          <div className={`rounded-2xl border p-12 flex flex-col items-center justify-center text-center ${dark ? 'bg-slate-900/60 border-slate-700/50' : 'bg-white border-slate-200'}`}>
+            <span className="text-5xl mb-3">📋</span>
+            <p className={`text-sm font-semibold ${dark ? 'text-slate-300' : 'text-slate-600'}`}>No academic records yet.</p>
+            <p className={`text-xs mt-1 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Your records will appear here once added by the administration.</p>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {sortedYears.map(year => {
+              const records = grouped[year].sort((a, b) => {
+                const order = { '1st Semester': 1, '2nd Semester': 2, 'Summer': 3 };
+                return (order[a.semester] ?? 9) - (order[b.semester] ?? 9);
+              });
+              const yearGpa = records.filter(r => r.gpa);
+              const yearAvg = yearGpa.length
+                ? (yearGpa.reduce((s, r) => s + parseFloat(r.gpa), 0) / yearGpa.length).toFixed(2)
+                : null;
+
+              return (
+                <div key={year} className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-800/50 border-slate-700/40' : 'bg-white border-slate-200 shadow-sm'}`}>
+                  {/* Year header */}
+                  <div className={`flex items-center justify-between px-5 py-3.5 border-b ${dark ? 'border-slate-700/40 bg-slate-900/50' : 'border-slate-100 bg-slate-50'}`}>
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-base">🎓</span>
+                      <h4 className={`text-sm font-black ${dark ? 'text-slate-100' : 'text-slate-800'}`}>S.Y. {year}</h4>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${dark ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>{records.length} semester{records.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    {yearAvg && (
+                      <div className="text-right">
+                        <p className={`text-[10px] uppercase tracking-wider font-semibold ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Year Avg GPA</p>
+                        <p className={`text-base font-black ${gpaColor(parseFloat(yearAvg))}`}>{yearAvg}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Semester cards */}
+                  <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {records.map(ah => (
+                      <div key={ah.id} className={`rounded-xl border p-4 ${dark ? 'bg-slate-900/40 border-slate-700/40' : 'bg-slate-50 border-slate-200'}`}>
+                        {/* Semester label */}
+                        <div className="flex items-center justify-between mb-3">
+                          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${dark ? 'bg-brand-500/20 text-brand-300 border-brand-500/30' : 'bg-brand-100 text-brand-700 border-brand-200'}`}>
+                            {ah.semester}
+                          </span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${standingStyle(ah.academic_standing)}`}>
+                            {standingIcon(ah.academic_standing)} {ah.academic_standing}
+                          </span>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : <EmptyState icon="📚" title="No academic history yet." sub="Click 'Add Record' to get started." />}
-        </SectionCard>
 
+                        {/* GPA */}
+                        <div className="mb-3">
+                          <p className={`text-[10px] uppercase tracking-wider font-semibold mb-0.5 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>GPA</p>
+                          <p className={`text-3xl font-black ${gpaColor(ah.gpa ? parseFloat(ah.gpa) : null)}`}>
+                            {ah.gpa ?? <span className={`text-lg ${dark ? 'text-slate-600' : 'text-slate-300'}`}>N/A</span>}
+                          </p>
+                        </div>
+
+                        {/* Units progress bar */}
+                        <div>
+                          <div className="flex justify-between items-center mb-1">
+                            <p className={`text-[10px] uppercase tracking-wider font-semibold ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Units</p>
+                            <p className={`text-xs font-bold ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{ah.completed_units} / {ah.total_units}</p>
+                          </div>
+                          <div className={`h-1.5 rounded-full overflow-hidden ${dark ? 'bg-slate-700' : 'bg-slate-200'}`}>
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-brand-500 to-amber-400 transition-all duration-700"
+                              style={{ width: ah.total_units > 0 ? `${Math.min(100, (ah.completed_units / ah.total_units) * 100)}%` : '0%' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Educational Background */}
         {s && (
           <SectionCard title="Educational Background" icon="🏫">
             <div className="space-y-1">
@@ -1159,9 +1252,9 @@ const StudentDashboard = ({ user, onLogout }) => {
               <Row label="Last Year Attended"   value={val(s.last_year_attended)} />
               <Row label="LRN"                  value={val(s.lrn)} />
               {s.honors_received && (
-                <div className="mt-3 p-3 rounded-xl bg-amber-900/20 border border-amber-800/40">
-                  <p className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">Honors / Awards</p>
-                  <p className="text-sm text-slate-200">{s.honors_received}</p>
+                <div className={`mt-3 p-3 rounded-xl border ${dark ? 'bg-amber-900/20 border-amber-800/40' : 'bg-amber-50 border-amber-200'}`}>
+                  <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${dark ? 'text-amber-400' : 'text-amber-600'}`}>Honors / Awards</p>
+                  <p className={`text-sm ${dark ? 'text-slate-200' : 'text-slate-700'}`}>{s.honors_received}</p>
                 </div>
               )}
             </div>
