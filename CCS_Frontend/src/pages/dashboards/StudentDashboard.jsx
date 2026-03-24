@@ -685,57 +685,191 @@ const StudentDashboard = ({ user, onLogout }) => {
   /* ════════════════════════════════
      PANEL: DASHBOARD
   ════════════════════════════════ */
-  const DashboardPanel = () => (
-    <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600/20 via-purple-600/10 to-transparent border border-brand-500/20 p-6">
-        <div className="absolute right-0 top-0 w-48 h-48 bg-brand-500/10 rounded-full -translate-y-1/4 translate-x-1/4 blur-2xl pointer-events-none" />
-        <div className="relative flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gradient-to-tr from-brand-500 to-purple-500 flex items-center justify-center text-white text-xl font-bold shadow-lg shrink-0">
-            {photoUrl ? <img src={photoUrl} alt="Profile" className="w-full h-full object-cover" style={{ imageRendering: 'auto' }} /> : <span>{initials}</span>}
-          </div>
-          <div>
-            <p className={`text-sm ${dark ? 'text-slate-400' : 'text-slate-500'}`}>Welcome back,</p>
-            <h2 className={`text-2xl font-bold ${dark ? 'text-white' : 'text-slate-800'}`}>{user?.name} 👋</h2>
-            <p className={`text-sm mt-0.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>CCS Student · Profile Hub</p>
+  const DashboardPanel = () => {
+    const s = student;
+    const pendingTasks = tasks.filter(t => !t.done);
+    const doneTasks = tasks.filter(t => t.done);
+    const taskPct = tasks.length ? Math.round((doneTasks.length / tasks.length) * 100) : 0;
+    const skillCount = s?.skills?.length ?? 0;
+    const affiliationCount = s?.affiliations?.length ?? 0;
+    const violationCount = s?.violations?.length ?? 0;
+
+    const quickLinks = [
+      { id: 'profile',      label: 'My Profile',          icon: '👤', desc: 'View & edit your info',         color: dark ? 'from-blue-500/20 to-purple-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-100' },
+      { id: 'academic',     label: 'Academic History',     icon: '📋', desc: 'Grades & academic records',     color: dark ? 'from-emerald-500/20 to-teal-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100' },
+      { id: 'skills',       label: 'My Skills',            icon: '💡', desc: `${skillCount} skill${skillCount !== 1 ? 's' : ''} recorded`,  color: dark ? 'from-amber-500/20 to-orange-500/10 border-amber-500/20' : 'bg-amber-50 border-amber-100' },
+      { id: 'affiliations', label: 'My Affiliations',      icon: '🏛️', desc: `${affiliationCount} org${affiliationCount !== 1 ? 's' : ''} joined`,  color: dark ? 'from-purple-500/20 to-pink-500/10 border-purple-500/20' : 'bg-purple-50 border-purple-100' },
+      { id: 'violations',   label: 'My Violations',        icon: '⚠️', desc: violationCount ? `${violationCount} record${violationCount !== 1 ? 's' : ''}` : 'Clean record ✅', color: dark ? 'from-red-500/20 to-rose-500/10 border-red-500/20' : 'bg-red-50 border-red-100' },
+      { id: 'grades',       label: 'My Grades',            icon: '🎓', desc: 'View your grade report',        color: dark ? 'from-cyan-500/20 to-blue-500/10 border-cyan-500/20' : 'bg-cyan-50 border-cyan-100' },
+    ];
+
+    return (
+      <div className="space-y-6">
+
+        {/* ── Hero Banner ── */}
+        <div className={`relative overflow-hidden rounded-2xl border p-6 ${dark ? 'bg-gradient-to-br from-brand-600/25 via-purple-600/10 to-slate-900/0 border-brand-500/20' : 'bg-gradient-to-br from-brand-50 via-purple-50 to-white border-brand-100'}`}>
+          <div className="absolute right-0 top-0 w-64 h-64 bg-brand-500/10 rounded-full -translate-y-1/3 translate-x-1/3 blur-3xl pointer-events-none" />
+          <div className="absolute left-1/2 bottom-0 w-48 h-48 bg-purple-500/10 rounded-full translate-y-1/2 blur-2xl pointer-events-none" />
+          <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-5">
+            <div className="relative shrink-0">
+              <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gradient-to-tr from-brand-500 to-purple-500 flex items-center justify-center text-white text-2xl font-bold shadow-xl ring-4 ring-brand-500/20">
+                {photoUrl ? <img src={photoUrl} alt="Profile" className="w-full h-full object-cover" /> : <span>{initials}</span>}
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-400 border-2 border-slate-900 shadow" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-xs font-semibold uppercase tracking-widest mb-0.5 ${dark ? 'text-brand-400' : 'text-brand-600'}`}>Welcome back</p>
+              <h2 className={`text-2xl font-black truncate ${dark ? 'text-white' : 'text-slate-800'}`}>{user?.name} 👋</h2>
+              <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                {s?.program && <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${dark ? 'bg-brand-500/20 text-brand-300 border border-brand-500/30' : 'bg-brand-100 text-brand-700'}`}>{s.program}</span>}
+                {s?.year_level && <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>{s.year_level}</span>}
+                {s?.section && <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${dark ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-700'}`}>Section {s.section}</span>}
+                {s?.enrollment_status && <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${dark ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-blue-100 text-blue-700'}`}>{s.enrollment_status}</span>}
+                {!s && <span className={`text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>CCS Student · Profile Hub</span>}
+              </div>
+            </div>
+            {s?.student_number && (
+              <div className={`shrink-0 text-right hidden sm:block`}>
+                <p className={`text-[10px] uppercase tracking-widest font-semibold ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Student No.</p>
+                <p className={`text-sm font-black font-mono ${dark ? 'text-slate-200' : 'text-slate-700'}`}>{s.student_number}</p>
+              </div>
+            )}
           </div>
         </div>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: 'Enrolled Units', val: '14', icon: '📚', color: 'from-brand-500/20 to-amber-500/10 border-brand-500/20' },
-          { label: 'Active Subjects', val: COURSES_DEMO.length, icon: '📖', color: 'from-blue-500/20 to-purple-500/10 border-blue-500/20' },
-          { label: 'Pending Tasks', val: tasks.filter(t => !t.done).length, icon: '✅', color: 'from-red-500/20 to-pink-500/10 border-red-500/20' },
-          { label: 'GPA (Prelim)', val: '1.40', icon: '🎓', color: 'from-emerald-500/20 to-teal-500/10 border-emerald-500/20' },
-        ].map(st => (
-          <div key={st.label} className={`rounded-2xl border p-4 bg-gradient-to-br ${st.color}`}>
-            <div className="text-2xl mb-1">{st.icon}</div>
-            <div className={`text-2xl font-bold ${dark ? 'text-white' : 'text-slate-800'}`}>{st.val}</div>
-            <div className={`text-xs mt-0.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{st.label}</div>
-          </div>
-        ))}
-      </div>
-      <div>
-        <h3 className={`text-xs font-bold uppercase tracking-wider mb-4 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>📢 Announcements</h3>
-        <div className="space-y-3">
-          {ANNOUNCEMENTS.map(a => (
-            <div key={a.id} className={`flex gap-4 p-4 rounded-2xl border transition-all ${dark ? 'bg-slate-800/50 border-slate-700/40 hover:border-slate-600' : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'}`}>
-              <div className={`w-2 h-2 rounded-full mt-2 shrink-0 bg-gradient-to-b ${a.color}`} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-                  <p className={`text-sm font-semibold ${dark ? 'text-slate-200' : 'text-slate-700'}`}>{a.title}</p>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r ${a.color} text-white`}>{a.tag}</span>
-                    <span className={`text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{a.date}</span>
-                  </div>
-                </div>
-                <p className={`text-xs leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{a.desc}</p>
-              </div>
+
+        {/* ── Stats Row ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: 'Enrolled Units', val: s?.year_level ? '14' : '—', icon: '📚', dc: 'from-brand-500/20 to-amber-500/10 border-brand-500/20', lc: 'bg-orange-50 border-orange-100' },
+            { label: 'Active Subjects', val: COURSES_DEMO.length, icon: '📖', dc: 'from-blue-500/20 to-purple-500/10 border-blue-500/20', lc: 'bg-blue-50 border-blue-100' },
+            { label: 'Pending Tasks', val: pendingTasks.length, icon: '✅', dc: 'from-red-500/20 to-pink-500/10 border-red-500/20', lc: 'bg-red-50 border-red-100' },
+            { label: 'GPA (Prelim)', val: '1.40', icon: '🎓', dc: 'from-emerald-500/20 to-teal-500/10 border-emerald-500/20', lc: 'bg-emerald-50 border-emerald-100' },
+          ].map(st => (
+            <div key={st.label} className={`rounded-2xl border p-4 ${dark ? `bg-gradient-to-br ${st.dc}` : st.lc}`}>
+              <div className="text-2xl mb-2">{st.icon}</div>
+              <div className={`text-2xl font-black ${dark ? 'text-white' : 'text-slate-800'}`}>{st.val}</div>
+              <div className={`text-xs mt-0.5 font-medium ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{st.label}</div>
             </div>
           ))}
         </div>
+
+        {/* ── Main Grid: Tasks + Quick Links ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+
+          {/* Task Progress */}
+          <div className={`lg:col-span-2 rounded-2xl border overflow-hidden ${dark ? 'bg-slate-800/50 border-slate-700/40' : 'bg-white border-slate-200 shadow-sm'}`}>
+            <div className={`flex items-center justify-between px-5 py-3.5 border-b ${dark ? 'border-slate-700/40 bg-slate-900/50' : 'border-slate-100 bg-slate-50'}`}>
+              <div className="flex items-center gap-2"><span>✅</span><h4 className="text-xs font-bold uppercase tracking-widest text-brand-500">My Pending Tasks</h4></div>
+              <button onClick={() => setActive('tasks')} className={`text-[10px] font-semibold px-2 py-1 rounded-lg transition-all ${dark ? 'text-brand-400 hover:bg-brand-500/10' : 'text-brand-600 hover:bg-brand-50'}`}>View all →</button>
+            </div>
+            <div className="p-5 space-y-4">
+              {/* Progress bar */}
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className={`text-xs font-semibold ${dark ? 'text-slate-300' : 'text-slate-600'}`}>Task Completion</span>
+                  <span className={`text-xs font-black ${dark ? 'text-brand-400' : 'text-brand-600'}`}>{taskPct}%</span>
+                </div>
+                <div className={`h-2 rounded-full overflow-hidden ${dark ? 'bg-slate-700' : 'bg-slate-100'}`}>
+                  <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-amber-400 transition-all duration-700" style={{ width: `${taskPct}%` }} />
+                </div>
+                <p className={`text-[10px] mt-1 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{doneTasks.length} of {tasks.length} tasks done</p>
+              </div>
+              {/* Pending list */}
+              <div className="space-y-2">
+                {pendingTasks.slice(0, 4).map(t => (
+                  <div key={t.id} className={`flex items-start gap-3 p-3 rounded-xl border ${dark ? 'bg-slate-900/40 border-slate-700/40' : 'bg-slate-50 border-slate-200'}`}>
+                    <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${t.priority === 'High' ? 'bg-red-400' : t.priority === 'Medium' ? 'bg-amber-400' : 'bg-slate-400'}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs font-semibold truncate ${dark ? 'text-slate-200' : 'text-slate-700'}`}>{t.title}</p>
+                      <p className={`text-[10px] mt-0.5 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{t.subject} · Due {t.due}</p>
+                    </div>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${priorityStyle(t.priority, dark)}`}>{t.priority}</span>
+                  </div>
+                ))}
+                {pendingTasks.length === 0 && (
+                  <div className="text-center py-4">
+                    <span className="text-3xl">🎉</span>
+                    <p className={`text-xs mt-1 font-semibold ${dark ? 'text-emerald-400' : 'text-emerald-600'}`}>All tasks done!</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Navigation Links */}
+          <div className="lg:col-span-3 space-y-3">
+            <h3 className={`text-xs font-bold uppercase tracking-wider ${dark ? 'text-slate-400' : 'text-slate-500'}`}>🔗 Quick Navigation</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {quickLinks.map(ql => (
+                <button key={ql.id} onClick={() => setActive(ql.id)}
+                  className={`text-left p-4 rounded-2xl border transition-all hover:-translate-y-0.5 hover:shadow-lg ${dark ? `bg-gradient-to-br ${ql.color} hover:shadow-slate-900/40` : `${ql.color} hover:shadow-slate-200/80 shadow-sm`}`}>
+                  <span className="text-2xl block mb-2">{ql.icon}</span>
+                  <p className={`text-xs font-bold leading-tight ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{ql.label}</p>
+                  <p className={`text-[10px] mt-0.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{ql.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Current Subjects ── */}
+        <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-800/50 border-slate-700/40' : 'bg-white border-slate-200 shadow-sm'}`}>
+          <div className={`flex items-center justify-between px-5 py-3.5 border-b ${dark ? 'border-slate-700/40 bg-slate-900/50' : 'border-slate-100 bg-slate-50'}`}>
+            <div className="flex items-center gap-2"><span>📖</span><h4 className="text-xs font-bold uppercase tracking-widest text-brand-500">Current Subjects</h4></div>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-500'}`}>{COURSES_DEMO.length} subjects</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className={`border-b ${dark ? 'border-slate-700/40 bg-slate-900/30' : 'border-slate-100 bg-slate-50'}`}>
+                  {['Code', 'Subject', 'Instructor', 'Schedule', 'Room', 'Units'].map(h => (
+                    <th key={h} className={`px-4 py-3 text-left font-bold uppercase tracking-wider text-[10px] ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className={`divide-y ${dark ? 'divide-slate-700/30' : 'divide-slate-100'}`}>
+                {COURSES_DEMO.map(c => (
+                  <tr key={c.code} className={`transition-colors ${dark ? 'hover:bg-slate-700/20' : 'hover:bg-slate-50'}`}>
+                    <td className="px-4 py-3 font-bold text-brand-400 whitespace-nowrap">{c.code}</td>
+                    <td className={`px-4 py-3 font-medium max-w-[180px] truncate ${dark ? 'text-slate-200' : 'text-slate-700'}`}>{c.title}</td>
+                    <td className={`px-4 py-3 whitespace-nowrap ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{c.instructor}</td>
+                    <td className={`px-4 py-3 whitespace-nowrap ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{c.schedule}</td>
+                    <td className={`px-4 py-3 whitespace-nowrap ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{c.room}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] ${dark ? 'bg-brand-500/20 text-brand-300' : 'bg-brand-100 text-brand-700'}`}>{c.units}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* ── Announcements ── */}
+        <div>
+          <h3 className={`text-xs font-bold uppercase tracking-wider mb-4 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>📢 Announcements</h3>
+          <div className="space-y-3">
+            {ANNOUNCEMENTS.map(a => (
+              <div key={a.id} className={`flex gap-4 p-4 rounded-2xl border transition-all ${dark ? 'bg-slate-800/50 border-slate-700/40 hover:border-slate-600' : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'}`}>
+                <div className={`w-2 h-2 rounded-full mt-2 shrink-0 bg-gradient-to-b ${a.color}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                    <p className={`text-sm font-semibold ${dark ? 'text-slate-200' : 'text-slate-700'}`}>{a.title}</p>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r ${a.color} text-white`}>{a.tag}</span>
+                      <span className={`text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{a.date}</span>
+                    </div>
+                  </div>
+                  <p className={`text-xs leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{a.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
       </div>
-    </div>
-  );
+    );
+  };
 
   /* ════════════════════════════════
      PANEL: MY PROFILE
