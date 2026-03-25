@@ -115,7 +115,7 @@ const AdminLogin = ({ onLogin }) => {
         </div>
 
         {/* Form card */}
-        <div className="rounded-2xl p-6 space-y-4"
+        <form onSubmit={handleSubmit} className="rounded-2xl p-6 space-y-4"
           style={{ background: 'rgba(15,21,48,0.7)', border: '1px solid rgba(242,101,34,0.12)', backdropFilter: 'blur(16px)', boxShadow: '0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)' }}>
 
           {/* Top orange line */}
@@ -184,7 +184,7 @@ const AdminLogin = ({ onLogin }) => {
           )}
 
           {/* Submit */}
-          <button type="button" onClick={handleSubmit} disabled={loading}
+          <button type="submit" disabled={loading}
             className="w-full py-3 rounded-xl font-bold text-sm tracking-widest uppercase transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 relative overflow-hidden group mt-1"
             style={{ background: 'linear-gradient(135deg, #f26522 0%, #e04f0f 100%)', boxShadow: '0 4px 24px rgba(242,101,34,0.3), 0 0 0 1px rgba(242,101,34,0.2)', color: '#fff', animation: 'btn-glow 2.5s ease-in-out infinite' }}>
             <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -196,7 +196,7 @@ const AdminLogin = ({ onLogin }) => {
 
           {/* Bottom orange line */}
           <div className="h-px w-full mt-2" style={{ background: 'linear-gradient(90deg, transparent, rgba(242,101,34,0.3), transparent)' }} />
-        </div>
+        </form>
 
         <p className="text-center text-xs mt-6" style={{ color: 'rgba(71,85,105,0.7)' }}>© 2026 CCS Profiling System · All rights reserved</p>
       </div>
