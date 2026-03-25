@@ -12,6 +12,8 @@ import {
   CameraIcon, BuildingOfficeIcon, UserGroupIcon,
   ShieldExclamationIcon, DocumentTextIcon, CalendarIcon,
   ArrowRightIcon, FunnelIcon,
+  PhoneIcon, HeartIcon, IdentificationIcon, AcademicCapIcon as GraduationIcon,
+  BookmarkIcon, WrenchScrewdriverIcon, TrophyIcon,
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
 
@@ -90,13 +92,13 @@ const EmptyState = ({ icon, title, sub }) => {
   );
 };
 
-const SectionCard = ({ title, icon, action, children }) => {
+const SectionCard = ({ title, Icon, action, children }) => {
   const dark = useTheme();
   return (
     <div className={`rounded-2xl border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:border-brand-400/60 hover:shadow-brand-500/20 ${dark ? 'bg-slate-900 border-slate-700/60 hover:bg-slate-800' : 'bg-white border-slate-200 shadow-sm hover:bg-brand-50/40'}`}>
       <div className={`flex items-center justify-between px-5 py-3.5 border-b ${dark ? 'border-slate-700/60 bg-slate-900' : 'border-slate-100 bg-slate-50'}`}>
         <div className="flex items-center gap-2.5">
-          <span className="text-base">{icon}</span>
+          {Icon && <Icon className="w-4 h-4 text-brand-500" />}
           <h4 className="text-xs font-bold uppercase tracking-widest text-brand-500">{title}</h4>
         </div>
         {action}
@@ -808,12 +810,12 @@ const StudentDashboard = ({ user, onLogout }) => {
     const violationCount = s?.violations?.length ?? 0;
 
     const quickLinks = [
-      { id: 'profile',      label: 'My Profile',          icon: '👤', desc: 'View & edit your info',         color: dark ? 'from-blue-500/20 to-purple-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-100' },
-      { id: 'academic',     label: 'Academic History',     icon: '📋', desc: 'Grades & academic records',     color: dark ? 'from-emerald-500/20 to-teal-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100' },
-      { id: 'skills',       label: 'My Skills',            icon: '💡', desc: `${skillCount} skill${skillCount !== 1 ? 's' : ''} recorded`,  color: dark ? 'from-amber-500/20 to-orange-500/10 border-amber-500/20' : 'bg-amber-50 border-amber-100' },
-      { id: 'affiliations', label: 'My Affiliations',      icon: '🏛️', desc: `${affiliationCount} org${affiliationCount !== 1 ? 's' : ''} joined`,  color: dark ? 'from-purple-500/20 to-pink-500/10 border-purple-500/20' : 'bg-purple-50 border-purple-100' },
-      { id: 'violations',   label: 'My Violations',        icon: '⚠️', desc: violationCount ? `${violationCount} record${violationCount !== 1 ? 's' : ''}` : 'Clean record ✅', color: dark ? 'from-red-500/20 to-rose-500/10 border-red-500/20' : 'bg-red-50 border-red-100' },
-      { id: 'grades',       label: 'My Grades',            icon: '🎓', desc: 'View your grade report',        color: dark ? 'from-cyan-500/20 to-blue-500/10 border-cyan-500/20' : 'bg-cyan-50 border-cyan-100' },
+      { id: 'profile',      label: 'My Profile',      Icon: UserIcon,                desc: 'View & edit your info',                                                    color: dark ? 'from-blue-500/20 to-purple-500/10 border-blue-500/20'    : 'bg-blue-50 border-blue-100',    iconColor: 'text-blue-500'    },
+      { id: 'academic',     label: 'Academic History', Icon: ClipboardDocumentListIcon, desc: 'Grades & academic records',                                              color: dark ? 'from-emerald-500/20 to-teal-500/10 border-emerald-500/20': 'bg-emerald-50 border-emerald-100', iconColor: 'text-emerald-500' },
+      { id: 'skills',       label: 'My Skills',        Icon: LightBulbIcon,           desc: `${skillCount} skill${skillCount !== 1 ? 's' : ''} recorded`,              color: dark ? 'from-amber-500/20 to-orange-500/10 border-amber-500/20'  : 'bg-amber-50 border-amber-100',   iconColor: 'text-amber-500'   },
+      { id: 'affiliations', label: 'My Affiliations',  Icon: BuildingLibraryIcon,     desc: `${affiliationCount} org${affiliationCount !== 1 ? 's' : ''} joined`,      color: dark ? 'from-purple-500/20 to-pink-500/10 border-purple-500/20'  : 'bg-purple-50 border-purple-100', iconColor: 'text-purple-500'  },
+      { id: 'violations',   label: 'My Violations',    Icon: ExclamationTriangleIcon, desc: violationCount ? `${violationCount} record${violationCount !== 1 ? 's' : ''}` : 'Clean record', color: dark ? 'from-red-500/20 to-rose-500/10 border-red-500/20' : 'bg-red-50 border-red-100', iconColor: 'text-red-500' },
+      { id: 'grades',       label: 'My Grades',        Icon: AcademicCapIcon,         desc: 'View your grade report',                                                   color: dark ? 'from-cyan-500/20 to-blue-500/10 border-cyan-500/20'      : 'bg-cyan-50 border-cyan-100',     iconColor: 'text-cyan-500'    },
     ];
 
     return (
@@ -853,13 +855,13 @@ const StudentDashboard = ({ user, onLogout }) => {
         {/* ── Stats Row ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Enrolled Units', val: s?.year_level ? '14' : '—', icon: '📚', dc: 'from-brand-500/20 to-amber-500/10 border-brand-500/20', lc: 'bg-orange-50 border-orange-100' },
-            { label: 'Active Subjects', val: COURSES_DEMO.length, icon: '📖', dc: 'from-blue-500/20 to-purple-500/10 border-blue-500/20', lc: 'bg-blue-50 border-blue-100' },
-            { label: 'Pending Tasks', val: pendingTasks.length, icon: '✅', dc: 'from-red-500/20 to-pink-500/10 border-red-500/20', lc: 'bg-red-50 border-red-100' },
-            { label: 'GPA (Prelim)', val: '1.40', icon: '🎓', dc: 'from-emerald-500/20 to-teal-500/10 border-emerald-500/20', lc: 'bg-emerald-50 border-emerald-100' },
+            { label: 'Enrolled Units',  val: s?.year_level ? '14' : '—', Icon: BookmarkIcon,              iconCls: 'text-brand-500',   dc: 'from-brand-500/20 to-amber-500/10 border-brand-500/20',   lc: 'bg-orange-50 border-orange-100' },
+            { label: 'Active Subjects', val: COURSES_DEMO.length,         Icon: BookOpenIcon,              iconCls: 'text-blue-500',    dc: 'from-blue-500/20 to-purple-500/10 border-blue-500/20',    lc: 'bg-blue-50 border-blue-100' },
+            { label: 'Pending Tasks',   val: pendingTasks.length,          Icon: ClipboardDocumentCheckIcon, iconCls: 'text-red-500',   dc: 'from-red-500/20 to-pink-500/10 border-red-500/20',        lc: 'bg-red-50 border-red-100' },
+            { label: 'GPA (Prelim)',    val: '1.40',                       Icon: AcademicCapIcon,           iconCls: 'text-emerald-500', dc: 'from-emerald-500/20 to-teal-500/10 border-emerald-500/20', lc: 'bg-emerald-50 border-emerald-100' },
           ].map(st => (
             <div key={st.label} className={`rounded-2xl border p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:border-brand-400/60 hover:shadow-brand-500/20 ${dark ? `bg-gradient-to-br ${st.dc}` : st.lc}`}>
-              <div className="text-2xl mb-2">{st.icon}</div>
+              <st.Icon className={`w-6 h-6 mb-2 ${st.iconCls}`} />
               <div className={`text-2xl font-black ${dark ? 'text-white' : 'text-slate-800'}`}>{st.val}</div>
               <div className={`text-xs mt-0.5 font-medium ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{st.label}</div>
             </div>
@@ -1035,7 +1037,7 @@ const StudentDashboard = ({ user, onLogout }) => {
               {quickLinks.map(ql => (
                 <button key={ql.id} onClick={() => setActive(ql.id)}
                   className={`text-left p-4 rounded-2xl border transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:border-brand-400/60 hover:shadow-brand-500/20 ${dark ? `bg-gradient-to-br ${ql.color}` : `${ql.color} shadow-sm`}`}>
-                  <span className="text-2xl block mb-2">{ql.icon}</span>
+                  <ql.Icon className={`w-7 h-7 mb-2 ${ql.iconColor}`} />
                   <p className={`text-xs font-bold leading-tight ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{ql.label}</p>
                   <p className={`text-[10px] mt-0.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{ql.desc}</p>
                 </button>
@@ -1545,10 +1547,10 @@ const StudentDashboard = ({ user, onLogout }) => {
       );
     };
 
-    const CategorySection = ({ title, emoji, skills, emptyMsg }) => (
+    const CategorySection = ({ title, Icon: CatIcon, skills, emptyMsg }) => (
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-base">{emoji}</span>
+          {CatIcon && <CatIcon className="w-4 h-4 text-brand-500" />}
           <h3 className={`text-xs font-black uppercase tracking-widest ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{title}</h3>
           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${dark ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>{skills.length}</span>
           <div className={`flex-1 h-px ${dark ? 'bg-slate-700/60' : 'bg-slate-200'}`} />
