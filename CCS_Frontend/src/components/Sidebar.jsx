@@ -25,6 +25,7 @@ const Sidebar = ({ currentModule, setCurrentModule, user, onLogout }) => {
     : 'AD';
 
   return (
+    /* Fixed sidebar — doesn't affect layout flow, no reflow glitch */
     <aside
       className={`fixed inset-y-0 left-0 z-50 flex flex-col h-full border-r transition-all duration-300 ease-in-out ${
         expanded ? 'w-64 shadow-2xl shadow-slate-900/50' : 'w-16'
