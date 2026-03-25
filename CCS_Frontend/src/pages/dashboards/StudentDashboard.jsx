@@ -1948,8 +1948,8 @@ const StudentDashboard = ({ user, onLogout }) => {
         )}
 
         {/* ── Admin notice ── */}
-        <div className={`flex items-start gap-3 p-4 rounded-xl border text-xs ${dark ? 'bg-slate-800/40 border-slate-700/40 text-slate-500' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
-          <svg className={`w-4 h-4 shrink-0 mt-0.5 ${dark ? 'text-slate-600' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <div className={`flex items-start gap-3 p-4 rounded-xl border text-xs ${dark ? 'bg-amber-900/20 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-700'}`}>
+          <svg className={`w-4 h-4 shrink-0 mt-0.5 ${dark ? 'text-amber-400' : 'text-amber-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           <span>Violation records are managed by the administration. Contact your department or guidance office for any concerns or disputes.</span>
         </div>
       </div>
