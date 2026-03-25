@@ -2142,61 +2142,160 @@ const StudentDashboard = ({ user, onLogout }) => {
      PANEL: TASKS
   ════════════════════════════════ */
   const TasksPanel = () => {
+    const [filter, setFilter] = useState('All');
     const pending = tasks.filter(t => !t.done);
     const done    = tasks.filter(t => t.done);
+    const pct     = tasks.length ? Math.round((done.length / tasks.length) * 100) : 0;
+
+    const highCount   = pending.filter(t => t.priority === 'High').length;
+    const mediumCount = pending.filter(t => t.priority === 'Medium').length;
+
+    const filtered = filter === 'All'       ? tasks
+      : filter === 'Pending'   ? pending
+      : filter === 'Completed' ? done
+      : tasks.filter(t => !t.done && t.priority === filter);
+
     return (
-      <div className="space-y-6">
-        <div className="rounded-2xl bg-slate-800/50 border border-slate-700/40 p-5">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-sm font-bold text-slate-200">Task Progress</h3>
-            <span className="text-xs text-slate-400">{done.length} / {tasks.length} completed</span>
+      <div className="space-y-5">
+
+        {/* ── Hero banner ── */}
+        <div className={`relative overflow-hidden rounded-2xl border p-5 ${dark ? 'bg-gradient-to-br from-brand-600/20 via-amber-600/10 to-slate-900/0 border-brand-500/20' : 'bg-gradient-to-br from-orange-50 via-amber-50 to-white border-orange-100'}`}>
+          <div className="absolute right-0 top-0 w-48 h-48 bg-brand-500/10 rounded-full -translate-y-1/3 translate-x-1/3 blur-3xl pointer-events-none" />
+          <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg ${dark ? 'bg-brand-500/20' : 'bg-orange-100'}`}>📋</div>
+              <div>
+                <h2 className={`text-lg font-black ${dark ? 'text-white' : 'text-slate-800'}`}>My Pending Tasks</h2>
+                <p className={`text-xs mt-0.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  {pending.length === 0 ? 'All tasks completed — great work!' : `${pending.length} task${pending.length > 1 ? 's' : ''} remaining`}
+                </p>
+              </div>
+            </div>
+            {/* Stat pills */}
+            <div className="flex gap-2 flex-wrap">
+              {[
+                { label: 'Total',     val: tasks.length,   c: dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600' },
+                { label: 'Pending',   val: pending.length, c: pending.length > 0 ? dark ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-red-100 text-red-600' : dark ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500' },
+                { label: 'Done',      val: done.length,    c: dark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600' },
+              ].map(p => (
+                <div key={p.label} className={`px-3 py-1.5 rounded-xl text-center ${p.c}`}>
+                  <p className="text-lg font-black leading-none">{p.val}</p>
+                  <p className="text-[9px] font-semibold uppercase tracking-wide mt-0.5">{p.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-brand-500 to-amber-500 rounded-full transition-all duration-500" style={{ width: `${(done.length / tasks.length) * 100}%` }} />
+
+          {/* Progress bar */}
+          <div className="relative mt-4">
+            <div className="flex justify-between items-center mb-1.5">
+              <span className={`text-xs font-semibold ${dark ? 'text-slate-400' : 'text-slate-500'}`}>Overall Progress</span>
+              <span className={`text-xs font-black ${dark ? 'text-brand-400' : 'text-brand-600'}`}>{pct}%</span>
+            </div>
+            <div className={`h-3 rounded-full overflow-hidden ${dark ? 'bg-slate-700/60' : 'bg-slate-200'}`}>
+              <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-amber-400 transition-all duration-700 relative"
+                style={{ width: `${pct}%` }}>
+                {pct > 10 && <div className="absolute inset-0 bg-white/20 rounded-full" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.1) 4px, rgba(255,255,255,0.1) 8px)' }} />}
+              </div>
+            </div>
+            <p className={`text-[10px] mt-1 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{done.length} of {tasks.length} tasks completed</p>
           </div>
-          <p className="text-xs text-slate-500 mt-2">{pending.length} pending {pending.length === 1 ? 'task' : 'tasks'} remaining</p>
         </div>
+
+        {/* ── Priority breakdown ── */}
         {pending.length > 0 && (
-          <div>
-            <h3 className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-3">📋 Pending</h3>
-            <div className="space-y-3">
-              {pending.map(t => (
-                <div key={t.id} className="flex items-start gap-4 p-4 rounded-2xl bg-slate-800/50 border border-slate-700/40 hover:border-slate-600 transition-all">
-                  <button onClick={() => toggleTask(t.id)} className="w-5 h-5 rounded-full border-2 border-slate-600 hover:border-brand-500 mt-0.5 shrink-0 transition-colors" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[10px] font-bold text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded border border-brand-500/20">{t.subject}</span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${priorityStyle(t.priority)}`}>{t.priority}</span>
-                    </div>
-                    <p className="text-sm font-medium text-slate-200 mt-1">{t.title}</p>
-                    <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                      Due: {t.due}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: 'High Priority',   val: highCount,                                    c: dark ? 'border-red-500/30 bg-red-900/10' : 'border-red-200 bg-red-50',     tc: 'text-red-400',    icon: '🔴' },
+              { label: 'Medium Priority', val: mediumCount,                                  c: dark ? 'border-amber-500/30 bg-amber-900/10' : 'border-amber-200 bg-amber-50', tc: 'text-amber-400',  icon: '🟡' },
+              { label: 'Low Priority',    val: pending.filter(t => t.priority === 'Low').length, c: dark ? 'border-slate-600/40 bg-slate-800/30' : 'border-slate-200 bg-slate-50', tc: dark ? 'text-slate-400' : 'text-slate-500', icon: '🟢' },
+            ].map(p => (
+              <div key={p.label} className={`rounded-xl border p-3 text-center ${p.c}`}>
+                <p className="text-lg mb-1">{p.icon}</p>
+                <p className={`text-2xl font-black ${p.tc}`}>{p.val}</p>
+                <p className={`text-[10px] font-semibold uppercase tracking-wide mt-0.5 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{p.label}</p>
+              </div>
+            ))}
           </div>
         )}
-        {done.length > 0 && (
-          <div>
-            <h3 className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-3">✅ Completed</h3>
-            <div className="space-y-2">
-              {done.map(t => (
-                <div key={t.id} className="flex items-center gap-4 p-3 rounded-xl bg-slate-800/30 border border-slate-700/20 opacity-60">
-                  <button onClick={() => toggleTask(t.id)} className="w-5 h-5 rounded-full bg-emerald-500/30 border-2 border-emerald-500 flex items-center justify-center shrink-0">
-                    <svg className="w-3 h-3 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+
+        {/* ── Filter tabs ── */}
+        <div className="flex gap-2 flex-wrap">
+          {['All', 'Pending', 'High', 'Medium', 'Low', 'Completed'].map(f => (
+            <button key={f} onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${filter === f
+                ? 'bg-brand-500 text-white border-brand-500 shadow-md'
+                : dark ? 'bg-slate-800/60 border-slate-700 text-slate-400 hover:border-slate-500' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+              {f}
+              {f === 'Pending' && pending.length > 0 && (
+                <span className="ml-1.5 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{pending.length}</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Task list ── */}
+        {filtered.length === 0 ? (
+          <div className={`rounded-2xl border-2 border-dashed p-10 text-center ${dark ? 'border-slate-700' : 'border-slate-200'}`}>
+            <div className="text-4xl mb-2">🎉</div>
+            <p className={`text-sm font-bold ${dark ? 'text-emerald-300' : 'text-emerald-600'}`}>
+              {filter === 'Completed' ? 'No completed tasks yet.' : 'All tasks done!'}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filtered.map(t => {
+              const isDone = t.done;
+              const pStyle = priorityStyle(t.priority, dark);
+              return (
+                <div key={t.id} className={`group flex items-start gap-4 p-4 rounded-2xl border transition-all ${
+                  isDone
+                    ? dark ? 'bg-slate-800/20 border-slate-700/20 opacity-55' : 'bg-slate-50 border-slate-100 opacity-60'
+                    : t.priority === 'High'
+                      ? dark ? 'bg-red-900/10 border-red-500/20 hover:border-red-500/40' : 'bg-red-50/60 border-red-200 hover:border-red-300'
+                      : t.priority === 'Medium'
+                        ? dark ? 'bg-amber-900/10 border-amber-500/20 hover:border-amber-500/40' : 'bg-amber-50/60 border-amber-200 hover:border-amber-300'
+                        : dark ? 'bg-slate-800/40 border-slate-700/40 hover:border-slate-600' : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
+                }`}>
+                  {/* Checkbox */}
+                  <button onClick={() => toggleTask(t.id)}
+                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${
+                      isDone
+                        ? 'bg-emerald-500 border-emerald-500'
+                        : dark ? 'border-slate-600 hover:border-brand-500 hover:bg-brand-500/10' : 'border-slate-300 hover:border-brand-500 hover:bg-brand-50'
+                    }`}>
+                    {isDone && <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>}
                   </button>
+
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-400 line-through">{t.title}</p>
-                    <p className="text-xs text-slate-600">{t.subject} · {t.due}</p>
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${dark ? 'bg-brand-500/10 text-brand-400 border-brand-500/20' : 'bg-brand-50 text-brand-600 border-brand-200'}`}>{t.subject}</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${pStyle}`}>{t.priority}</span>
+                    </div>
+                    <p className={`text-sm font-semibold ${isDone ? 'line-through' : ''} ${dark ? isDone ? 'text-slate-500' : 'text-slate-100' : isDone ? 'text-slate-400' : 'text-slate-700'}`}>{t.title}</p>
+                    <div className={`flex items-center gap-1 mt-1 text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
+                      <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      Due: {t.due}
+                    </div>
                   </div>
+
+                  {/* Status tag */}
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded-lg shrink-0 self-center ${
+                    isDone
+                      ? dark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600'
+                      : dark ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'
+                  }`}>{isDone ? 'Done' : 'Pending'}</span>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         )}
+
+        {/* ── Notice ── */}
+        <div className={`flex items-start gap-3 p-4 rounded-xl border text-xs ${dark ? 'bg-amber-900/20 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-700'}`}>
+          <svg className={`w-4 h-4 shrink-0 mt-0.5 ${dark ? 'text-amber-400' : 'text-amber-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <span>Tasks shown here are personal reminders. Click the circle to mark a task as done.</span>
+        </div>
       </div>
     );
   };
