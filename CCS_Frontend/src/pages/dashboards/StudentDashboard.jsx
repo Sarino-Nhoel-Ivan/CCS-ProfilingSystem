@@ -2310,7 +2310,7 @@ const StudentDashboard = ({ user, onLogout }) => {
 
   return (
     <ThemeCtx.Provider value={dark}>
-    <div className={`flex h-screen w-screen overflow-hidden transition-colors duration-300 ${dark ? 'sd-dark bg-slate-950' : 'sd-light bg-slate-100'}`}>
+    <div className={`flex h-screen w-screen overflow-hidden transition-colors duration-300 ${dark ? 'sd-dark bg-slate-950' : 'sd-light bg-slate-50'}`}>
       {dark && <>
         <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-brand-600/5 rounded-full blur-[150px] pointer-events-none" />
         <div className="fixed bottom-0 left-0 w-[400px] h-[400px] bg-purple-600/5 rounded-full blur-[120px] pointer-events-none" />
@@ -2363,7 +2363,7 @@ const StudentDashboard = ({ user, onLogout }) => {
       <div className="flex-1 flex flex-col h-full overflow-hidden">
 
         {/* Top nav */}
-        <header className={`relative z-30 flex items-center justify-between px-5 py-4 border-b backdrop-blur-xl shrink-0 ${dark ? 'border-slate-800/60 bg-slate-900/80' : 'border-slate-200 bg-white/90 shadow-sm'}`}>
+        <header className={`relative z-30 flex items-center justify-between px-5 py-4 border-b shrink-0 ${dark ? 'border-slate-800/60 bg-slate-900/80 backdrop-blur-xl' : 'border-slate-200 bg-white shadow-sm'}`}>
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-500 to-amber-400 flex items-center justify-center shadow-[0_0_15px_rgba(242,101,34,0.4)]">
               <img src="/ccs_logo.jpg" alt="CCS" className="w-6 h-6 object-contain rounded-lg" onError={e => { e.target.style.display = 'none'; }} />
@@ -2427,8 +2427,8 @@ const StudentDashboard = ({ user, onLogout }) => {
         </header>
 
         {/* Main content */}
-        <main className={`flex-1 overflow-x-hidden overflow-y-auto transition-colors duration-300 ${dark ? 'bg-slate-950' : 'bg-slate-100'}`}>
-          <div className={`sticky top-0 z-10 px-6 py-4 backdrop-blur-xl border-b flex items-center gap-3 ${dark ? 'bg-slate-900/80 border-slate-800/50' : 'bg-white/90 border-slate-200'}`}>
+        <main className={`flex-1 overflow-x-hidden overflow-y-auto transition-colors duration-300 ${dark ? 'bg-slate-950' : 'bg-slate-50'}`}>
+          <div className={`sticky top-0 z-10 px-6 py-4 border-b flex items-center gap-3 ${dark ? 'bg-slate-900/80 border-slate-800/50 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'}`}>
             <svg className="w-5 h-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={activeNav?.icon} />
             </svg>

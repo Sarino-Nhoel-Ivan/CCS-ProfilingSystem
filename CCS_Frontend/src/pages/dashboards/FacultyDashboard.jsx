@@ -995,7 +995,7 @@ const FacultyDashboard = ({user,onLogout}) => {
 
   return (
     <ThemeCtx.Provider value={dark}>
-      <div className={`flex h-screen w-screen overflow-hidden transition-colors duration-300 ${dark?'bg-slate-950':'bg-slate-100'}`}>
+      <div className={`flex h-screen w-screen overflow-hidden transition-colors duration-300 ${dark?'bg-slate-950':'bg-slate-50'}`}>
         {dark&&<><div className="fixed top-0 right-0 w-[600px] h-[600px] bg-blue-600/5 rounded-full blur-[150px] pointer-events-none"/><div className="fixed bottom-0 left-0 w-[400px] h-[400px] bg-purple-600/5 rounded-full blur-[120px] pointer-events-none"/></>}
 
         {/* Sidebar */}
@@ -1038,7 +1038,7 @@ const FacultyDashboard = ({user,onLogout}) => {
               <div className={`w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white text-sm font-bold shadow`}>{initials}</div>
             </div>
           </header>
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className={`flex-1 overflow-y-auto p-6 ${dark?'bg-slate-950':'bg-slate-50'}`}>
             {renderPanel()}
           </div>
         </main>
