@@ -887,7 +887,9 @@ const StudentDashboard = ({ user, onLogout }) => {
                   : dark ? 'border-emerald-500/20 bg-emerald-900/20' : 'border-emerald-200 bg-emerald-100/60'
               }`}>
                 <div className="flex items-center gap-2">
-                  <span className="text-base">{hasPending ? (high.length > 0 ? '🚨' : '⚠️') : '✅'}</span>
+                  {hasPending
+                    ? (high.length > 0 ? <ExclamationTriangleIcon className="w-4 h-4 text-red-400" /> : <ExclamationCircleIcon className="w-4 h-4 text-amber-400" />)
+                    : <CheckCircleIcon className="w-4 h-4 text-emerald-500" />}
                   <h4 className={`text-xs font-bold uppercase tracking-widest ${
                     hasPending
                       ? high.length > 0 ? 'text-red-400' : 'text-amber-400'
@@ -986,7 +988,7 @@ const StudentDashboard = ({ user, onLogout }) => {
           {/* Task Progress */}
           <div className={`lg:col-span-2 rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
             <div className={`flex items-center justify-between px-5 py-3.5 border-b ${dark ? 'border-slate-700/60 bg-slate-900' : 'border-slate-100 bg-slate-50'}`}>
-              <div className="flex items-center gap-2"><span>✅</span><h4 className="text-xs font-bold uppercase tracking-widest text-brand-500">My Pending Tasks</h4></div>
+              <div className="flex items-center gap-2"><ClipboardDocumentCheckIcon className="w-4 h-4 text-brand-500" /><h4 className="text-xs font-bold uppercase tracking-widest text-brand-500">My Pending Tasks</h4></div>
               <button onClick={() => setActive('tasks')} className={`text-[10px] font-semibold px-2 py-1 rounded-lg transition-all ${dark ? 'text-brand-400 hover:bg-brand-500/10' : 'text-brand-600 hover:bg-brand-50'}`}>View all →</button>
             </div>
             <div className="p-5 space-y-4">
