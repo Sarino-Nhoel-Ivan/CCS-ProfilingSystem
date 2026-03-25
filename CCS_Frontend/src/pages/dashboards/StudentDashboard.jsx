@@ -855,6 +855,125 @@ const StudentDashboard = ({ user, onLogout }) => {
           ))}
         </div>
 
+        {/* ── Violations / Notices ── */}
+        {(() => {
+          const viols = s?.violations ?? [];
+          const pending = viols.filter(v => v.status !== 'Resolved');
+          const high    = pending.filter(v => v.severity_level === 'High');
+          const hasPending = pending.length > 0;
+
+          if (!s) return null;
+
+          return (
+            <div className={`rounded-2xl border overflow-hidden ${
+              hasPending
+                ? high.length > 0
+                  ? dark ? 'border-red-500/40 bg-red-900/10' : 'border-red-200 bg-red-50'
+                  : dark ? 'border-amber-500/40 bg-amber-900/10' : 'border-amber-200 bg-amber-50'
+                : dark ? 'border-emerald-500/30 bg-emerald-900/10' : 'border-emerald-200 bg-emerald-50'
+            }`}>
+              {/* Header */}
+              <div className={`flex items-center justify-between px-5 py-3.5 border-b ${
+                hasPending
+                  ? high.length > 0
+                    ? dark ? 'border-red-500/30 bg-red-900/20' : 'border-red-200 bg-red-100/60'
+                    : dark ? 'border-amber-500/30 bg-amber-900/20' : 'border-amber-200 bg-amber-100/60'
+                  : dark ? 'border-emerald-500/20 bg-emerald-900/20' : 'border-emerald-200 bg-emerald-100/60'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <span className="text-base">{hasPending ? (high.length > 0 ? '🚨' : '⚠️') : '✅'}</span>
+                  <h4 className={`text-xs font-bold uppercase tracking-widest ${
+                    hasPending
+                      ? high.length > 0 ? 'text-red-400' : 'text-amber-400'
+                      : 'text-emerald-500'
+                  }`}>
+                    {hasPending ? 'Disciplinary Notices' : 'Disciplinary Record'}
+                  </h4>
+                  {hasPending && (
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${high.length > 0 ? 'bg-red-500 text-white' : 'bg-amber-500 text-white'}`}>
+                      {pending.length} unresolved
+                    </span>
+                  )}
+                </div>
+                <button onClick={() => setActive('violations')}
+                  className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-all border ${
+                    hasPending
+                      ? high.length > 0
+                        ? dark ? 'text-red-400 border-red-500/30 hover:bg-red-500/10' : 'text-red-600 border-red-300 hover:bg-red-100'
+                        : dark ? 'text-amber-400 border-amber-500/30 hover:bg-amber-500/10' : 'text-amber-600 border-amber-300 hover:bg-amber-100'
+                      : dark ? 'text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10' : 'text-emerald-600 border-emerald-300 hover:bg-emerald-100'
+                  }`}>
+                  View all →
+                </button>
+              </div>
+
+              <div className="p-5">
+                {!hasPending ? (
+                  /* Clean record */
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${dark ? 'bg-emerald-500/20' : 'bg-emerald-100'}`}>
+                      <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <div>
+                      <p className={`text-sm font-bold ${dark ? 'text-emerald-300' : 'text-emerald-700'}`}>You have a clean disciplinary record.</p>
+                      <p className={`text-xs mt-0.5 ${dark ? 'text-emerald-500/70' : 'text-emerald-600/70'}`}>No active violations or notices on file. Keep it up!</p>
+                    </div>
+                  </div>
+                ) : (
+                  /* Violation cards */
+                  <div className="space-y-3">
+                    {pending.slice(0, 3).map(v => {
+                      const isHigh = v.severity_level === 'High';
+                      const isMed  = v.severity_level === 'Medium';
+                      return (
+                        <div key={v.id} className={`flex items-start gap-3 p-4 rounded-xl border ${
+                          isHigh
+                            ? dark ? 'bg-red-900/20 border-red-500/30' : 'bg-red-100/60 border-red-300'
+                            : isMed
+                              ? dark ? 'bg-amber-900/20 border-amber-500/30' : 'bg-amber-100/60 border-amber-300'
+                              : dark ? 'bg-slate-800/60 border-slate-600/40' : 'bg-white border-slate-200'
+                        }`}>
+                          {/* Severity icon */}
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                            isHigh ? 'bg-red-500/20 text-red-400' : isMed ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-500/20 text-slate-400'
+                          }`}>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                              <p className={`text-sm font-bold ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{v.violation_type}</p>
+                              <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                                isHigh ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                                : isMed ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                : 'bg-slate-500/20 text-slate-400 border border-slate-500/30'
+                              }`}>{v.severity_level}</span>
+                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                                v.status === 'Pending' ? 'bg-orange-500/20 text-orange-400' : 'bg-blue-500/20 text-blue-400'
+                              }`}>{v.status}</span>
+                            </div>
+                            {v.description && <p className={`text-xs truncate ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{v.description}</p>}
+                            <p className={`text-[10px] mt-1 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
+                              Reported {fmt(v.date_reported)}{v.reported_by ? ` · by ${v.reported_by}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {pending.length > 3 && (
+                      <button onClick={() => setActive('violations')}
+                        className={`w-full text-center text-xs font-semibold py-2.5 rounded-xl border transition-all ${
+                          dark ? 'border-slate-700 text-slate-400 hover:bg-slate-800' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                        }`}>
+                        +{pending.length - 3} more violation{pending.length - 3 > 1 ? 's' : ''} — View all
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* ── Main Grid: Tasks + Quick Links ── */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
 
