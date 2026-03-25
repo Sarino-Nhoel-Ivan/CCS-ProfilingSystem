@@ -687,35 +687,26 @@ const StudentDashboard = ({ user, onLogout }) => {
   const buildNotifications = (s, taskList) => {
     const items = [];
     if (!s) return items;
-    // Violations
     (s.violations ?? []).forEach(v => items.push({
-      id: `viol-${v.id}`,
-      type: 'violation',
-      icon: '⚠️',
+      id: `viol-${v.id}`, type: 'violation',
+      Icon: ExclamationTriangleIcon, iconCls: 'text-red-400',
       title: 'Violation Recorded',
       body: `${v.violation_type} — ${v.severity_level} severity`,
-      date: v.date_reported,
-      nav: 'violations',
+      date: v.date_reported, nav: 'violations',
     }));
-    // Academic history updates
     (s.academic_histories ?? []).forEach(ah => items.push({
-      id: `ah-${ah.id}`,
-      type: 'academic',
-      icon: '📋',
+      id: `ah-${ah.id}`, type: 'academic',
+      Icon: ClipboardDocumentListIcon, iconCls: 'text-blue-400',
       title: 'Academic Record Updated',
       body: `${ah.school_year} ${ah.semester} — GPA: ${ah.gpa ?? '—'}`,
-      date: ah.updated_at ?? ah.created_at,
-      nav: 'academic',
+      date: ah.updated_at ?? ah.created_at, nav: 'academic',
     }));
-    // Pending tasks
     taskList.filter(t => !t.done).forEach(t => items.push({
-      id: `task-${t.id}`,
-      type: 'task',
-      icon: '📌',
+      id: `task-${t.id}`, type: 'task',
+      Icon: ClipboardDocumentCheckIcon, iconCls: 'text-brand-400',
       title: 'Pending Task',
       body: `${t.title} — Due ${t.due}`,
-      date: null,
-      nav: 'tasks',
+      date: null, nav: 'tasks',
     }));
     return items;
   };
