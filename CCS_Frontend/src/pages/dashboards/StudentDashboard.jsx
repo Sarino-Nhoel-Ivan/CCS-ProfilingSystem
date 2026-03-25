@@ -189,7 +189,8 @@ const Modal = ({ title, subtitle, onClose, children, footer }) => {
 
 const BtnPrimary = ({ children, loading, ...props }) => (
   <button {...props} disabled={loading || props.disabled}
-    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold transition-all disabled:opacity-50 shadow-lg shadow-brand-500/20">
+    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-bold transition-all duration-200 disabled:opacity-50 hover:scale-105 active:scale-95"
+    style={{ background: 'linear-gradient(135deg, #f26522, #e04f0f)', boxShadow: '0 4px 14px rgba(242,101,34,0.35)' }}>
     {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : children}
   </button>
 );
@@ -197,7 +198,7 @@ const BtnPrimary = ({ children, loading, ...props }) => (
 const BtnGhost = ({ children, ...props }) => {
   const dark = useTheme();
   return (
-    <button {...props} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${dark ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300' : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-600'}`}>
+    <button {...props} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95 ${dark ? 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-300' : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-600'}`}>
       {children}
     </button>
   );
@@ -212,7 +213,9 @@ const BtnDanger = ({ children, ...props }) => (
 const BtnEdit = ({ onClick }) => {
   const dark = useTheme();
   return (
-    <button onClick={onClick} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${dark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'}`}>
+    <button onClick={onClick}
+      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-white transition-all duration-200 hover:scale-105 active:scale-95"
+      style={{ background: 'linear-gradient(135deg, #f26522, #e04f0f)', boxShadow: '0 2px 8px rgba(242,101,34,0.30)' }}>
       <PencilSquareIcon className="w-3.5 h-3.5" />
       Edit
     </button>
@@ -220,7 +223,9 @@ const BtnEdit = ({ onClick }) => {
 };
 
 const AddBtn = ({ onClick, label }) => (
-  <button onClick={onClick} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/30 text-brand-500 text-xs font-semibold transition-all">
+  <button onClick={onClick}
+    className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-xs font-bold transition-all duration-200 hover:scale-105 active:scale-95"
+    style={{ background: 'linear-gradient(135deg, #f26522, #e04f0f)', boxShadow: '0 4px 14px rgba(242,101,34,0.30)' }}>
     <PlusIcon className="w-3.5 h-3.5" />
     {label}
   </button>
