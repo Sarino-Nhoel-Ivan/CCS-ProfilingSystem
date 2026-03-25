@@ -6,11 +6,10 @@ import {
 } from '@heroicons/react/24/outline';
 import { useDarkMode } from '../context/DarkModeContext';
 
-const Sidebar = ({ currentModule, setCurrentModule, user, onLogout }) => {
+const Sidebar = ({ currentModule, setCurrentModule, isOpen, setIsOpen, user, onLogout }) => {
   const dark = useDarkMode();
-  const [pinned, setPinned]   = useState(false);
   const [hovered, setHovered] = useState(false);
-  const expanded = pinned || hovered;
+  const expanded = isOpen || hovered;
 
   const modules = [
     { id: 'student',     label: 'Student Information',  Icon: UserIcon },
@@ -23,7 +22,7 @@ const Sidebar = ({ currentModule, setCurrentModule, user, onLogout }) => {
 
   return (
     <aside
-      className={`relative z-50 flex flex-col h-full border-r transition-all duration-300 ease-in-out shrink-0 ${
+      className={`fixed inset-y-0 left-0 z-50 flex flex-col h-full border-r transition-all duration-300 ease-in-out ${
         expanded ? 'w-64 shadow-2xl shadow-slate-900/50' : 'w-16'
       } ${dark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}
       onMouseEnter={() => setHovered(true)}
@@ -47,13 +46,13 @@ const Sidebar = ({ currentModule, setCurrentModule, user, onLogout }) => {
         </div>
         {expanded && (
           <button
-            onClick={() => setPinned(p => !p)}
+            onClick={() => setIsOpen(p => !p)}
             className={`p-1.5 rounded-lg transition-colors focus:outline-none shrink-0 ${
-              pinned
+              isOpen
                 ? dark ? 'bg-slate-800 text-brand-400' : 'bg-brand-50 text-brand-500'
                 : dark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
             }`}
-            title={pinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
+            title={isOpen ? 'Unpin Sidebar' : 'Pin Sidebar'}
           >
             <Bars3Icon className="w-5 h-5" />
           </button>
