@@ -1831,12 +1831,16 @@ const StudentDashboard = ({ user, onLogout }) => {
             style={{ background: viols.length === 0 ? '#10b981' : highCount > 0 ? '#ef4444' : '#f59e0b' }} />
           <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg ${
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${
                 viols.length === 0 ? dark ? 'bg-emerald-500/20' : 'bg-emerald-100'
                 : highCount > 0 ? dark ? 'bg-red-500/20' : 'bg-red-100'
                 : dark ? 'bg-amber-500/20' : 'bg-amber-100'
               }`}>
-                {viols.length === 0 ? '✅' : highCount > 0 ? '🚨' : '⚠️'}
+                {viols.length === 0
+                  ? <CheckCircleIcon className="w-6 h-6 text-emerald-500" />
+                  : highCount > 0
+                    ? <ExclamationTriangleIcon className="w-6 h-6 text-red-500" />
+                    : <ExclamationCircleIcon className="w-6 h-6 text-amber-500" />}
               </div>
               <div>
                 <h2 className={`text-lg font-black ${dark ? 'text-white' : 'text-slate-800'}`}>Disciplinary Records</h2>
