@@ -14,6 +14,8 @@ const StudentModule = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [listSearch, setListSearch] = useState('');
+  const [listFilter, setListFilter] = useState('All');
 
   // ── Tailwind utility helpers keyed on dark mode ──────────────────
   const card   = dark ? 'bg-slate-900 border-slate-700/60'  : 'bg-white border-slate-100';
@@ -173,25 +175,41 @@ const StudentModule = () => {
 
               {/* Student List */}
               <div className={`p-6 rounded-xl border shadow-sm col-span-2 transition-colors duration-300 ${card}`}>
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className={`text-lg font-bold transition-colors duration-300 ${boldText}`}>Recent Students</h3>
-                  <button className="text-sm text-brand-500 hover:text-brand-400 font-medium">View All</button>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className={`text-lg font-bold transition-colors duration-300 ${boldText}`}>Student List</h3>
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>{students.length} total</span>
                 </div>
 
-                <div className={`divide-y max-h-[500px] overflow-y-auto pr-2 ${divider}`}>
+                {/* Search + filter */}
+                <div className="flex gap-2 mb-4 flex-wrap">
+                  <div className="relative flex-1 min-w-[160px]">
+                    <svg className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${dark ? 'text-slate-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input value={listSearch} onChange={e => setListSearch(e.target.value)} placeholder="Search name or number..."
+                      className={`w-full pl-9 pr-3 py-2 rounded-lg border text-sm outline-none transition-colors ${dark ? 'bg-slate-800 border-slate-600 text-slate-100 placeholder-slate-500 focus:border-brand-400' : 'bg-white border-slate-200 text-slate-700 placeholder-slate-400 focus:border-brand-400'}`} />
+                  </div>
+                  {['All', 'Enrolled', 'Not Enrolled'].map(f => (
+                    <button key={f} onClick={() => setListFilter(f)}
+                      className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-all ${listFilter === f
+                        ? 'bg-brand-500 text-white border-brand-500'
+                        : dark ? 'bg-slate-800 border-slate-600 text-slate-400 hover:border-slate-500' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+                      {f}
+                    </button>
+                  ))}
+                </div>
+
+                <div className={`divide-y max-h-[460px] overflow-y-auto pr-1 ${divider}`}>
                   {isLoading ? (
-                    <div className="py-8 flex justify-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500"></div>
-                    </div>
-                  ) : students.length === 0 ? (
-                    <div className={`py-8 text-center ${labelText}`}>No students found.</div>
-                  ) : (
-                    students.map((student) => (
-                      <div
-                        key={student.id}
-                        onClick={() => handleStudentClick(student.id)}
-                        className={`py-4 flex items-center justify-between group cursor-pointer -mx-4 px-4 rounded-lg transition-colors ${rowHover}`}
-                      >
+                    <div className="py-8 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500" /></div>
+                  ) : (() => {
+                    const filtered = students.filter(s => {
+                      const matchSearch = !listSearch || `${s.first_name} ${s.last_name} ${s.student_number || ''}`.toLowerCase().includes(listSearch.toLowerCase());
+                      const matchFilter = listFilter === 'All' || s.enrollment_status === listFilter;
+                      return matchSearch && matchFilter;
+                    });
+                    if (filtered.length === 0) return <div className={`py-8 text-center text-sm ${labelText}`}>No students match your search.</div>;
+                    return filtered.map(student => (
+                      <div key={student.id} onClick={() => handleStudentClick(student.id)}
+                        className={`py-4 flex items-center justify-between group cursor-pointer -mx-4 px-4 rounded-lg transition-colors ${rowHover}`}>
                         <div className="flex items-center space-x-4">
                           <div className="w-10 h-10 rounded-full bg-brand-600/20 text-brand-400 flex items-center justify-center font-bold text-sm shrink-0">
                             {student.first_name[0]}{student.last_name[0]}
@@ -200,29 +218,18 @@ const StudentModule = () => {
                             <p className={`text-sm font-semibold group-hover:text-brand-500 transition-colors ${boldText}`}>
                               {student.first_name} {student.middle_name ? student.middle_name[0] + '. ' : ''}{student.last_name}
                             </p>
-                            <p className={`text-xs ${labelText}`}>
-                              {student.program || 'N/A'} - {student.year_level || 'N/A'}
-                            </p>
-                            <p className={`text-xs ${labelText}`}>
-                              {student.student_number ? `No. ${student.student_number}` : `ID: ${student.id}`}
-                            </p>
+                            <p className={`text-xs ${labelText}`}>{student.program || 'N/A'} · {student.year_level || 'N/A'}</p>
+                            <p className={`text-xs ${labelText}`}>{student.student_number ? `No. ${student.student_number}` : `ID: ${student.id}`}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          {student.enrollment_status === 'Enrolled' ? (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/15 text-green-400">
-                              {student.enrollment_status}
-                            </span>
-                          ) : (
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-800'}`}>
-                              {student.enrollment_status}
-                            </span>
-                          )}
-                          <p className={`text-xs mt-1 ${labelText}`}>ID: {student.id}</p>
+                          {student.enrollment_status === 'Enrolled'
+                            ? <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/15 text-green-400">Enrolled</span>
+                            : <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-800'}`}>{student.enrollment_status}</span>}
                         </div>
                       </div>
-                    ))
-                  )}
+                    ));
+                  })()}
                 </div>
               </div>
 
