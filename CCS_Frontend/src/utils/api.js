@@ -135,4 +135,7 @@ export const api = {
   search: {
     query: (q) => fetchApi(`/search?query=${encodeURIComponent(q)}`),
   },
+  auth: {
+    changePassword: (data) => fetchApi('/auth/change-password', { method: 'POST', body: JSON.stringify(data) }),
+  },
 };

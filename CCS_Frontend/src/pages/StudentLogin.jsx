@@ -265,11 +265,7 @@ const StudentLogin = ({ onLogin, onGoToSignUp }) => {
             <div className="flex-1 h-px" style={{ background: 'rgba(242,101,34,0.2)' }} />
           </div>
 
-          <p className="text-sm text-center" style={{ color: '#b05020' }}>
-            Don't have an account?{' '}
-            <button onClick={onGoToSignUp} className="font-bold transition-colors hover:underline" style={{ color: '#e04f0f' }}>Create one</button>
-          </p>
-          <p className="text-xs mt-2 text-center" style={{ color: '#c06030' }}>
+          <p className="text-xs text-center" style={{ color: '#c06030' }}>
             Faculty?{' '}
             <a href="/faculty/login" className="font-semibold transition-colors hover:underline" style={{ color: '#e04f0f' }}>Faculty Login →</a>
           </p>

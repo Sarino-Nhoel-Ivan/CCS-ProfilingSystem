@@ -14,6 +14,7 @@ import {
   ArrowRightIcon, FunnelIcon, PhoneIcon, HeartIcon,
   IdentificationIcon, BookmarkIcon, WrenchScrewdriverIcon,
   TrophyIcon, MegaphoneIcon, LinkIcon, ChartBarIcon,
+  KeyIcon, EyeIcon,
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
 
@@ -670,6 +671,90 @@ const SkillsModal = ({ studentId, currentSkills, onClose, onSaved }) => {
 };
 
 /* ════════════════════════════════════════════════
+   FORCE CHANGE PASSWORD MODAL
+════════════════════════════════════════════════ */
+const ForceChangePasswordModal = ({ dark, onChanged }) => {
+  const [newPw, setNewPw]       = useState('');
+  const [confirmPw, setConfirm] = useState('');
+  const [showNew, setShowNew]   = useState(false);
+  const [showConf, setShowConf] = useState(false);
+  const [saving, setSaving]     = useState(false);
+  const [err, setErr]           = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErr('');
+    if (newPw.length < 8) { setErr('Password must be at least 8 characters.'); return; }
+    if (newPw !== confirmPw) { setErr('Passwords do not match.'); return; }
+    setSaving(true);
+    try {
+      await api.auth.changePassword({ new_password: newPw, new_password_confirmation: confirmPw });
+      onChanged();
+    } catch (ex) {
+      setErr(ex.message || 'Failed to change password.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inp = `w-full pr-10 pl-4 py-3 rounded-xl border text-sm outline-none transition-colors ${dark ? 'bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500 focus:border-brand-500' : 'bg-white border-slate-300 text-slate-800 placeholder-slate-400 focus:border-brand-500'}`;
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}>
+      <div className={`w-full max-w-md rounded-2xl border shadow-2xl overflow-hidden ${dark ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'}`}>
+        {/* Header */}
+        <div className="px-6 py-5 border-b" style={{ background: 'linear-gradient(135deg,#f26522,#e04f0f)', borderColor: 'transparent' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+              <KeyIcon className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-base font-black text-white">Change Your Password</h2>
+              <p className="text-xs text-white/80 mt-0.5">You must set a new password before continuing.</p>
+            </div>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className={`flex items-start gap-3 p-3.5 rounded-xl border text-xs ${dark ? 'bg-amber-900/20 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-700'}`}>
+            <InformationCircleIcon className={`w-4 h-4 shrink-0 mt-0.5 ${dark ? 'text-amber-400' : 'text-amber-500'}`} />
+            Your account was created by the administration. Your temporary password was your birthday (mm/dd/yyyy). Please set a new secure password now.
+          </div>
+
+          {err && <div className={`flex items-center gap-2 p-3 rounded-xl text-xs border ${dark ? 'bg-red-900/20 border-red-500/30 text-red-400' : 'bg-red-50 border-red-200 text-red-600'}`}><ExclamationCircleIcon className="w-4 h-4 shrink-0" />{err}</div>}
+
+          <div>
+            <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>New Password</label>
+            <div className="relative">
+              <input type={showNew ? 'text' : 'password'} value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="Min. 8 characters" className={inp} required />
+              <button type="button" onClick={() => setShowNew(p => !p)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${dark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}>
+                <EyeIcon className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>Confirm New Password</label>
+            <div className="relative">
+              <input type={showConf ? 'text' : 'password'} value={confirmPw} onChange={e => setConfirm(e.target.value)} placeholder="Re-enter new password" className={inp} required />
+              <button type="button" onClick={() => setShowConf(p => !p)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${dark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}>
+                <EyeIcon className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" disabled={saving}
+            className="w-full py-3 rounded-xl text-white text-sm font-bold transition-all disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
+            style={{ background: 'linear-gradient(135deg,#f26522,#e04f0f)', boxShadow: '0 4px 14px rgba(242,101,34,0.35)' }}>
+            {saving ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Saving...</span> : 'Set New Password'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+/* ════════════════════════════════════════════════
    MAIN COMPONENT
 ════════════════════════════════════════════════ */
 const StudentDashboard = ({ user, onLogout }) => {
@@ -678,6 +763,7 @@ const StudentDashboard = ({ user, onLogout }) => {
   const [sidebarPinned, setSidebarPinned] = useState(false);
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const [student, setStudent]           = useState(null);
+  const [mustChangePassword, setMustChangePassword] = useState(() => user?.must_change_password === true);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [profileErr, setProfileErr]   = useState(null);
   const [dark, setDark]               = useState(() => localStorage.getItem('sd_theme') !== 'light');
@@ -2333,6 +2419,15 @@ const StudentDashboard = ({ user, onLogout }) => {
 
   return (
     <ThemeCtx.Provider value={dark}>
+    {/* Force-change-password modal — blocks everything until password is changed */}
+    {mustChangePassword && (
+      <ForceChangePasswordModal dark={dark} onChanged={() => {
+        setMustChangePassword(false);
+        const stored = JSON.parse(localStorage.getItem('auth_user') || '{}');
+        stored.must_change_password = false;
+        localStorage.setItem('auth_user', JSON.stringify(stored));
+      }} />
+    )}
     <div className={`flex h-screen w-screen overflow-hidden transition-colors duration-300 ${dark ? 'sd-dark bg-slate-950' : 'sd-light bg-slate-50'}`}>
       {dark && <>
         <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-brand-600/5 rounded-full blur-[150px] pointer-events-none" />

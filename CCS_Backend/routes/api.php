@@ -19,6 +19,7 @@ Route::post('/auth/verify-otp', [OtpController::class, 'verify']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user',          fn(Request $r) => $r->user());
     Route::post('/auth/logout',  [AuthController::class, 'logout']);
+    Route::post('/auth/change-password', [AuthController::class, 'changePassword']);
 });
 
 Route::get('/search', [\App\Http\Controllers\SearchController::class, 'index']);

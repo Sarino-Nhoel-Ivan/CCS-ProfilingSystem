@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Student;
 use App\Models\MedicalHistory;
 use App\Models\Violation;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 class StudentController extends Controller
 {
@@ -53,8 +56,82 @@ class StudentController extends Controller
             'last_year_attended'       => 'nullable|string|max:20',
             'honors_received'          => 'nullable|string',
         ]);
+
         $student = Student::create($validatedData);
+
+        // Auto-create login account:
+        // Login: student_number | Temp password: birthday in mm/dd/yyyy format
+        $birthDate   = \Carbon\Carbon::parse($validatedData['birth_date']);
+        $tempPassword = $birthDate->format('m/d/Y');
+
+        \DB::table('users')->insert([
+            'name'                 => $validatedData['student_number'],
+            'email'                => $validatedData['email'],
+            'password'             => Hash::make($tempPassword),
+            'role'                 => 'student',
+            'student_id'           => $student->id,
+            'must_change_password' => true,
+            'created_at'           => now(),
+            'updated_at'           => now(),
+        ]);
+
+        // Send welcome email to student's gmail
+        try {
+            $fullName = trim($validatedData['first_name'] . ' ' . $validatedData['last_name']);
+            Mail::html($this->buildWelcomeEmail($fullName, $validatedData['student_number'], $tempPassword), function ($msg) use ($validatedData, $fullName) {
+                $msg->to($validatedData['email'], $fullName)
+                    ->subject('Your CCS Profiling System Account Has Been Created');
+            });
+        } catch (\Throwable $e) {
+            \Log::error('Welcome email error: ' . $e->getMessage());
+        }
+
         return response()->json($student, 201);
+    }
+
+    private function buildWelcomeEmail(string $name, string $studentNumber, string $tempPassword): string
+    {
+        return <<<HTML
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:'Segoe UI',Arial,sans-serif;">
+  <div style="max-width:560px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+    <div style="background:linear-gradient(135deg,#f26522,#e04f0f);padding:32px 40px;text-align:center;">
+      <h1 style="color:#fff;margin:0;font-size:22px;font-weight:800;letter-spacing:-0.5px;">CCS Profiling System</h1>
+      <p style="color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:13px;">Pamantasan ng Cabuyao — College of Computing Studies</p>
+    </div>
+    <div style="padding:36px 40px;">
+      <p style="color:#1e293b;font-size:16px;font-weight:700;margin:0 0 8px;">Hello, {$name}!</p>
+      <p style="color:#475569;font-size:14px;line-height:1.6;margin:0 0 24px;">Your student account has been successfully created by the administration. You can now log in to the <strong>CCS Profile Hub</strong> using the credentials below.</p>
+
+      <div style="background:#fff7f0;border:1.5px solid #fed7aa;border-radius:12px;padding:20px 24px;margin-bottom:24px;">
+        <p style="margin:0 0 12px;font-size:12px;font-weight:700;color:#c2410c;text-transform:uppercase;letter-spacing:0.05em;">Your Login Credentials</p>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            <td style="padding:6px 0;font-size:13px;color:#64748b;width:140px;">Student Number</td>
+            <td style="padding:6px 0;font-size:14px;font-weight:700;color:#1e293b;font-family:monospace;">{$studentNumber}</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;font-size:13px;color:#64748b;">Temporary Password</td>
+            <td style="padding:6px 0;font-size:14px;font-weight:700;color:#1e293b;font-family:monospace;">{$tempPassword}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="background:#fef3c7;border:1.5px solid #fcd34d;border-radius:10px;padding:14px 18px;margin-bottom:24px;">
+        <p style="margin:0;font-size:13px;color:#92400e;line-height:1.5;">⚠️ <strong>Important:</strong> Your temporary password is your birthday in <strong>mm/dd/yyyy</strong> format. You will be required to change it upon your first login.</p>
+      </div>
+
+      <p style="color:#475569;font-size:13px;line-height:1.6;margin:0;">If you have any concerns, please contact the CCS administration office.</p>
+    </div>
+    <div style="background:#f8fafc;padding:20px 40px;text-align:center;border-top:1px solid #e2e8f0;">
+      <p style="margin:0;font-size:12px;color:#94a3b8;">© 2026 CCS Profiling System · Pamantasan ng Cabuyao</p>
+    </div>
+  </div>
+</body>
+</html>
+HTML;
     }
 
     public function show($id)

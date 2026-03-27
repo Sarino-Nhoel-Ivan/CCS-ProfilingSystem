@@ -120,15 +120,11 @@ function App() {
       <Route
         path="/student/login"
         element={!user
-          ? <StudentLogin onLogin={handleLogin} onGoToSignUp={() => navigate('/student/signup')} />
+          ? <StudentLogin onLogin={handleLogin} />
           : <Navigate to={dashboardPath(user)} replace />}
       />
-      <Route
-        path="/student/signup"
-        element={!user
-          ? <StudentSignUp onSignUp={handleSignUp} onGoToLogin={() => navigate('/student/login')} />
-          : <Navigate to={dashboardPath(user)} replace />}
-      />
+      {/* student/signup removed — accounts created by admin only */}
+      <Route path="/student/signup" element={<Navigate to="/student/login" replace />} />
 
       {/* Faculty routes */}
       <Route
@@ -152,8 +148,8 @@ function App() {
           : <Navigate to={dashboardPath(user)} replace />}
       />
 
-      {/* Backward compat redirects */}
-      <Route path="/signup" element={<Navigate to="/student/signup" replace />} />
+      {/* Backward compat redirect */}
+      <Route path="/signup" element={<Navigate to="/student/login" replace />} />
 
       {/* Dashboards */}
       <Route
