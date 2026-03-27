@@ -52,6 +52,7 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
 
   // ── Core student fields ───────────────────────────────────────────────────
   const [formData, setFormData] = useState({
+    student_number: '',
     first_name: '', middle_name: '', last_name: '', suffix: '',
     gender: 'Male', birth_date: '', place_of_birth: '',
     nationality: 'Filipino', civil_status: 'Single', religion: 'Roman Catholic',
@@ -78,6 +79,7 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
     if (isOpen && student) {
       setActiveSection('personal');
       setFormData({
+        student_number:            student.student_number || '',
         first_name:                student.first_name || '',
         middle_name:               student.middle_name || '',
         last_name:                 student.last_name || '',
@@ -327,94 +329,63 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
 
               {/* ── Personal Info ─────────────────────────────────────────── */}
               {activeSection === 'personal' && (
-                <div className="space-y-7">
+                <div className="space-y-6">
+
+                  {/* Personal Information */}
                   <div>
                     <h4 className={sectionHead}>Personal Information</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div><label className={labelCls}>First Name *</label><input required type="text" name="first_name" value={formData.first_name} onChange={handleChange} className={inputCls} /></div>
-                      <div><label className={labelCls}>Middle Name</label><input type="text" name="middle_name" value={formData.middle_name} onChange={handleChange} className={inputCls} /></div>
-                      <div><label className={labelCls}>Last Name *</label><input required type="text" name="last_name" value={formData.last_name} onChange={handleChange} className={inputCls} /></div>
-                      <div><label className={labelCls}>Suffix</label><input type="text" name="suffix" value={formData.suffix} onChange={handleChange} className={inputCls} /></div>
-                      <div><label className={labelCls}>Gender</label><select name="gender" value={formData.gender} onChange={handleChange} className={selectCls}><option>Male</option><option>Female</option></select></div>
-                      <div><label className={labelCls}>Birth Date *</label><input required type="date" name="birth_date" value={formData.birth_date} onChange={handleChange} className={inputCls} /></div>
-                      <div className="md:col-span-2"><label className={labelCls}>Place of Birth *</label><input required type="text" name="place_of_birth" value={formData.place_of_birth} onChange={handleChange} className={inputCls} /></div>
-                      <div><label className={labelCls}>Nationality</label><input type="text" name="nationality" value={formData.nationality} onChange={handleChange} className={inputCls} /></div>
-                      <div><label className={labelCls}>Civil Status</label>
-                        <select name="civil_status" value={formData.civil_status} onChange={handleChange} className={selectCls}>
-                          <option>Single</option><option>Married</option><option>Widowed</option><option>Separated</option>
-                        </select>
-                      </div>
-                      <div><label className={labelCls}>Religion</label><input type="text" name="religion" value={formData.religion} onChange={handleChange} className={inputCls} /></div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className={sectionHead}>Contact & Address</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div><label className={labelCls}>Email Address *</label><input required type="email" name="email" value={formData.email} onChange={handleChange} className={inputCls} /></div>
-                      <div><label className={labelCls}>Primary Contact *</label><input required type="text" name="contact_number" value={formData.contact_number} onChange={handleChange} className={inputCls} /></div>
-                      <div><label className={labelCls}>Alternate Contact</label><input type="text" name="alternate_contact_number" value={formData.alternate_contact_number} onChange={handleChange} className={inputCls} /></div>
-                      <div><label className={labelCls}>Street</label><input type="text" name="street" value={formData.street} onChange={handleChange} className={inputCls} /></div>
-                      <div><label className={labelCls}>Barangay</label><input type="text" name="barangay" value={formData.barangay} onChange={handleChange} className={inputCls} /></div>
-                      <div><label className={labelCls}>City *</label><input required type="text" name="city" value={formData.city} onChange={handleChange} className={inputCls} /></div>
-                      <div><label className={labelCls}>Province</label><input type="text" name="province" value={formData.province} onChange={handleChange} className={inputCls} /></div>
-                      <div><label className={labelCls}>Zip Code</label><input type="text" name="zip_code" value={formData.zip_code} onChange={handleChange} className={inputCls} /></div>
+                      <div><label className={labelCls}>Student ID</label>
+                        <input type="text" name="student_number" value={formData.student_number || ''} onChange={handleChange} className={inputCls} /></div>
+                      <div><label className={labelCls}>First Name *</label>
+                        <input required type="text" name="first_name" value={formData.first_name} onChange={handleChange} className={inputCls} /></div>
+                      <div><label className={labelCls}>Last Name *</label>
+                        <input required type="text" name="last_name" value={formData.last_name} onChange={handleChange} className={inputCls} /></div>
+                      <div><label className={labelCls}>Email *</label>
+                        <input required type="email" name="email" value={formData.email} onChange={handleChange} className={inputCls} /></div>
+                      <div><label className={labelCls}>Phone</label>
+                        <input type="text" name="contact_number" value={formData.contact_number} onChange={handleChange} className={inputCls} /></div>
+                      <div><label className={labelCls}>Date of Birth</label>
+                        <input type="date" name="birth_date" value={formData.birth_date} onChange={handleChange} className={inputCls} /></div>
+                      <div><label className={labelCls}>Gender</label>
+                        <select name="gender" value={formData.gender} onChange={handleChange} className={selectCls}>
+                          <option value="">Select...</option>
+                          <option>Male</option><option>Female</option>
+                        </select></div>
+                      <div className="md:col-span-2"><label className={labelCls}>Address</label>
+                        <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="City / Address" className={inputCls} /></div>
                     </div>
                   </div>
 
+                  {/* Academic Information */}
                   <div>
                     <h4 className={sectionHead}>Academic Information</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div><label className={labelCls}>Course / Program *</label>
+                      <div><label className={labelCls}>Course *</label>
                         <select required name="program" value={formData.program} onChange={handleChange} className={selectCls}>
-                          <option value="">Select Course / Program</option>
+                          <option value="">Select...</option>
                           <option value="Information Technology">BSIT - Information Technology</option>
                           <option value="Computer Science">BSCS - Computer Science</option>
-                        </select>
-                      </div>
-                      <div><label className={labelCls}>Year Level</label>
+                        </select></div>
+                      <div><label className={labelCls}>Year Level *</label>
                         <select name="year_level" value={formData.year_level} onChange={handleChange} className={selectCls}>
+                          <option value="">Select...</option>
                           <option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option>
-                        </select>
-                      </div>
+                        </select></div>
                       <div><label className={labelCls}>Section</label>
                         <select name="section" value={formData.section} onChange={handleChange} className={selectCls}>
                           <option value="">Select Section</option>
-                          {getSectionOptions(formData.program, formData.year_level).map(sec => (<option key={sec} value={sec}>{sec}</option>))}
-                        </select>
-                      </div>
+                          {getSectionOptions(formData.program, formData.year_level).map(sec => <option key={sec}>{sec}</option>)}
+                        </select></div>
                       <div><label className={labelCls}>Student Type</label>
                         <select name="student_type" value={formData.student_type} onChange={handleChange} className={selectCls}>
                           <option>Regular</option><option>Irregular</option><option>Returnee</option><option>Shiftee</option>
                           <option>Transferee</option><option>Graduated</option><option>Dropped</option><option>LOA</option><option>Suspended</option>
-                        </select>
-                      </div>
+                        </select></div>
                       <div><label className={labelCls}>Enrollment Status</label>
                         <select name="enrollment_status" value={formData.enrollment_status} onChange={handleChange} className={selectCls}>
                           <option>Enrolled</option><option>Not Enrolled</option>
-                        </select>
-                      </div>
-                      <div><label className={labelCls}>Date Enrolled</label>
-                        <input type="date" name="date_enrolled" value={formData.date_enrolled} onChange={handleChange} className={inputCls} />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className={sectionHead}>Academic Background</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div><label className={labelCls}>LRN (Learner Reference Number)</label>
-                        <input type="text" name="lrn" value={formData.lrn} onChange={handleChange} maxLength={12} placeholder="12-digit LRN" className={inputCls} />
-                      </div>
-                      <div><label className={labelCls}>Last Year Attended</label>
-                        <input type="text" name="last_year_attended" value={formData.last_year_attended} onChange={handleChange} placeholder="e.g. 2022-2023" className={inputCls} />
-                      </div>
-                      <div className="md:col-span-2"><label className={labelCls}>Last School Attended</label>
-                        <input type="text" name="last_school_attended" value={formData.last_school_attended} onChange={handleChange} className={inputCls} />
-                      </div>
-                      <div className="md:col-span-2"><label className={labelCls}>Honors / Awards Received</label>
-                        <textarea name="honors_received" value={formData.honors_received} onChange={handleChange} rows={3} placeholder="e.g. With Honors, Best in Math..." className={`${inputCls} resize-none`} />
-                      </div>
+                        </select></div>
                     </div>
                   </div>
 
