@@ -16,6 +16,13 @@ const StudentModule = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [listSearch, setListSearch] = useState('');
   const [listFilter, setListFilter] = useState('All');
+  // Advanced filters
+  const [filterSkill, setFilterSkill]         = useState('');
+  const [filterCourse, setFilterCourse]       = useState('');
+  const [filterAffil, setFilterAffil]         = useState('');
+  const [filterYear, setFilterYear]           = useState('');
+  const [availableSkills, setAvailableSkills] = useState([]);
+  const [availableCourses, setAvailableCourses] = useState([]);
 
   // ── Tailwind utility helpers keyed on dark mode ──────────────────
   const card   = dark ? 'bg-slate-900 border-slate-700/60'  : 'bg-white border-slate-100';
@@ -37,8 +44,14 @@ const StudentModule = () => {
     const fetchStudents = async () => {
       try {
         setIsLoading(true);
-        const data = await api.students.getAll();
+        const [data, skills, courses] = await Promise.all([
+          api.students.getAll(),
+          api.skills.getAll().catch(() => []),
+          api.courses.getAll().catch(() => []),
+        ]);
         setStudents(data);
+        setAvailableSkills(skills);
+        setAvailableCourses(courses);
         const enrolledCount    = data.filter(s => s.enrollment_status === 'Enrolled').length;
         const notEnrolledCount = data.filter(s => s.enrollment_status === 'Not Enrolled').length;
         setStats({ total: data.length, enrolled: enrolledCount, notEnrolled: notEnrolledCount });
@@ -180,8 +193,8 @@ const StudentModule = () => {
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>{students.length} total</span>
                 </div>
 
-                {/* Search + filter */}
-                <div className="flex gap-2 mb-4 flex-wrap">
+                {/* Search + enrollment filter */}
+                <div className="flex gap-2 mb-3 flex-wrap">
                   <div className="relative flex-1 min-w-[160px]">
                     <svg className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${dark ? 'text-slate-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     <input value={listSearch} onChange={e => setListSearch(e.target.value)} placeholder="Search name or number..."
@@ -197,14 +210,48 @@ const StudentModule = () => {
                   ))}
                 </div>
 
-                <div className={`divide-y max-h-[460px] overflow-y-auto pr-1 ${divider}`}>
+                {/* Advanced filters row */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                  {/* Skill */}
+                  <select value={filterSkill} onChange={e => setFilterSkill(e.target.value)}
+                    className={`rounded-lg border text-xs px-2 py-2 outline-none transition-colors ${dark ? 'bg-slate-800 border-slate-600 text-slate-200' : 'bg-white border-slate-200 text-slate-700'}`}>
+                    <option value="">All Skills</option>
+                    {availableSkills.map(s => <option key={s.id} value={s.id}>{s.skill_name}</option>)}
+                  </select>
+                  {/* Course */}
+                  <select value={filterCourse} onChange={e => setFilterCourse(e.target.value)}
+                    className={`rounded-lg border text-xs px-2 py-2 outline-none transition-colors ${dark ? 'bg-slate-800 border-slate-600 text-slate-200' : 'bg-white border-slate-200 text-slate-700'}`}>
+                    <option value="">All Courses</option>
+                    {availableCourses.map(c => <option key={c.id} value={c.id}>{c.course_code}</option>)}
+                  </select>
+                  {/* Org / Affiliation */}
+                  <select value={filterAffil} onChange={e => setFilterAffil(e.target.value)}
+                    className={`rounded-lg border text-xs px-2 py-2 outline-none transition-colors ${dark ? 'bg-slate-800 border-slate-600 text-slate-200' : 'bg-white border-slate-200 text-slate-700'}`}>
+                    <option value="">All Affiliations</option>
+                    {[...new Set(students.flatMap(s => s.affiliations?.map(a => a.organization_name) ?? []))].sort().map(org => (
+                      <option key={org} value={org}>{org}</option>
+                    ))}
+                  </select>
+                  {/* Year Level */}
+                  <select value={filterYear} onChange={e => setFilterYear(e.target.value)}
+                    className={`rounded-lg border text-xs px-2 py-2 outline-none transition-colors ${dark ? 'bg-slate-800 border-slate-600 text-slate-200' : 'bg-white border-slate-200 text-slate-700'}`}>
+                    <option value="">All Years</option>
+                    {['1st Year','2nd Year','3rd Year','4th Year'].map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
+
+                <div className={`divide-y max-h-[400px] overflow-y-auto pr-1 ${divider}`}>
                   {isLoading ? (
                     <div className="py-8 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500" /></div>
                   ) : (() => {
                     const filtered = students.filter(s => {
                       const matchSearch = !listSearch || `${s.first_name} ${s.last_name} ${s.student_number || ''}`.toLowerCase().includes(listSearch.toLowerCase());
                       const matchFilter = listFilter === 'All' || s.enrollment_status === listFilter;
-                      return matchSearch && matchFilter;
+                      const matchSkill  = !filterSkill || s.skills?.some(sk => String(sk.id) === filterSkill);
+                      const matchCourse = !filterCourse || String(s.course_id) === filterCourse;
+                      const matchAffil  = !filterAffil || s.affiliations?.some(a => a.organization_name === filterAffil);
+                      const matchYear   = !filterYear || s.year_level === filterYear;
+                      return matchSearch && matchFilter && matchSkill && matchCourse && matchAffil && matchYear;
                     });
                     if (filtered.length === 0) return <div className={`py-8 text-center text-sm ${labelText}`}>No students match your search.</div>;
                     return filtered.map(student => (
@@ -212,7 +259,7 @@ const StudentModule = () => {
                         className={`py-4 flex items-center justify-between group cursor-pointer -mx-4 px-4 rounded-lg transition-colors ${rowHover}`}>
                         <div className="flex items-center space-x-4">
                           <div className="w-10 h-10 rounded-full bg-brand-600/20 text-brand-400 flex items-center justify-center font-bold text-sm shrink-0">
-                            {student.first_name[0]}{student.last_name[0]}
+                            {student.first_name?.[0]}{student.last_name?.[0]}
                           </div>
                           <div>
                             <p className={`text-sm font-semibold group-hover:text-brand-500 transition-colors ${boldText}`}>

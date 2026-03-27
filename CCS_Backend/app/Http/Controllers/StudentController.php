@@ -78,7 +78,7 @@ class StudentController extends Controller
         // Send welcome email to student's gmail
         try {
             $fullName = trim($validatedData['first_name'] . ' ' . $validatedData['last_name']);
-            Mail::html($this->buildWelcomeEmail($fullName, $validatedData['student_number'], $tempPassword), function ($msg) use ($validatedData, $fullName) {
+            Mail::html($this->buildWelcomeEmail($fullName, $validatedData['student_number']), function ($msg) use ($validatedData, $fullName) {
                 $msg->to($validatedData['email'], $fullName)
                     ->subject('Your CCS Profiling System Account Has Been Created');
             });
@@ -89,7 +89,7 @@ class StudentController extends Controller
         return response()->json($student, 201);
     }
 
-    private function buildWelcomeEmail(string $name, string $studentNumber, string $tempPassword): string
+    private function buildWelcomeEmail(string $name, string $studentNumber): string
     {
         return <<<HTML
 <!DOCTYPE html>
@@ -114,13 +114,13 @@ class StudentController extends Controller
           </tr>
           <tr>
             <td style="padding:6px 0;font-size:13px;color:#64748b;">Temporary Password</td>
-            <td style="padding:6px 0;font-size:14px;font-weight:700;color:#1e293b;font-family:monospace;">{$tempPassword}</td>
+            <td style="padding:6px 0;font-size:14px;color:#475569;">Your birthday in <strong>mm/dd/yyyy</strong> format</td>
           </tr>
         </table>
       </div>
 
       <div style="background:#fef3c7;border:1.5px solid #fcd34d;border-radius:10px;padding:14px 18px;margin-bottom:24px;">
-        <p style="margin:0;font-size:13px;color:#92400e;line-height:1.5;">⚠️ <strong>Important:</strong> Your temporary password is your birthday in <strong>mm/dd/yyyy</strong> format. You will be required to change it upon your first login.</p>
+        <p style="margin:0;font-size:13px;color:#92400e;line-height:1.5;">⚠️ <strong>Important:</strong> Use your birthday (mm/dd/yyyy) as your temporary password. You will be required to change it upon your first login.</p>
       </div>
 
       <p style="color:#475569;font-size:13px;line-height:1.6;margin:0;">If you have any concerns, please contact the CCS administration office.</p>
