@@ -210,8 +210,12 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
     setError(null);
 
     try {
-      // 1. Update core student
-      await api.students.update(student.id, formData);
+      // 1. Update core student — convert empty strings to null for integer FK fields
+      const payload = { ...formData };
+      ['department_id', 'course_id'].forEach(k => {
+        if (payload[k] === '' || payload[k] === undefined) payload[k] = null;
+      });
+      await api.students.update(student.id, payload);
 
       // 2. Sync medical records: delete removed, update existing, add new
       const originalMedical = student.medical_histories || [];
