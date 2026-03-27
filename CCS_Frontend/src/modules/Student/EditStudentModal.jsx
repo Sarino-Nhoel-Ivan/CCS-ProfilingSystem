@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../utils/api';
+import { useDarkMode } from '../../context/DarkModeContext';
 
 const YEAR_PREFIX = { '1st Year': '1', '2nd Year': '2', '3rd Year': '3', '4th Year': '4' };
 const PROGRAM_CODE = { 'Information Technology': 'IT', 'Computer Science': 'CS' };
@@ -22,11 +23,27 @@ const SECTIONS_TABS = [
   { id: 'violations',label: 'Violations' },
 ];
 
-const inputCls = 'w-full rounded-lg border-slate-300 border px-3 py-2 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500';
-const selectCls = `${inputCls} bg-white`;
-const labelCls = 'block text-sm font-medium text-slate-700 mb-1';
-
 const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
+  const dark = useDarkMode();
+
+  // Dark mode tokens (defined inside component so they react to dark mode)
+  const modalBg   = dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-100';
+  const headerBg  = dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-100';
+  const footerBg  = dark ? 'bg-slate-800/60 border-slate-700/60' : 'bg-slate-50 border-slate-100';
+  const tabsBg    = dark ? 'bg-slate-800/50 border-slate-700/60' : 'bg-slate-50/50 border-slate-100';
+  const inputCls  = `w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${dark ? 'bg-slate-800 border-slate-600 text-slate-100 placeholder-slate-500 focus:border-brand-400' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-brand-500'}`;
+  const selectCls = `w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${dark ? 'bg-slate-800 border-slate-600 text-slate-100 focus:border-brand-400' : 'bg-white border-slate-300 text-slate-900 focus:border-brand-500'}`;
+  const labelCls  = `block text-sm font-medium mb-1 ${dark ? 'text-slate-300' : 'text-slate-700'}`;
+  const boldText  = dark ? 'text-slate-100' : 'text-slate-900';
+  const sectionHead = `text-sm font-semibold uppercase tracking-wider mb-4 border-b pb-2 ${dark ? 'text-brand-400 border-slate-700' : 'text-brand-600 border-brand-100'}`;
+  const cardBg    = dark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200';
+  const skillCardBase = dark ? 'border-slate-700 bg-slate-800/60' : 'border-slate-200 bg-white';
+  const skillCardSel  = dark ? 'border-brand-500 bg-brand-900/20' : 'border-brand-400 bg-brand-50/30';
+  const subText   = dark ? 'text-slate-400' : 'text-slate-500';
+  const cancelBtn = dark
+    ? 'text-slate-200 bg-slate-800 border border-slate-600 hover:bg-slate-700'
+    : 'text-slate-700 bg-white border border-slate-300 hover:bg-slate-50';
+
   const [activeSection, setActiveSection] = useState('personal');
   const [departments, setDepartments] = useState([]);
   const [allSkills, setAllSkills]       = useState([]);
@@ -270,12 +287,12 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
       <div className="flex min-h-full items-center justify-center p-4 sm:p-0">
-        <div className="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-4xl border border-slate-100">
+        <div className={`relative transform overflow-hidden rounded-2xl text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-4xl border ${modalBg}`}>
 
           {/* Header */}
-          <div className="bg-white px-6 pt-5 pb-4 border-b border-slate-100 flex justify-between items-center">
-            <h3 className="text-xl font-bold text-slate-900">Edit Student Profile</h3>
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-500">
+          <div className={`px-6 pt-5 pb-4 border-b flex justify-between items-center ${headerBg}`}>
+            <h3 className={`text-xl font-bold ${boldText}`}>Edit Student Profile</h3>
+            <button onClick={onClose} className={`${dark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-400 hover:text-slate-500'}`}>
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -283,13 +300,13 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
           </div>
 
           {/* Section Tabs */}
-          <div className="flex border-b border-slate-100 bg-slate-50/50 px-6">
+          <div className={`flex border-b px-6 ${tabsBg}`}>
             {SECTIONS_TABS.map(tab => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveSection(tab.id)}
-                className={`px-5 py-3 text-sm font-medium transition-all relative ${activeSection === tab.id ? 'text-brand-600' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`px-5 py-3 text-sm font-medium transition-all relative ${activeSection === tab.id ? 'text-brand-600' : `${subText} hover:text-slate-700`}`}
               >
                 {tab.label}
                 {activeSection === tab.id && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-brand-600" />}
@@ -301,14 +318,14 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
             <div className="px-6 py-5 overflow-y-auto max-h-[60vh]">
 
               {error && (
-                <div className="mb-5 bg-red-50 border-l-4 border-red-500 p-4 rounded-md text-sm text-red-700">{error}</div>
+                <div className={`mb-5 border-l-4 border-red-500 p-4 rounded-md text-sm ${dark ? 'bg-red-900/30 text-red-300' : 'bg-red-50 text-red-700'}`}>{error}</div>
               )}
 
               {/* ── Personal Info ─────────────────────────────────────────── */}
               {activeSection === 'personal' && (
                 <div className="space-y-7">
                   <div>
-                    <h4 className="text-sm font-semibold text-brand-600 uppercase tracking-wider mb-4 border-b pb-2">Personal Information</h4>
+                    <h4 className={sectionHead}>Personal Information</h4>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div><label className={labelCls}>First Name *</label><input required type="text" name="first_name" value={formData.first_name} onChange={handleChange} className={inputCls} /></div>
                       <div><label className={labelCls}>Middle Name</label><input type="text" name="middle_name" value={formData.middle_name} onChange={handleChange} className={inputCls} /></div>
@@ -328,7 +345,7 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-semibold text-brand-600 uppercase tracking-wider mb-4 border-b pb-2">Contact & Address</h4>
+                    <h4 className={sectionHead}>Contact & Address</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div><label className={labelCls}>Email Address *</label><input required type="email" name="email" value={formData.email} onChange={handleChange} className={inputCls} /></div>
                       <div><label className={labelCls}>Primary Contact *</label><input required type="text" name="contact_number" value={formData.contact_number} onChange={handleChange} className={inputCls} /></div>
@@ -342,7 +359,7 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-semibold text-brand-600 uppercase tracking-wider mb-4 border-b pb-2">Academic Information</h4>
+                    <h4 className={sectionHead}>Academic Information</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div><label className={labelCls}>Course / Program *</label>
                         <select required name="program" value={formData.program} onChange={handleChange} className={selectCls}>
@@ -380,7 +397,7 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-semibold text-brand-600 uppercase tracking-wider mb-4 border-b pb-2">Academic Background</h4>
+                    <h4 className={sectionHead}>Academic Background</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div><label className={labelCls}>LRN (Learner Reference Number)</label>
                         <input type="text" name="lrn" value={formData.lrn} onChange={handleChange} maxLength={12} placeholder="12-digit LRN" className={inputCls} />
@@ -404,7 +421,7 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
               {activeSection === 'medical' && (
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-sm font-semibold text-brand-600 uppercase tracking-wider border-b pb-2 flex-1">Medical Records & Emergency Contacts</h4>
+                    <h4 className={`text-sm font-semibold uppercase tracking-wider border-b pb-2 flex-1 ${dark ? 'text-brand-400 border-slate-700' : 'text-brand-600 border-brand-100'}`}>Medical Records & Emergency Contacts</h4>
                     <button type="button" onClick={addMedicalRow} className="ml-4 text-sm text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
                       Add Record
@@ -412,13 +429,13 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
                   </div>
                   <div className="space-y-5">
                     {medicalRecords.map((m, i) => (
-                      <div key={i} className="bg-slate-50 border border-slate-200 p-4 rounded-xl relative">
+                      <div key={i} className={`border p-4 rounded-xl relative ${cardBg}`}>
                         {medicalRecords.length > 1 && (
                           <button type="button" onClick={() => removeMedicalRow(i)} className="absolute top-3 right-3 text-red-400 hover:text-red-600">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                           </button>
                         )}
-                        <p className="text-xs font-bold text-slate-500 uppercase mb-3">Record #{i + 1}</p>
+                        <p className={`text-xs font-bold uppercase mb-3 ${subText}`}>Record #{i + 1}</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div><label className={labelCls}>Blood Type</label>
                             <select value={m.bloodtype} onChange={e => handleMedicalChange(i, 'bloodtype', e.target.value)} className={selectCls}>
@@ -445,29 +462,29 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
               {/* ── Skills ────────────────────────────────────────────────── */}
               {activeSection === 'skills' && (
                 <div>
-                  <h4 className="text-sm font-semibold text-brand-600 uppercase tracking-wider mb-4 border-b pb-2">Skills & Certifications</h4>
+                  <h4 className={sectionHead}>Skills & Certifications</h4>
                   {allSkills.length === 0 ? (
-                    <p className="text-sm text-slate-500 italic">No skills available in the system.</p>
+                    <p className={`text-sm italic ${subText}`}>No skills available in the system.</p>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {allSkills.map(skill => {
                         const sel = selectedSkills.find(s => s.skill_id === skill.id);
                         const isSelected = !!sel;
                         return (
-                          <div key={skill.id} className={`border rounded-xl p-4 transition-all ${isSelected ? 'border-brand-400 bg-brand-50/30' : 'border-slate-200 bg-white'}`}>
+                          <div key={skill.id} className={`border rounded-xl p-4 transition-all ${isSelected ? skillCardSel : skillCardBase}`}>
                             <div className="flex items-center gap-3 mb-2">
                               <input type="checkbox" id={`skill-${skill.id}`} checked={isSelected} onChange={() => toggleSkill(skill)}
                                 className="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500 cursor-pointer" />
-                              <label htmlFor={`skill-${skill.id}`} className="font-semibold text-sm text-slate-800 cursor-pointer flex-1">
+                              <label htmlFor={`skill-${skill.id}`} className={`font-semibold text-sm cursor-pointer flex-1 ${boldText}`}>
                                 {skill.skill_name}
-                                <span className="ml-2 text-xs font-normal text-slate-400">{skill.skill_category}</span>
+                                <span className={`ml-2 text-xs font-normal ${subText}`}>{skill.skill_category}</span>
                               </label>
                             </div>
                             {isSelected && (
-                              <div className="mt-2 pl-7 space-y-2 border-t border-brand-100 pt-3">
+                              <div className={`mt-2 pl-7 space-y-2 border-t pt-3 ${dark ? 'border-slate-700' : 'border-brand-100'}`}>
                                 <div>
-                                  <label className="block text-xs font-medium text-slate-600 mb-1">Proficiency Level</label>
-                                  <select value={sel.skill_level} onChange={e => updateSkillPivot(skill.id, 'skill_level', e.target.value)} className="w-full rounded-lg border-slate-200 border px-2 py-1 text-xs bg-white focus:border-brand-400">
+                                  <label className={`block text-xs font-medium mb-1 ${dark ? 'text-slate-400' : 'text-slate-600'}`}>Proficiency Level</label>
+                                  <select value={sel.skill_level} onChange={e => updateSkillPivot(skill.id, 'skill_level', e.target.value)} className={`w-full rounded-lg border px-2 py-1 text-xs ${dark ? 'bg-slate-700 border-slate-600 text-slate-100 focus:border-brand-400' : 'bg-white border-slate-200 text-slate-800 focus:border-brand-400'}`}>
                                     <option value="">Select Level</option>
                                     {['Beginner','Intermediate','Advanced','Expert'].map(l => <option key={l}>{l}</option>)}
                                   </select>
@@ -476,19 +493,19 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
                                   <input type="checkbox" id={`cert-${skill.id}`} checked={sel.certification}
                                     onChange={e => updateSkillPivot(skill.id, 'certification', e.target.checked)}
                                     className="w-3.5 h-3.5 text-brand-600 rounded border-slate-300" />
-                                  <label htmlFor={`cert-${skill.id}`} className="text-xs text-slate-600">Has Certification</label>
+                                  <label htmlFor={`cert-${skill.id}`} className={`text-xs ${dark ? 'text-slate-400' : 'text-slate-600'}`}>Has Certification</label>
                                 </div>
                                 {sel.certification && (
                                   <div className="grid grid-cols-2 gap-2">
                                     <div>
-                                      <label className="block text-xs font-medium text-slate-600 mb-1">Certification Name</label>
+                                      <label className={`block text-xs font-medium mb-1 ${dark ? 'text-slate-400' : 'text-slate-600'}`}>Certification Name</label>
                                       <input type="text" value={sel.certification_name} onChange={e => updateSkillPivot(skill.id, 'certification_name', e.target.value)}
-                                        className="w-full rounded-lg border-slate-200 border px-2 py-1 text-xs" />
+                                        className={`w-full rounded-lg border px-2 py-1 text-xs ${dark ? 'bg-slate-700 border-slate-600 text-slate-100' : 'bg-white border-slate-200 text-slate-800'}`} />
                                     </div>
                                     <div>
-                                      <label className="block text-xs font-medium text-slate-600 mb-1">Date Obtained</label>
+                                      <label className={`block text-xs font-medium mb-1 ${dark ? 'text-slate-400' : 'text-slate-600'}`}>Date Obtained</label>
                                       <input type="date" value={sel.certification_date} onChange={e => updateSkillPivot(skill.id, 'certification_date', e.target.value)}
-                                        className="w-full rounded-lg border-slate-200 border px-2 py-1 text-xs" />
+                                        className={`w-full rounded-lg border px-2 py-1 text-xs ${dark ? 'bg-slate-700 border-slate-600 text-slate-100' : 'bg-white border-slate-200 text-slate-800'}`} />
                                     </div>
                                   </div>
                                 )}
@@ -506,7 +523,7 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
               {activeSection === 'violations' && (
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-sm font-semibold text-brand-600 uppercase tracking-wider border-b pb-2 flex-1">Violations / Disciplinary Records</h4>
+                    <h4 className={`text-sm font-semibold uppercase tracking-wider border-b pb-2 flex-1 ${dark ? 'text-brand-400 border-slate-700' : 'text-brand-600 border-brand-100'}`}>Violations / Disciplinary Records</h4>
                     <button type="button" onClick={addViolationRow} className="ml-4 text-sm text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
                       Add Violation
@@ -521,11 +538,11 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
                   ) : (
                     <div className="space-y-5">
                       {violations.map((v, i) => (
-                        <div key={i} className={`border p-4 rounded-xl relative ${v.severity_level === 'High' ? 'border-red-200 bg-red-50/20' : v.severity_level === 'Medium' ? 'border-yellow-200 bg-yellow-50/20' : 'border-slate-200 bg-white'}`}>
+                        <div key={i} className={`border p-4 rounded-xl relative ${v.severity_level === 'High' ? (dark ? 'border-red-800 bg-red-900/20' : 'border-red-200 bg-red-50/20') : v.severity_level === 'Medium' ? (dark ? 'border-yellow-700 bg-yellow-900/20' : 'border-yellow-200 bg-yellow-50/20') : cardBg}`}>
                           <button type="button" onClick={() => removeViolationRow(i)} className="absolute top-3 right-3 text-red-400 hover:text-red-600">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                           </button>
-                          <p className="text-xs font-bold text-slate-500 uppercase mb-3">Violation #{i + 1}</p>
+                          <p className={`text-xs font-bold uppercase mb-3 ${subText}`}>Violation #{i + 1}</p>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="md:col-span-2"><label className={labelCls}>Violation Type *</label>
                               <input required type="text" value={v.violation_type} onChange={e => handleViolationChange(i, 'violation_type', e.target.value)} className={inputCls} />
@@ -566,8 +583,8 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
             </div>
 
             {/* Footer */}
-            <div className="bg-slate-50 px-6 py-3 flex justify-end gap-3 border-t border-slate-100">
-              <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+            <div className={`px-6 py-3 flex justify-end gap-3 border-t ${footerBg}`}>
+              <button type="button" onClick={onClose} className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${cancelBtn}`}>
                 Cancel
               </button>
               <button type="submit" disabled={isSubmitting} className="px-5 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-500 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
