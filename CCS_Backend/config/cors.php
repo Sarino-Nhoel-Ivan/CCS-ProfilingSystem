@@ -28,6 +28,7 @@ return [
 
     'allowed_origins_patterns' => [
         '#^https://.*\.vercel\.app$#',
+        '#^https://ccs-profiling.*\.vercel\.app$#',
     ],
 
     'allowed_headers' => ['*'],
