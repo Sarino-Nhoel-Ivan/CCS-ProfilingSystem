@@ -1,2 +1,5 @@
 [build]
 builder = "nixpacks"
+
+[deploy]
+healthcheckPath = "/api/health"
