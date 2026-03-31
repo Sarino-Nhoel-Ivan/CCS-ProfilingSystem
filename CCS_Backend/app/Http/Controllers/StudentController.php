@@ -75,17 +75,29 @@ class StudentController extends Controller
             'updated_at'           => now(),
         ]);
 
-        // Send welcome email to student's gmail
+        // Send welcome email to student's gmail via Brevo HTTP API
         try {
             $fullName = trim($validatedData['first_name'] . ' ' . $validatedData['last_name']);
-            \Log::info('Attempting welcome email to: ' . $validatedData['email'] . ' | mailer: ' . config('mail.default') . ' | key set: ' . (config('mail.mailers.brevo.key') ? 'yes' : 'NO'));
-            Mail::html($this->buildWelcomeEmail($fullName, $validatedData['student_number']), function ($msg) use ($validatedData, $fullName) {
-                $msg->to($validatedData['email'], $fullName)
-                    ->subject('Your CCS Profiling System Account Has Been Created');
-            });
-            \Log::info('Welcome email sent to: ' . $validatedData['email']);
+            $apiKey   = config('services.brevo.key', env('BREVO_API_KEY'));
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'api-key'      => $apiKey,
+                'Content-Type' => 'application/json',
+            ])->post('https://api.brevo.com/v3/smtp/email', [
+                'sender'      => [
+                    'name'  => config('mail.from.name'),
+                    'email' => config('mail.from.address'),
+                ],
+                'to'          => [['email' => $validatedData['email'], 'name' => $fullName]],
+                'subject'     => 'Your CCS Profiling System Account Has Been Created',
+                'htmlContent' => $this->buildWelcomeEmail($fullName, $validatedData['student_number']),
+            ]);
+            if ($response->successful()) {
+                \Log::info('Welcome email sent to: ' . $validatedData['email']);
+            } else {
+                \Log::error('Welcome email failed: ' . $response->body());
+            }
         } catch (\Throwable $e) {
-            \Log::error('Welcome email error: ' . $e->getMessage() . ' | ' . $e->getFile() . ':' . $e->getLine());
+            \Log::error('Welcome email error: ' . $e->getMessage());
         }
 
         return response()->json($student, 201);

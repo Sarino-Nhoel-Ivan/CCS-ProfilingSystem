@@ -46,10 +46,22 @@ class OtpController extends Controller
         Cache::put("otp:{$email}", $otp, now()->addMinutes(10));
 
         try {
-            Mail::html($this->buildEmailHtml($otp), function ($message) use ($email) {
-                $message->to($email)
-                    ->subject('Your CCS Profiling System Verification Code');
-            });
+            $apiKey   = config('services.brevo.key', env('BREVO_API_KEY'));
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'api-key'      => $apiKey,
+                'Content-Type' => 'application/json',
+            ])->post('https://api.brevo.com/v3/smtp/email', [
+                'sender'      => [
+                    'name'  => config('mail.from.name'),
+                    'email' => config('mail.from.address'),
+                ],
+                'to'          => [['email' => $email]],
+                'subject'     => 'Your CCS Profiling System Verification Code',
+                'htmlContent' => $this->buildEmailHtml($otp),
+            ]);
+            if (!$response->successful()) {
+                \Log::error('OTP mail error: ' . $response->body());
+            }
         } catch (\Throwable $e) {
             \Log::error('OTP mail error: ' . $e->getMessage());
         }
