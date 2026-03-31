@@ -105,6 +105,7 @@ class StudentController extends Controller
 
     private function buildWelcomeEmail(string $name, string $studentNumber): string
     {
+        $loginUrl = rtrim(env('FRONTEND_URL', 'https://ccs-profiling-system-iota.vercel.app'), '/') . '/student/login';
         return <<<HTML
 <!DOCTYPE html>
 <html>
@@ -137,7 +138,11 @@ class StudentController extends Controller
         <p style="margin:0;font-size:13px;color:#92400e;line-height:1.5;">⚠️ <strong>Important:</strong> Use your birthday (mm/dd/yyyy) as your temporary password. You will be required to change it upon your first login.</p>
       </div>
 
-      <p style="color:#475569;font-size:13px;line-height:1.6;margin:0;">If you have any concerns, please contact the CCS administration office.</p>
+      <p style="color:#475569;font-size:13px;line-height:1.6;margin:0 0 24px;">If you have any concerns, please contact the CCS administration office.</p>
+
+      <div style="text-align:center;margin:8px 0 8px;">
+        <a href="{$loginUrl}" style="display:inline-block;background:linear-gradient(135deg,#f26522,#e04f0f);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:12px;box-shadow:0 4px 14px rgba(242,101,34,0.4);">Go to Student Login →</a>
+      </div>
     </div>
     <div style="background:#f8fafc;padding:20px 40px;text-align:center;border-top:1px solid #e2e8f0;">
       <p style="margin:0;font-size:12px;color:#94a3b8;">© 2026 CCS Profiling System · Pamantasan ng Cabuyao</p>
