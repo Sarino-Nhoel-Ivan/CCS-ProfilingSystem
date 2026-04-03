@@ -13,8 +13,11 @@ const getSectionOptions = (program, yearLevel) => {
   return SECTIONS.map(s => `${yr}${code}-${s}`);
 };
 
-const emptyMedical = () => ({ bloodtype: '', existing_conditions: '', emergency_contact_name: '', emergency_contact_number: '' });
-const emptyViolation = () => ({ violation_type: '', description: '', date_reported: '', reported_by: '', severity_level: 'Low', action_taken: '', status: 'Pending', resolution_date: '' });
+const emptyMedical    = () => ({ bloodtype: '', existing_conditions: '', emergency_contact_name: '', emergency_contact_number: '' });
+const emptyViolation  = () => ({ offense: '', date: '', sanction: '' });
+const emptyAffil      = () => ({ organization: '', role: '', year: '' });
+const emptyActivity   = () => ({ activity: '', description: '', year: '' });
+const emptyAcadHist   = () => ({ school: '', year: '', gpa: '' });
 
 const SECTIONS_TABS = [
   { id: 'personal',  label: 'Personal Info' },
@@ -70,6 +73,15 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
   // ── Skills (pivot) ────────────────────────────────────────────────────────
   const [selectedSkills, setSelectedSkills] = useState([]);
   // selectedSkills: [{ skill_id, skill_level, certification, certification_name, certification_date }]
+
+  // ── Affiliations ──────────────────────────────────────────────────────────
+  const [affiliations, setAffiliations]     = useState([emptyAffil()]);
+
+  // ── Non-Academic Activities ───────────────────────────────────────────────
+  const [activities, setActivities]         = useState([emptyActivity()]);
+
+  // ── Academic History ──────────────────────────────────────────────────────
+  const [acadHistories, setAcadHistories]   = useState([emptyAcadHist()]);
 
   // ── Violations ────────────────────────────────────────────────────────────
   const [violations, setViolations]         = useState([]);
@@ -141,23 +153,53 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
 
       // Violations
       setViolations(
-        student.violations
+        student.violations && student.violations.length > 0
           ? student.violations.map(v => ({
-              id:               v.id,
-              violation_type:   v.violation_type || '',
-              description:      v.description || '',
-              date_reported:    v.date_reported ? v.date_reported.split('T')[0] : '',
-              reported_by:      v.reported_by || '',
-              severity_level:   v.severity_level || 'Low',
-              action_taken:     v.action_taken || '',
-              status:           v.status || 'Pending',
-              resolution_date:  v.resolution_date ? v.resolution_date.split('T')[0] : '',
+              id:      v.id,
+              offense: v.violation_type || '',
+              date:    v.date_reported ? v.date_reported.split('T')[0] : '',
+              sanction:v.description || '',
             }))
-          : []
+          : [emptyViolation()]
       );
 
-      fetchDropdownData();
-    }
+      // Affiliations
+      setAffiliations(
+        student.affiliations && student.affiliations.length > 0
+          ? student.affiliations.map(a => ({
+              id:           a.id,
+              organization: a.organization_name || '',
+              role:         a.position || '',
+              year:         a.date_joined ? a.date_joined.split('-')[0] : '',
+            }))
+          : [emptyAffil()]
+      );
+
+      // Activities
+      setActivities(
+        student.activities && student.activities.length > 0
+          ? student.activities.map(a => ({
+              id:          a.id,
+              activity:    a.activity || '',
+              description: a.description || '',
+              year:        a.year || '',
+            }))
+          : [emptyActivity()]
+      );
+
+      // Academic Histories
+      setAcadHistories(
+        student.academic_histories && student.academic_histories.length > 0
+          ? student.academic_histories.map(h => ({
+              id:     h.id,
+              school: h.school_name || '',
+              year:   h.school_year || '',
+              gpa:    h.gpa || '',
+            }))
+          : [emptyAcadHist()]
+      );
+
+      fetchDropdownData();    }
   }, [isOpen, student]);
 
   const fetchDropdownData = async () => {
@@ -204,6 +246,24 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
     setViolations(prev => prev.map((v, idx) => idx === i ? { ...v, [field]: value } : v));
   const addViolationRow  = () => setViolations(prev => [...prev, emptyViolation()]);
   const removeViolationRow = (i) => setViolations(prev => prev.filter((_, idx) => idx !== i));
+
+  // ── Affiliation helpers ────────────────────────────────────────────────────
+  const handleAffilChange = (i, field, value) =>
+    setAffiliations(prev => prev.map((a, idx) => idx === i ? { ...a, [field]: value } : a));
+  const addAffilRow    = () => setAffiliations(prev => [...prev, emptyAffil()]);
+  const removeAffilRow = (i) => setAffiliations(prev => prev.filter((_, idx) => idx !== i));
+
+  // ── Activity helpers ───────────────────────────────────────────────────────
+  const handleActivityChange = (i, field, value) =>
+    setActivities(prev => prev.map((a, idx) => idx === i ? { ...a, [field]: value } : a));
+  const addActivityRow    = () => setActivities(prev => [...prev, emptyActivity()]);
+  const removeActivityRow = (i) => setActivities(prev => prev.filter((_, idx) => idx !== i));
+
+  // ── Academic History helpers ───────────────────────────────────────────────
+  const handleAcadHistChange = (i, field, value) =>
+    setAcadHistories(prev => prev.map((h, idx) => idx === i ? { ...h, [field]: value } : h));
+  const addAcadHistRow    = () => setAcadHistories(prev => [...prev, emptyAcadHist()]);
+  const removeAcadHistRow = (i) => setAcadHistories(prev => prev.filter((_, idx) => idx !== i));
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
@@ -260,21 +320,69 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
           await api.students.deleteViolation(student.id, orig.id).catch(() => {});
         }
       }
-      for (const v of violations) {
-        const payload = {
-          violation_type:  v.violation_type,
-          description:     v.description,
-          date_reported:   v.date_reported,
-          reported_by:     v.reported_by,
-          severity_level:  v.severity_level,
-          action_taken:    v.action_taken,
-          status:          v.status,
-          resolution_date: v.resolution_date || null,
+      for (const v of violations.filter(v => v.offense)) {
+        const vPayload = {
+          violation_type: v.offense,
+          description:    v.sanction || '',
+          date_reported:  v.date || new Date().toISOString().split('T')[0],
+          reported_by:    'Administration',
+          severity_level: 'Low',
+          status:         'Pending',
         };
         if (v.id) {
-          await api.students.updateViolation(student.id, v.id, payload);
+          await api.students.updateViolation(student.id, v.id, vPayload);
         } else {
-          await api.students.addViolation(student.id, payload);
+          await api.students.addViolation(student.id, vPayload);
+        }
+      }
+
+      // 5. Sync affiliations
+      const originalAffils = student.affiliations || [];
+      for (const orig of originalAffils) {
+        const stillPresent = affiliations.find(a => a.id && a.id === orig.id);
+        if (!stillPresent) {
+          await api.students.deleteAffiliation(student.id, orig.id).catch(() => {});
+        }
+      }
+      for (const a of affiliations.filter(a => a.organization)) {
+        const affilPayload = {
+          organization_name: a.organization,
+          position:          a.role || 'Member',
+          date_joined:       a.year ? `${a.year}-01-01` : new Date().toISOString().split('T')[0],
+          status:            'Active',
+        };
+        if (a.id) {
+          await api.students.updateAffiliation(student.id, a.id, affilPayload).catch(() =>
+            api.students.addAffiliation(student.id, affilPayload)
+          );
+        } else {
+          await api.students.addAffiliation(student.id, affilPayload);
+        }
+      }
+
+      // 6. Sync academic histories
+      const originalAcadHist = student.academic_histories || [];
+      for (const orig of originalAcadHist) {
+        const stillPresent = acadHistories.find(h => h.id && h.id === orig.id);
+        if (!stillPresent) {
+          await api.students.deleteAcademicHistory(student.id, orig.id).catch(() => {});
+        }
+      }
+      for (const h of acadHistories.filter(h => h.school || h.year)) {
+        const histPayload = {
+          school_year:       h.year || '',
+          semester:          '1st Semester',
+          gpa:               h.gpa || null,
+          academic_standing: 'Good Standing',
+          total_units:       0,
+          completed_units:   0,
+        };
+        if (h.id) {
+          await api.students.updateAcademicHistory(student.id, h.id, histPayload).catch(() =>
+            api.students.addAcademicHistory(student.id, histPayload)
+          );
+        } else {
+          await api.students.addAcademicHistory(student.id, histPayload);
         }
       }
 
@@ -389,6 +497,75 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
                     </div>
                   </div>
 
+                  {/* Affiliations */}
+                  <div>
+                    <h4 className={sectionHead}>Affiliations</h4>
+                    {affiliations.map((a, i) => (
+                      <div key={i} className="grid grid-cols-3 gap-3 mb-3 items-end">
+                        <div><label className={labelCls}>Organization</label>
+                          <input type="text" value={a.organization} onChange={e => handleAffilChange(i, 'organization', e.target.value)} className={inputCls} /></div>
+                        <div><label className={labelCls}>Role</label>
+                          <input type="text" value={a.role} onChange={e => handleAffilChange(i, 'role', e.target.value)} className={inputCls} /></div>
+                        <div className="flex gap-2 items-end">
+                          <div className="flex-1"><label className={labelCls}>Year</label>
+                            <input type="text" value={a.year} onChange={e => handleAffilChange(i, 'year', e.target.value)} placeholder="e.g. 2024" className={inputCls} /></div>
+                          {affiliations.length > 1 && (
+                            <button type="button" onClick={() => removeAffilRow(i)} className={`p-2 rounded-lg border transition-all ${dark ? 'border-slate-600 text-slate-400 hover:bg-red-900/20 hover:border-red-500/40 hover:text-red-400' : 'border-slate-300 text-slate-400 hover:bg-red-50 hover:border-red-300 hover:text-red-500'}`}>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    <button type="button" onClick={addAffilRow} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all mt-1 ${dark ? 'border-brand-500/40 text-brand-400 hover:bg-brand-500/10' : 'border-brand-300 text-brand-600 hover:bg-brand-50'}`}>+ Add Row</button>
+                  </div>
+
+                  {/* Non-Academic Activities */}
+                  <div>
+                    <h4 className={sectionHead}>Non-Academic Activities</h4>
+                    {activities.map((a, i) => (
+                      <div key={i} className="grid grid-cols-3 gap-3 mb-3 items-end">
+                        <div><label className={labelCls}>Activity</label>
+                          <input type="text" value={a.activity} onChange={e => handleActivityChange(i, 'activity', e.target.value)} className={inputCls} /></div>
+                        <div><label className={labelCls}>Description</label>
+                          <input type="text" value={a.description} onChange={e => handleActivityChange(i, 'description', e.target.value)} className={inputCls} /></div>
+                        <div className="flex gap-2 items-end">
+                          <div className="flex-1"><label className={labelCls}>Year</label>
+                            <input type="text" value={a.year} onChange={e => handleActivityChange(i, 'year', e.target.value)} placeholder="e.g. 2024" className={inputCls} /></div>
+                          {activities.length > 1 && (
+                            <button type="button" onClick={() => removeActivityRow(i)} className={`p-2 rounded-lg border transition-all ${dark ? 'border-slate-600 text-slate-400 hover:bg-red-900/20 hover:border-red-500/40 hover:text-red-400' : 'border-slate-300 text-slate-400 hover:bg-red-50 hover:border-red-300 hover:text-red-500'}`}>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    <button type="button" onClick={addActivityRow} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all mt-1 ${dark ? 'border-brand-500/40 text-brand-400 hover:bg-brand-500/10' : 'border-brand-300 text-brand-600 hover:bg-brand-50'}`}>+ Add Row</button>
+                  </div>
+
+                  {/* Academic History */}
+                  <div>
+                    <h4 className={sectionHead}>Academic History</h4>
+                    {acadHistories.map((h, i) => (
+                      <div key={i} className="grid grid-cols-3 gap-3 mb-3 items-end">
+                        <div><label className={labelCls}>School</label>
+                          <input type="text" value={h.school} onChange={e => handleAcadHistChange(i, 'school', e.target.value)} className={inputCls} /></div>
+                        <div><label className={labelCls}>Year</label>
+                          <input type="text" value={h.year} onChange={e => handleAcadHistChange(i, 'year', e.target.value)} placeholder="e.g. 2022-2023" className={inputCls} /></div>
+                        <div className="flex gap-2 items-end">
+                          <div className="flex-1"><label className={labelCls}>GPA</label>
+                            <input type="text" value={h.gpa} onChange={e => handleAcadHistChange(i, 'gpa', e.target.value)} placeholder="e.g. 1.50" className={inputCls} /></div>
+                          {acadHistories.length > 1 && (
+                            <button type="button" onClick={() => removeAcadHistRow(i)} className={`p-2 rounded-lg border transition-all ${dark ? 'border-slate-600 text-slate-400 hover:bg-red-900/20 hover:border-red-500/40 hover:text-red-400' : 'border-slate-300 text-slate-400 hover:bg-red-50 hover:border-red-300 hover:text-red-500'}`}>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    <button type="button" onClick={addAcadHistRow} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all mt-1 ${dark ? 'border-brand-500/40 text-brand-400 hover:bg-brand-500/10' : 'border-brand-300 text-brand-600 hover:bg-brand-50'}`}>+ Add Row</button>
+                  </div>
+
                 </div>
               )}
 
@@ -497,61 +674,25 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
               {/* ── Violations ────────────────────────────────────────────── */}
               {activeSection === 'violations' && (
                 <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className={`text-sm font-semibold uppercase tracking-wider border-b pb-2 flex-1 ${dark ? 'text-brand-400 border-slate-700' : 'text-brand-600 border-brand-100'}`}>Violations / Disciplinary Records</h4>
-                    <button type="button" onClick={addViolationRow} className="ml-4 text-sm text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                      Add Violation
-                    </button>
-                  </div>
-                  {violations.length === 0 ? (
-                    <div className="bg-green-50 border border-green-100 p-6 rounded-xl text-center">
-                      <svg className="w-10 h-10 text-green-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      <p className="text-green-700 font-semibold text-sm">No violations recorded.</p>
-                      <p className="text-green-600 text-xs mt-1">Click "Add Violation" to record one.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-5">
-                      {violations.map((v, i) => (
-                        <div key={i} className={`border p-4 rounded-xl relative ${v.severity_level === 'High' ? (dark ? 'border-red-800 bg-red-900/20' : 'border-red-200 bg-red-50/20') : v.severity_level === 'Medium' ? (dark ? 'border-yellow-700 bg-yellow-900/20' : 'border-yellow-200 bg-yellow-50/20') : cardBg}`}>
-                          <button type="button" onClick={() => removeViolationRow(i)} className="absolute top-3 right-3 text-red-400 hover:text-red-600">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                  <h4 className={sectionHead}>Violations</h4>
+                  {violations.map((v, i) => (
+                    <div key={i} className="grid grid-cols-3 gap-3 mb-3 items-end">
+                      <div><label className={labelCls}>Offense</label>
+                        <input type="text" value={v.offense} onChange={e => handleViolationChange(i, 'offense', e.target.value)} className={inputCls} /></div>
+                      <div><label className={labelCls}>Date</label>
+                        <input type="date" value={v.date} onChange={e => handleViolationChange(i, 'date', e.target.value)} className={inputCls} /></div>
+                      <div className="flex gap-2 items-end">
+                        <div className="flex-1"><label className={labelCls}>Sanction</label>
+                          <input type="text" value={v.sanction} onChange={e => handleViolationChange(i, 'sanction', e.target.value)} className={inputCls} /></div>
+                        {violations.length > 1 && (
+                          <button type="button" onClick={() => removeViolationRow(i)} className={`p-2 rounded-lg border transition-all ${dark ? 'border-slate-600 text-slate-400 hover:bg-red-900/20 hover:border-red-500/40 hover:text-red-400' : 'border-slate-300 text-slate-400 hover:bg-red-50 hover:border-red-300 hover:text-red-500'}`}>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                           </button>
-                          <p className={`text-xs font-bold uppercase mb-3 ${subText}`}>Violation #{i + 1}</p>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="md:col-span-2"><label className={labelCls}>Violation Type *</label>
-                              <input required type="text" value={v.violation_type} onChange={e => handleViolationChange(i, 'violation_type', e.target.value)} className={inputCls} />
-                            </div>
-                            <div><label className={labelCls}>Severity *</label>
-                              <select value={v.severity_level} onChange={e => handleViolationChange(i, 'severity_level', e.target.value)} className={selectCls}>
-                                <option>Low</option><option>Medium</option><option>High</option>
-                              </select>
-                            </div>
-                            <div><label className={labelCls}>Date Reported *</label>
-                              <input required type="date" value={v.date_reported} onChange={e => handleViolationChange(i, 'date_reported', e.target.value)} className={inputCls} />
-                            </div>
-                            <div><label className={labelCls}>Reported By</label>
-                              <input type="text" value={v.reported_by} onChange={e => handleViolationChange(i, 'reported_by', e.target.value)} className={inputCls} />
-                            </div>
-                            <div><label className={labelCls}>Status *</label>
-                              <select value={v.status} onChange={e => handleViolationChange(i, 'status', e.target.value)} className={selectCls}>
-                                <option>Pending</option><option>Under Review</option><option>Resolved</option>
-                              </select>
-                            </div>
-                            <div className="md:col-span-3"><label className={labelCls}>Description</label>
-                              <textarea value={v.description} onChange={e => handleViolationChange(i, 'description', e.target.value)} rows={2} className={`${inputCls} resize-none`} />
-                            </div>
-                            <div className="md:col-span-2"><label className={labelCls}>Action Taken</label>
-                              <textarea value={v.action_taken} onChange={e => handleViolationChange(i, 'action_taken', e.target.value)} rows={2} className={`${inputCls} resize-none`} />
-                            </div>
-                            <div><label className={labelCls}>Resolution Date</label>
-                              <input type="date" value={v.resolution_date} onChange={e => handleViolationChange(i, 'resolution_date', e.target.value)} className={inputCls} />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                        )}
+                      </div>
                     </div>
-                  )}
+                  ))}
+                  <button type="button" onClick={addViolationRow} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all mt-1 ${dark ? 'border-brand-500/40 text-brand-400 hover:bg-brand-500/10' : 'border-brand-300 text-brand-600 hover:bg-brand-50'}`}>+ Add Row</button>
                 </div>
               )}
 
