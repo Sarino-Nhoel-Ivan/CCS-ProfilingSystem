@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../../utils/api';
 import { useDarkMode } from '../../context/DarkModeContext';
 
@@ -49,6 +49,9 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
   const [allSkills, setAllSkills]       = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError]               = useState(null);
+  const [fieldErrors, setFieldErrors]   = useState({});
+  const formScrollRef = useRef(null);
+  const fieldRefs     = useRef({});
 
   // ── Core student fields ───────────────────────────────────────────────────
   const [formData, setFormData] = useState({
@@ -73,6 +76,29 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
 
   // ── Violations ────────────────────────────────────────────────────────────
   const [violations, setViolations]         = useState([]);
+
+  // ── Affiliations ──────────────────────────────────────────────────────────
+  const emptyAffiliation  = () => ({ organization_name: '', role: '', year: '' });
+  const [affiliations, setAffiliations]     = useState([emptyAffiliation()]);
+  const addAffiliation    = () => setAffiliations(p => [...p, emptyAffiliation()]);
+  const removeAffiliation = (i) => setAffiliations(p => p.filter((_, idx) => idx !== i));
+  const updateAffiliation = (i, f, v) => setAffiliations(p => p.map((a, idx) => idx === i ? { ...a, [f]: v } : a));
+
+  // ── Non-Academic Activities ───────────────────────────────────────────────
+  const emptyNonAcademic  = () => ({ activity: '', description: '', year: '' });
+  const [nonAcademic, setNonAcademic]       = useState([emptyNonAcademic()]);
+  const addNonAcademic    = () => setNonAcademic(p => [...p, emptyNonAcademic()]);
+  const removeNonAcademic = (i) => setNonAcademic(p => p.filter((_, idx) => idx !== i));
+  const updateNonAcademic = (i, f, v) => setNonAcademic(p => p.map((a, idx) => idx === i ? { ...a, [f]: v } : a));
+
+  // ── Academic History ──────────────────────────────────────────────────────
+  const emptyAcademicHistory  = () => ({ school_name: '', year_attended: '', gpa: '' });
+  const [academicHistory, setAcademicHistory] = useState([emptyAcademicHistory()]);
+  const addAcademicHistory    = () => setAcademicHistory(p => [...p, emptyAcademicHistory()]);
+  const removeAcademicHistory = (i) => setAcademicHistory(p => p.filter((_, idx) => idx !== i));
+  const updateAcademicHistory = (i, f, v) => setAcademicHistory(p => p.map((a, idx) => idx === i ? { ...a, [f]: v } : a));
+
+  // ── Skills text (comma-separated) ────────────────────────────────────────
 
   // ── Load data when modal opens ────────────────────────────────────────────
   useEffect(() => {
@@ -156,6 +182,26 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
           : []
       );
 
+      // Affiliations
+      setAffiliations(
+        student.affiliations && student.affiliations.length > 0
+          ? student.affiliations.map(a => ({ id: a.id, organization_name: a.organization_name || '', role: a.role || '', year: a.year || '' }))
+          : [{ organization_name: '', role: '', year: '' }]
+      );
+
+      // Non-Academic Activities (stored in affiliations with type flag or separate — use honors_received as fallback)
+      setNonAcademic([{ activity: '', description: '', year: '' }]);
+
+      // Academic History
+      setAcademicHistory(
+        student.academic_histories && student.academic_histories.length > 0
+          ? student.academic_histories.map(h => ({ id: h.id, school_name: h.school_name || '', year_attended: h.year_attended || '', gpa: h.gpa || '' }))
+          : [{ school_name: '', year_attended: '', gpa: '' }]
+      );
+
+      // Skills text
+      
+
       fetchDropdownData();
     }
   }, [isOpen, student]);
@@ -180,7 +226,53 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
+    if (fieldErrors[name]) setFieldErrors(p => { const n = { ...p }; delete n[name]; return n; });
   };
+
+  const parseErrors = useCallback((message) => {
+    const map = {};
+    const patterns = [
+      { re: /student.?number.*required/i,  key: 'student_number' },
+      { re: /student.?number.*taken/i,      key: 'student_number' },
+      { re: /student.?number.*start/i,      key: 'student_number' },
+      { re: /first.?name.*required/i,       key: 'first_name' },
+      { re: /last.?name.*required/i,        key: 'last_name' },
+      { re: /email.*required/i,             key: 'email' },
+      { re: /email.*taken/i,                key: 'email' },
+      { re: /email.*valid/i,                key: 'email' },
+      { re: /contact.*required/i,           key: 'contact_number' },
+      { re: /program.*required/i,           key: 'program' },
+      { re: /year.?level.*required/i,       key: 'year_level' },
+    ];
+    for (const { re, key } of patterns) {
+      if (re.test(message)) map[key] = message;
+    }
+    return map;
+  }, []);
+
+  const scrollToFirstError = useCallback((errors) => {
+    const order = ['student_number','first_name','last_name','email','contact_number','program','year_level'];
+    for (const key of order) {
+      if (errors[key] && fieldRefs.current[key]) {
+        fieldRefs.current[key].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        fieldRefs.current[key].focus({ preventScroll: true });
+        break;
+      }
+    }
+  }, []);
+
+  const inpErr = (field) => fieldErrors[field]
+    ? `w-full rounded-lg border-2 px-3 py-2 text-sm outline-none transition-all bg-red-50 border-red-400 text-slate-900 placeholder-slate-400 shadow-[0_0_0_3px_rgba(239,68,68,0.15)]`
+    : inputCls;
+  const selErr = (field) => fieldErrors[field]
+    ? `w-full rounded-lg border-2 px-3 py-2 text-sm outline-none transition-all bg-red-50 border-red-400 text-slate-900 shadow-[0_0_0_3px_rgba(239,68,68,0.15)]`
+    : selectCls;
+  const ErrMsg = ({ field }) => fieldErrors[field]
+    ? <p className="mt-1.5 text-xs font-semibold text-red-600 flex items-center gap-1.5">
+        <svg className="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/></svg>
+        {fieldErrors[field]}
+      </p>
+    : null;
 
   // ── Medical helpers ────────────────────────────────────────────────────────
   const handleMedicalChange = (i, field, value) =>
@@ -210,6 +302,7 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
+    setFieldErrors({});
 
     try {
       // 1. Update core student — convert empty strings to null for integer FK fields
@@ -278,10 +371,50 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
         }
       }
 
+      // 5. Sync affiliations
+      const originalAffiliations = student.affiliations || [];
+      for (const orig of originalAffiliations) {
+        const stillPresent = affiliations.find(a => a.id && a.id === orig.id);
+        if (!stillPresent) await api.students.deleteAffiliation(student.id, orig.id).catch(() => {});
+      }
+      for (const a of affiliations) {
+        if (!a.organization_name.trim()) continue;
+        const aPayload = { organization_name: a.organization_name, role: a.role, year: a.year };
+        if (a.id) {
+          await api.students.updateAffiliation(student.id, a.id, aPayload);
+        } else {
+          await api.students.addAffiliation(student.id, aPayload);
+        }
+      }
+
+      // 6. Sync academic history
+      const originalHistory = student.academic_histories || [];
+      for (const orig of originalHistory) {
+        const stillPresent = academicHistory.find(h => h.id && h.id === orig.id);
+        if (!stillPresent) await api.students.deleteAcademicHistory(student.id, orig.id).catch(() => {});
+      }
+      for (const h of academicHistory) {
+        if (!h.school_name.trim()) continue;
+        const hPayload = { school_name: h.school_name, year_attended: h.year_attended, gpa: h.gpa };
+        if (h.id) {
+          await api.students.updateAcademicHistory(student.id, h.id, hPayload);
+        } else {
+          await api.students.addAcademicHistory(student.id, hPayload);
+        }
+      }
+
       onStudentUpdated();
       onClose();
     } catch (err) {
-      setError(err.message || 'Failed to update student. Please check all required fields.');
+      const msg = err.message || 'Failed to update student. Please check all required fields.';
+      const parsed = parseErrors(msg);
+      setError(msg);
+      if (Object.keys(parsed).length > 0) {
+        setFieldErrors(parsed);
+        scrollToFirstError(parsed);
+      } else if (formScrollRef.current) {
+        formScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -321,7 +454,7 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
           </div>
 
           <form onSubmit={handleSubmit}>
-            <div className="px-6 py-5 overflow-y-auto max-h-[60vh]">
+            <div className="px-6 py-5 overflow-y-auto max-h-[60vh]" ref={formScrollRef}>
 
               {error && (
                 <div className={`mb-5 border-l-4 border-red-500 p-4 rounded-md text-sm ${dark ? 'bg-red-900/30 text-red-300' : 'bg-red-50 text-red-700'}`}>{error}</div>
@@ -336,15 +469,30 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
                     <h4 className={sectionHead}>Personal Information</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div><label className={labelCls}>Student ID</label>
-                        <input type="text" name="student_number" value={formData.student_number || ''} onChange={handleChange} className={inputCls} /></div>
+                        <input type="text" name="student_number" value={formData.student_number || ''} onChange={handleChange}
+                          ref={el => fieldRefs.current.student_number = el}
+                          className={inpErr('student_number')} />
+                        <ErrMsg field="student_number" /></div>
                       <div><label className={labelCls}>First Name *</label>
-                        <input required type="text" name="first_name" value={formData.first_name} onChange={handleChange} className={inputCls} /></div>
+                        <input type="text" name="first_name" value={formData.first_name} onChange={handleChange}
+                          ref={el => fieldRefs.current.first_name = el}
+                          className={inpErr('first_name')} />
+                        <ErrMsg field="first_name" /></div>
                       <div><label className={labelCls}>Last Name *</label>
-                        <input required type="text" name="last_name" value={formData.last_name} onChange={handleChange} className={inputCls} /></div>
+                        <input type="text" name="last_name" value={formData.last_name} onChange={handleChange}
+                          ref={el => fieldRefs.current.last_name = el}
+                          className={inpErr('last_name')} />
+                        <ErrMsg field="last_name" /></div>
                       <div><label className={labelCls}>Email *</label>
-                        <input required type="email" name="email" value={formData.email} onChange={handleChange} className={inputCls} /></div>
+                        <input type="email" name="email" value={formData.email} onChange={handleChange}
+                          ref={el => fieldRefs.current.email = el}
+                          className={inpErr('email')} />
+                        <ErrMsg field="email" /></div>
                       <div><label className={labelCls}>Phone</label>
-                        <input type="text" name="contact_number" value={formData.contact_number} onChange={handleChange} className={inputCls} /></div>
+                        <input type="text" name="contact_number" value={formData.contact_number} onChange={handleChange}
+                          ref={el => fieldRefs.current.contact_number = el}
+                          className={inpErr('contact_number')} />
+                        <ErrMsg field="contact_number" /></div>
                       <div><label className={labelCls}>Date of Birth</label>
                         <input type="date" name="birth_date" value={formData.birth_date} onChange={handleChange} className={inputCls} /></div>
                       <div><label className={labelCls}>Gender</label>
@@ -362,16 +510,22 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
                     <h4 className={sectionHead}>Academic Information</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div><label className={labelCls}>Course *</label>
-                        <select required name="program" value={formData.program} onChange={handleChange} className={selectCls}>
+                        <select name="program" value={formData.program} onChange={handleChange}
+                          ref={el => fieldRefs.current.program = el}
+                          className={selErr('program')}>
                           <option value="">Select...</option>
                           <option value="Information Technology">BSIT - Information Technology</option>
                           <option value="Computer Science">BSCS - Computer Science</option>
-                        </select></div>
+                        </select>
+                        <ErrMsg field="program" /></div>
                       <div><label className={labelCls}>Year Level *</label>
-                        <select name="year_level" value={formData.year_level} onChange={handleChange} className={selectCls}>
+                        <select name="year_level" value={formData.year_level} onChange={handleChange}
+                          ref={el => fieldRefs.current.year_level = el}
+                          className={selErr('year_level')}>
                           <option value="">Select...</option>
                           <option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option>
-                        </select></div>
+                        </select>
+                        <ErrMsg field="year_level" /></div>
                       <div><label className={labelCls}>Section</label>
                         <select name="section" value={formData.section} onChange={handleChange} className={selectCls}>
                           <option value="">Select Section</option>
@@ -387,6 +541,69 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
                           <option>Enrolled</option><option>Not Enrolled</option>
                         </select></div>
                     </div>
+                  </div>
+
+                  {/* Affiliations */}
+                  <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/50 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
+                    <h4 className={`text-sm font-bold uppercase tracking-wider mb-4 border-b pb-2 ${dark ? 'text-brand-400 border-slate-700' : 'text-brand-500 border-brand-100'}`}>Affiliations</h4>
+                    {affiliations.map((a, i) => (
+                      <div key={i} className="grid grid-cols-3 gap-3 mb-3 items-end">
+                        <div><label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>Organization</label>
+                          <input value={a.organization_name} onChange={e => updateAffiliation(i, 'organization_name', e.target.value)} className={inputCls} /></div>
+                        <div><label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>Role</label>
+                          <input value={a.role} onChange={e => updateAffiliation(i, 'role', e.target.value)} className={inputCls} /></div>
+                        <div className="flex gap-2 items-end">
+                          <div className="flex-1"><label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>Year</label>
+                            <input value={a.year} onChange={e => updateAffiliation(i, 'year', e.target.value)} placeholder="e.g. 2024" className={inputCls} /></div>
+                          {affiliations.length > 1 && <button type="button" onClick={() => removeAffiliation(i)} className={`p-2 rounded-lg border transition-all ${dark ? 'border-slate-600 text-slate-400 hover:bg-red-900/20 hover:border-red-500/40 hover:text-red-400' : 'border-brand-200 text-brand-400 hover:bg-red-50 hover:border-red-300 hover:text-red-500'}`}>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>}
+                        </div>
+                      </div>
+                    ))}
+                    <button type="button" onClick={addAffiliation} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all mt-3 ${dark ? 'border-brand-500/40 text-brand-400 hover:bg-brand-500/10' : 'border-brand-300 text-brand-600 hover:bg-brand-50'}`}>+ Add Row</button>
+                  </div>
+
+                  {/* Non-Academic Activities */}
+                  <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/50 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
+                    <h4 className={`text-sm font-bold uppercase tracking-wider mb-4 border-b pb-2 ${dark ? 'text-brand-400 border-slate-700' : 'text-brand-500 border-brand-100'}`}>Non-Academic Activities</h4>
+                    {nonAcademic.map((a, i) => (
+                      <div key={i} className="grid grid-cols-3 gap-3 mb-3 items-end">
+                        <div><label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>Activity</label>
+                          <input value={a.activity} onChange={e => updateNonAcademic(i, 'activity', e.target.value)} className={inputCls} /></div>
+                        <div><label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>Description</label>
+                          <input value={a.description} onChange={e => updateNonAcademic(i, 'description', e.target.value)} className={inputCls} /></div>
+                        <div className="flex gap-2 items-end">
+                          <div className="flex-1"><label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>Year</label>
+                            <input value={a.year} onChange={e => updateNonAcademic(i, 'year', e.target.value)} placeholder="e.g. 2024" className={inputCls} /></div>
+                          {nonAcademic.length > 1 && <button type="button" onClick={() => removeNonAcademic(i)} className={`p-2 rounded-lg border transition-all ${dark ? 'border-slate-600 text-slate-400 hover:bg-red-900/20 hover:border-red-500/40 hover:text-red-400' : 'border-brand-200 text-brand-400 hover:bg-red-50 hover:border-red-300 hover:text-red-500'}`}>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>}
+                        </div>
+                      </div>
+                    ))}
+                    <button type="button" onClick={addNonAcademic} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all mt-3 ${dark ? 'border-brand-500/40 text-brand-400 hover:bg-brand-500/10' : 'border-brand-300 text-brand-600 hover:bg-brand-50'}`}>+ Add Row</button>
+                  </div>
+
+                  {/* Academic History */}
+                  <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/50 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
+                    <h4 className={`text-sm font-bold uppercase tracking-wider mb-4 border-b pb-2 ${dark ? 'text-brand-400 border-slate-700' : 'text-brand-500 border-brand-100'}`}>Academic History</h4>
+                    {academicHistory.map((h, i) => (
+                      <div key={i} className="grid grid-cols-3 gap-3 mb-3 items-end">
+                        <div><label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>School</label>
+                          <input value={h.school_name} onChange={e => updateAcademicHistory(i, 'school_name', e.target.value)} className={inputCls} /></div>
+                        <div><label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>Year</label>
+                          <input value={h.year_attended} onChange={e => updateAcademicHistory(i, 'year_attended', e.target.value)} placeholder="e.g. 2022-2023" className={inputCls} /></div>
+                        <div className="flex gap-2 items-end">
+                          <div className="flex-1"><label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>GPA</label>
+                            <input value={h.gpa} onChange={e => updateAcademicHistory(i, 'gpa', e.target.value)} placeholder="e.g. 1.50" className={inputCls} /></div>
+                          {academicHistory.length > 1 && <button type="button" onClick={() => removeAcademicHistory(i)} className={`p-2 rounded-lg border transition-all ${dark ? 'border-slate-600 text-slate-400 hover:bg-red-900/20 hover:border-red-500/40 hover:text-red-400' : 'border-brand-200 text-brand-400 hover:bg-red-50 hover:border-red-300 hover:text-red-500'}`}>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>}
+                        </div>
+                      </div>
+                    ))}
+                    <button type="button" onClick={addAcademicHistory} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all mt-3 ${dark ? 'border-brand-500/40 text-brand-400 hover:bg-brand-500/10' : 'border-brand-300 text-brand-600 hover:bg-brand-50'}`}>+ Add Row</button>
                   </div>
 
                 </div>
@@ -520,7 +737,7 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
                           <p className={`text-xs font-bold uppercase mb-3 ${subText}`}>Violation #{i + 1}</p>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="md:col-span-2"><label className={labelCls}>Violation Type *</label>
-                              <input required type="text" value={v.violation_type} onChange={e => handleViolationChange(i, 'violation_type', e.target.value)} className={inputCls} />
+                              <input type="text" value={v.violation_type} onChange={e => handleViolationChange(i, 'violation_type', e.target.value)} className={inputCls} />
                             </div>
                             <div><label className={labelCls}>Severity *</label>
                               <select value={v.severity_level} onChange={e => handleViolationChange(i, 'severity_level', e.target.value)} className={selectCls}>
@@ -528,7 +745,7 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
                               </select>
                             </div>
                             <div><label className={labelCls}>Date Reported *</label>
-                              <input required type="date" value={v.date_reported} onChange={e => handleViolationChange(i, 'date_reported', e.target.value)} className={inputCls} />
+                              <input type="date" value={v.date_reported} onChange={e => handleViolationChange(i, 'date_reported', e.target.value)} className={inputCls} />
                             </div>
                             <div><label className={labelCls}>Reported By</label>
                               <input type="text" value={v.reported_by} onChange={e => handleViolationChange(i, 'reported_by', e.target.value)} className={inputCls} />
@@ -562,7 +779,7 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
               <button type="button" onClick={onClose} className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${cancelBtn}`}>
                 Cancel
               </button>
-              <button type="submit" disabled={isSubmitting} className="px-5 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-500 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
+              <button type="button" onClick={handleSubmit} disabled={isSubmitting} className="px-5 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-500 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
                 {isSubmitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
                 Save All Changes
               </button>

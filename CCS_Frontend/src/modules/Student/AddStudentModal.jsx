@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../../utils/api';
 import { useDarkMode } from '../../context/DarkModeContext';
 
@@ -20,7 +20,10 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
   const dark = useDarkMode();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError]               = useState(null);
+  const [fieldErrors, setFieldErrors]   = useState({});
   const [availableSkills, setAvailableSkills] = useState([]);
+  const formScrollRef = useRef(null);
+  const fieldRefs     = useRef({});
 
   // Dark-aware helpers
   const modalBg     = dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-100';
@@ -29,6 +32,18 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
   const sectionCard = dark ? 'bg-slate-800/50 border-slate-700/60 rounded-2xl border p-5' : 'bg-white border-slate-200 rounded-2xl border p-5 shadow-sm';
   const inp = `w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${dark ? 'bg-slate-800 border-slate-600 text-slate-100 placeholder-slate-500 focus:border-brand-400' : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-brand-500 focus:bg-white'}`;
   const sel = `w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${dark ? 'bg-slate-800 border-slate-600 text-slate-100 focus:border-brand-400' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-brand-500 focus:bg-white'}`;
+  const inpErr = (field) => fieldErrors[field]
+    ? `w-full rounded-lg border-2 px-3 py-2 text-sm outline-none transition-all animate-pulse-once ${dark ? 'bg-red-900/20 border-red-500 text-slate-100 placeholder-slate-500 shadow-[0_0_0_3px_rgba(239,68,68,0.2)]' : 'bg-red-50 border-red-400 text-slate-900 placeholder-slate-400 shadow-[0_0_0_3px_rgba(239,68,68,0.15)]'}`
+    : inp;
+  const selErr = (field) => fieldErrors[field]
+    ? `w-full rounded-lg border-2 px-3 py-2 text-sm outline-none transition-all ${dark ? 'bg-red-900/20 border-red-500 text-slate-100 shadow-[0_0_0_3px_rgba(239,68,68,0.2)]' : 'bg-red-50 border-red-400 text-slate-900 shadow-[0_0_0_3px_rgba(239,68,68,0.15)]'}`
+    : sel;
+  const ErrMsg = ({ field }) => fieldErrors[field]
+    ? <p className="mt-1.5 text-xs font-semibold text-red-600 flex items-center gap-1.5">
+        <svg className="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/></svg>
+        {fieldErrors[field]}
+      </p>
+    : null;
   const lbl = `block text-xs font-bold uppercase tracking-wider mb-1.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`;
   const boldText    = dark ? 'text-slate-100' : 'text-slate-900';
   const sectionHead = `text-sm font-bold uppercase tracking-wider mb-4 border-b pb-2 ${dark ? 'text-brand-400 border-slate-700' : 'text-brand-500 border-brand-100'}`;
@@ -58,7 +73,49 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
     if (isOpen) api.skills.getAll().then(setAvailableSkills).catch(() => {});
   }, [isOpen]);
 
-  const ch = (e) => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
+  const ch = (e) => {
+    const { name } = e.target;
+    setForm(p => ({ ...p, [name]: e.target.value }));
+    if (fieldErrors[name]) setFieldErrors(p => { const n = { ...p }; delete n[name]; return n; });
+  };
+
+  // Parse Laravel validation errors into a field→message map
+  const parseErrors = useCallback((message) => {
+    const map = {};
+    // Laravel returns "The X field is required." / "The X has already been taken."
+    const patterns = [
+      { re: /student.?number.*required/i,   key: 'student_number' },
+      { re: /student.?number.*taken/i,       key: 'student_number' },
+      { re: /student.?number.*start/i,       key: 'student_number' },
+      { re: /first.?name.*required/i,        key: 'first_name' },
+      { re: /last.?name.*required/i,         key: 'last_name' },
+      { re: /email.*required/i,              key: 'email' },
+      { re: /email.*taken/i,                 key: 'email' },
+      { re: /email.*valid/i,                 key: 'email' },
+      { re: /contact.*required/i,            key: 'contact_number' },
+      { re: /birth.?date.*required/i,        key: 'birth_date' },
+      { re: /gender.*required/i,             key: 'gender' },
+      { re: /program.*required/i,            key: 'program' },
+      { re: /course.*required/i,             key: 'program' },
+      { re: /year.?level.*required/i,        key: 'year_level' },
+    ];
+    for (const { re, key } of patterns) {
+      if (re.test(message)) map[key] = message;
+    }
+    return map;
+  }, []);
+
+  // Scroll to first errored field
+  const scrollToFirstError = useCallback((errors) => {
+    const order = ['student_number','first_name','last_name','email','contact_number','birth_date','gender','program','year_level'];
+    for (const key of order) {
+      if (errors[key] && fieldRefs.current[key]) {
+        fieldRefs.current[key].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        fieldRefs.current[key].focus({ preventScroll: true });
+        break;
+      }
+    }
+  }, []);
 
   // Row helpers
   const updRow = (setter, i, field, val) => setter(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: val } : r));
@@ -67,7 +124,7 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true); setError(null);
+    setIsSubmitting(true); setError(null); setFieldErrors({});
     try {
       // 1. Create student
       const student = await api.students.create({
@@ -132,7 +189,15 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
 
       onStudentAdded(); onClose();
     } catch (err) {
-      setError(err.message || 'Failed to create student.');
+      const msg = err.message || 'Failed to create student.';
+      const parsed = parseErrors(msg);
+      setError(msg);
+      if (Object.keys(parsed).length > 0) {
+        setFieldErrors(parsed);
+        scrollToFirstError(parsed);
+      } else if (formScrollRef.current) {
+        formScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -154,7 +219,7 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="px-6 py-5 overflow-y-auto max-h-[72vh] space-y-5">
+          <form onSubmit={handleSubmit} ref={formScrollRef} className="px-6 py-5 overflow-y-auto max-h-[72vh] space-y-5">
 
             {error && <div className={`border-l-4 border-red-500 p-4 rounded-lg text-sm ${dark ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-700'}`}>{error}</div>}
 
@@ -163,22 +228,43 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
               <h4 className={sectionHead}>Personal Information</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div><label className={lbl}>Student ID *</label>
-                  <input required name="student_number" value={form.student_number} onChange={ch} placeholder="e.g. 2201509" className={inp} /></div>
+                  <input required name="student_number" value={form.student_number} onChange={ch} placeholder="e.g. 2201509"
+                    ref={el => fieldRefs.current.student_number = el}
+                    className={inpErr('student_number')} />
+                  <ErrMsg field="student_number" /></div>
                 <div><label className={lbl}>First Name *</label>
-                  <input required name="first_name" value={form.first_name} onChange={ch} className={inp} /></div>
+                  <input required name="first_name" value={form.first_name} onChange={ch}
+                    ref={el => fieldRefs.current.first_name = el}
+                    className={inpErr('first_name')} />
+                  <ErrMsg field="first_name" /></div>
                 <div><label className={lbl}>Last Name *</label>
-                  <input required name="last_name" value={form.last_name} onChange={ch} className={inp} /></div>
+                  <input required name="last_name" value={form.last_name} onChange={ch}
+                    ref={el => fieldRefs.current.last_name = el}
+                    className={inpErr('last_name')} />
+                  <ErrMsg field="last_name" /></div>
                 <div><label className={lbl}>Email *</label>
-                  <input required type="email" name="email" value={form.email} onChange={ch} className={inp} /></div>
+                  <input required type="email" name="email" value={form.email} onChange={ch}
+                    ref={el => fieldRefs.current.email = el}
+                    className={inpErr('email')} />
+                  <ErrMsg field="email" /></div>
                 <div><label className={lbl}>Phone</label>
-                  <input name="contact_number" value={form.contact_number} onChange={ch} className={inp} /></div>
+                  <input name="contact_number" value={form.contact_number} onChange={ch}
+                    ref={el => fieldRefs.current.contact_number = el}
+                    className={inpErr('contact_number')} />
+                  <ErrMsg field="contact_number" /></div>
                 <div><label className={lbl}>Date of Birth</label>
-                  <input type="date" name="birth_date" value={form.birth_date} onChange={ch} className={inp} /></div>
+                  <input type="date" name="birth_date" value={form.birth_date} onChange={ch}
+                    ref={el => fieldRefs.current.birth_date = el}
+                    className={inpErr('birth_date')} />
+                  <ErrMsg field="birth_date" /></div>
                 <div><label className={lbl}>Gender</label>
-                  <select name="gender" value={form.gender} onChange={ch} className={sel}>
+                  <select name="gender" value={form.gender} onChange={ch}
+                    ref={el => fieldRefs.current.gender = el}
+                    className={selErr('gender')}>
                     <option value="">Select...</option>
                     <option>Male</option><option>Female</option>
-                  </select></div>
+                  </select>
+                  <ErrMsg field="gender" /></div>
                 <div><label className={lbl}>Address</label>
                   <input name="city" value={form.city} onChange={ch} placeholder="City / Address" className={inp} /></div>
               </div>
@@ -189,16 +275,22 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
               <h4 className={sectionHead}>Academic Information</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div><label className={lbl}>Course *</label>
-                  <select required name="program" value={form.program} onChange={ch} className={sel}>
+                  <select required name="program" value={form.program} onChange={ch}
+                    ref={el => fieldRefs.current.program = el}
+                    className={selErr('program')}>
                     <option value="">Select...</option>
                     <option value="Information Technology">BSIT - Information Technology</option>
                     <option value="Computer Science">BSCS - Computer Science</option>
-                  </select></div>
+                  </select>
+                  <ErrMsg field="program" /></div>
                 <div><label className={lbl}>Year Level *</label>
-                  <select name="year_level" value={form.year_level} onChange={ch} className={sel}>
+                  <select name="year_level" value={form.year_level} onChange={ch}
+                    ref={el => fieldRefs.current.year_level = el}
+                    className={selErr('year_level')}>
                     <option value="">Select...</option>
                     <option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option>
-                  </select></div>
+                  </select>
+                  <ErrMsg field="year_level" /></div>
                 <div><label className={lbl}>Section</label>
                   <select name="section" value={form.section} onChange={ch} className={sel}>
                     <option value="">Select Section</option>
