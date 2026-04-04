@@ -121,7 +121,7 @@ const StudentModule = () => {
     <div className="flex flex-col h-full w-full">
 
       {/* ── Module Header ─────────────────────────────────────────── */}
-      <div className={`flex justify-between items-end mb-8 p-6 rounded-2xl shadow-sm border transition-colors duration-300 ${header}`}>
+      <div className={`flex justify-between items-end mb-6 p-6 rounded-2xl shadow-sm border transition-colors duration-300 ${header}`}>
         <div>
           <h1 className={`text-3xl font-bold tracking-tight mb-2 transition-colors duration-300 ${boldText}`}>
             Student Information
@@ -149,6 +149,37 @@ const StudentModule = () => {
             </svg>
             Add Student
           </button>
+        </div>
+      </div>
+
+      {/* ── Quick Stats Cards ─────────────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className={`p-5 rounded-2xl border shadow-sm flex items-center gap-4 transition-colors duration-300 ${card}`}>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${statIcon1}`}>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+          </div>
+          <div>
+            <p className={`text-xs font-semibold uppercase tracking-wider ${labelText}`}>Total Students</p>
+            <p className={`text-2xl font-bold mt-0.5 ${boldText}`}>{isLoading ? '...' : stats.total}</p>
+          </div>
+        </div>
+        <div className={`p-5 rounded-2xl border shadow-sm flex items-center gap-4 transition-colors duration-300 ${card}`}>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${statIcon2}`}>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+          <div>
+            <p className={`text-xs font-semibold uppercase tracking-wider ${labelText}`}>Currently Enrolled</p>
+            <p className={`text-2xl font-bold mt-0.5 ${boldText}`}>{isLoading ? '...' : stats.enrolled}</p>
+          </div>
+        </div>
+        <div className={`p-5 rounded-2xl border shadow-sm flex items-center gap-4 transition-colors duration-300 ${card}`}>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${statIcon3}`}>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+          </div>
+          <div>
+            <p className={`text-xs font-semibold uppercase tracking-wider ${labelText}`}>Not Enrolled</p>
+            <p className={`text-2xl font-bold mt-0.5 ${boldText}`}>{isLoading ? '...' : stats.notEnrolled}</p>
+          </div>
         </div>
       </div>
 
@@ -185,10 +216,10 @@ const StudentModule = () => {
 
           {/* Overview */}
           {activeTab === 'overview' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6">
 
               {/* Student List */}
-              <div className={`p-6 rounded-xl border shadow-sm col-span-2 transition-colors duration-300 ${card}`}>
+              <div className={`p-6 rounded-xl border shadow-sm transition-colors duration-300 ${card}`}>
                 <div className="flex justify-between items-center mb-4">
                   <h3 className={`text-lg font-bold transition-colors duration-300 ${boldText}`}>Student List</h3>
                   <div className="flex items-center gap-2">
@@ -218,14 +249,12 @@ const StudentModule = () => {
                     <input value={listSearch} onChange={e => setListSearch(e.target.value)} placeholder="Search name or number..."
                       className={`w-full pl-9 pr-3 py-2 rounded-lg border text-sm outline-none transition-colors ${dark ? 'bg-slate-800 border-slate-600 text-slate-100 placeholder-slate-500 focus:border-brand-400' : 'bg-white border-slate-200 text-slate-700 placeholder-slate-400 focus:border-brand-400'}`} />
                   </div>
-                  {['All', 'Enrolled', 'Not Enrolled'].map(f => (
-                    <button key={f} onClick={() => setListFilter(f)}
-                      className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-all ${listFilter === f
-                        ? 'bg-brand-500 text-white border-brand-500'
-                        : dark ? 'bg-slate-800 border-slate-600 text-slate-400 hover:border-slate-500' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>
-                      {f}
-                    </button>
-                  ))}
+                  <select value={listFilter} onChange={e => setListFilter(e.target.value)}
+                    className={`rounded-lg border text-sm px-3 py-2 outline-none transition-colors ${dark ? 'bg-slate-800 border-slate-600 text-slate-200 focus:border-brand-400' : 'bg-white border-slate-200 text-slate-700 focus:border-brand-400'}`}>
+                    <option value="All">All</option>
+                    <option value="Enrolled">Enrolled</option>
+                    <option value="Not Enrolled">Not Enrolled</option>
+                  </select>
                 </div>
 
                 {/* Advanced filters row */}
@@ -366,42 +395,6 @@ const StudentModule = () => {
                     </div>
                   );
                 })()}
-              </div>
-
-              {/* Quick Stats */}
-              <div className="space-y-6">
-                <div className={`p-6 rounded-xl border shadow-sm transition-colors duration-300 ${card}`}>
-                  <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${labelText}`}>Quick Stats</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 ${statIcon1}`}>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                        </div>
-                        <span className={`text-sm font-medium ${dark ? 'text-slate-300' : 'text-slate-600'}`}>Total Students</span>
-                      </div>
-                      <span className={`text-lg font-bold ${boldText}`}>{isLoading ? '...' : stats.total}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 ${statIcon2}`}>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        </div>
-                        <span className={`text-sm font-medium ${dark ? 'text-slate-300' : 'text-slate-600'}`}>Currently Enrolled</span>
-                      </div>
-                      <span className={`text-lg font-bold ${boldText}`}>{isLoading ? '...' : stats.enrolled}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 ${statIcon3}`}>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
-                        </div>
-                        <span className={`text-sm font-medium ${dark ? 'text-slate-300' : 'text-slate-600'}`}>Not Enrolled</span>
-                      </div>
-                      <span className={`text-lg font-bold ${boldText}`}>{isLoading ? '...' : stats.notEnrolled}</span>
-                    </div>
-                  </div>
-                </div>
               </div>
 
             </div>
