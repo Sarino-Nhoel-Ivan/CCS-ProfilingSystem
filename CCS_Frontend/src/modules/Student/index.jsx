@@ -154,7 +154,7 @@ const StudentModule = () => {
 
       {/* ── Quick Stats Cards ─────────────────────────────────────── */}
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className={`p-5 rounded-2xl border shadow-sm flex items-center gap-4 transition-colors duration-300 ${card}`}>
+        <div className={`p-5 rounded-2xl border-l-4 border border-l-brand-500 shadow-sm flex items-center gap-4 transition-colors duration-300 ${card}`}>
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${statIcon1}`}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
           </div>
@@ -163,7 +163,7 @@ const StudentModule = () => {
             <p className={`text-2xl font-bold mt-0.5 ${boldText}`}>{isLoading ? '...' : stats.total}</p>
           </div>
         </div>
-        <div className={`p-5 rounded-2xl border shadow-sm flex items-center gap-4 transition-colors duration-300 ${card}`}>
+        <div className={`p-5 rounded-2xl border-l-4 border border-l-green-500 shadow-sm flex items-center gap-4 transition-colors duration-300 ${card}`}>
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${statIcon2}`}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
@@ -172,7 +172,7 @@ const StudentModule = () => {
             <p className={`text-2xl font-bold mt-0.5 ${boldText}`}>{isLoading ? '...' : stats.enrolled}</p>
           </div>
         </div>
-        <div className={`p-5 rounded-2xl border shadow-sm flex items-center gap-4 transition-colors duration-300 ${card}`}>
+        <div className={`p-5 rounded-2xl border-l-4 border border-l-slate-400 shadow-sm flex items-center gap-4 transition-colors duration-300 ${card}`}>
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${statIcon3}`}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
           </div>
