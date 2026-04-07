@@ -5,7 +5,7 @@ import {
   UserGroupIcon, CheckCircleIcon, NoSymbolIcon,
   MagnifyingGlassIcon, AcademicCapIcon, IdentificationIcon,
   ArrowUpTrayIcon, PlusIcon, Squares2X2Icon, TableCellsIcon, ListBulletIcon,
-  ChevronRightIcon, MapPinIcon, CalendarDaysIcon,
+  ChevronRightIcon, CalendarDaysIcon,
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
 import AddStudentModal from './AddStudentModal';
@@ -14,30 +14,29 @@ import DeleteConfirmModal from './DeleteConfirmModal';
 import StudentProfileTabs from './StudentProfileTabs';
 import { useDarkMode } from '../../context/DarkModeContext';
 
+const Avatar = ({ student, size = 'md' }) => {
+  const [imgError, setImgError] = useState(false);
+  const sz = size === 'sm' ? 'w-7 h-7 text-xs' : size === 'lg' ? 'w-10 h-10 text-sm' : 'w-9 h-9 text-sm';
+  const initials = `${student.first_name?.[0] ?? ''}${student.last_name?.[0] ?? ''}`;
+  if (student.profile_photo && !imgError) {
+    return (
+      <img
+        src={`${STORAGE_URL}/${student.profile_photo}?v=${student.updated_at ?? ''}`}
+        alt={initials}
+        className={`${sz} rounded-full object-cover shrink-0`}
+        onError={() => setImgError(true)}
+      />
+    );
+  }
+  return (
+    <div className={`${sz} rounded-full bg-brand-600/20 text-brand-400 flex items-center justify-center font-bold shrink-0`}>
+      {initials}
+    </div>
+  );
+};
+
 const StudentModule = () => {
   const dark = useDarkMode();
-
-  const Avatar = ({ student, size = 'md' }) => {
-    const sz = size === 'sm' ? 'w-7 h-7 text-xs' : size === 'lg' ? 'w-10 h-10 text-sm' : 'w-9 h-9 text-sm';
-    const initials = `${student.first_name?.[0] ?? ''}${student.last_name?.[0] ?? ''}`;
-    if (student.profile_photo) {
-      return (
-        <img
-          src={`${STORAGE_URL}/${student.profile_photo}?v=${student.updated_at ?? ''}`}
-          alt={initials}
-          className={`${sz} rounded-full object-cover shrink-0`}
-          onError={e => {
-            e.currentTarget.outerHTML = `<div class="${sz} rounded-full bg-brand-600/20 text-brand-400 flex items-center justify-center font-bold shrink-0">${initials}</div>`;
-          }}
-        />
-      );
-    }
-    return (
-      <div className={`${sz} rounded-full bg-brand-600/20 text-brand-400 flex items-center justify-center font-bold shrink-0`}>
-        {initials}
-      </div>
-    );
-  };
   const [activeTab, setActiveTab] = useState('overview');
   const [students, setStudents] = useState([]);
   const [stats, setStats] = useState({ total: 0, enrolled: 0, notEnrolled: 0 });
