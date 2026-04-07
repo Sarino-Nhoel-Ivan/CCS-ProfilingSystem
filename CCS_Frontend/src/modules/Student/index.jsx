@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../utils/api';
 import { STORAGE_URL } from '../../utils/config';
+import {
+  UserGroupIcon, CheckCircleIcon, NoSymbolIcon,
+  MagnifyingGlassIcon, AcademicCapIcon, IdentificationIcon,
+  ArrowUpTrayIcon, PlusIcon, Squares2X2Icon, TableCellsIcon, ListBulletIcon,
+  ChevronRightIcon, MapPinIcon, CalendarDaysIcon,
+} from '@heroicons/react/24/outline';
+import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
 import AddStudentModal from './AddStudentModal';
 import EditStudentModal from './EditStudentModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
@@ -165,18 +172,14 @@ const StudentModule = () => {
             onClick={() => window.open('http://localhost:8000/api/students/export/csv', '_blank')}
             className={`flex items-center px-4 py-2 font-medium rounded-lg transition-colors ${exportBtn}`}
           >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
+            <ArrowUpTrayIcon className="w-5 h-5 mr-2" />
             Export
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
             className="flex items-center px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg transition-colors shadow-lg shadow-brand-500/30"
           >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
+            <PlusIcon className="w-5 h-5 mr-2" />
             Add Student
           </button>
         </div>
@@ -186,7 +189,7 @@ const StudentModule = () => {
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className={`p-5 rounded-2xl border-l-4 border border-l-brand-500 shadow-sm flex items-center gap-4 transition-colors duration-300 ${card}`}>
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${statIcon1}`}>
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+            <UserGroupIcon className="w-6 h-6" />
           </div>
           <div>
             <p className={`text-xs font-semibold uppercase tracking-wider ${labelText}`}>Total Students</p>
@@ -195,7 +198,7 @@ const StudentModule = () => {
         </div>
         <div className={`p-5 rounded-2xl border-l-4 border border-l-green-500 shadow-sm flex items-center gap-4 transition-colors duration-300 ${card}`}>
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${statIcon2}`}>
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <CheckCircleSolid className="w-6 h-6" />
           </div>
           <div>
             <p className={`text-xs font-semibold uppercase tracking-wider ${labelText}`}>Currently Enrolled</p>
@@ -204,7 +207,7 @@ const StudentModule = () => {
         </div>
         <div className={`p-5 rounded-2xl border-l-4 border border-l-slate-400 shadow-sm flex items-center gap-4 transition-colors duration-300 ${card}`}>
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${statIcon3}`}>
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+            <NoSymbolIcon className="w-6 h-6" />
           </div>
           <div>
             <p className={`text-xs font-semibold uppercase tracking-wider ${labelText}`}>Not Enrolled</p>
@@ -214,7 +217,7 @@ const StudentModule = () => {
       </div>
 
       {/* ── Main Content Card ─────────────────────────────────────── */}
-      <div className={`flex-1 rounded-2xl shadow-sm border overflow-hidden flex flex-col transition-colors duration-300 ${card}`}>
+      <div className={`rounded-2xl shadow-sm border transition-colors duration-300 ${card}`}>
 
         {/* Tabs */}
         <div className={`flex border-b px-6 pt-2 transition-colors duration-300 ${tabBar}`}>
@@ -242,7 +245,7 @@ const StudentModule = () => {
         </div>
 
         {/* Tab Content */}
-        <div className={`flex-1 p-8 overflow-y-auto transition-colors duration-300 ${tabContent}`}>
+        <div className={`p-8 transition-colors duration-300 ${tabContent}`}>
 
           {/* Overview */}
           {activeTab === 'overview' && (
@@ -257,9 +260,9 @@ const StudentModule = () => {
                     {/* View toggle */}
                     <div className={`flex rounded-lg border overflow-hidden ${dark ? 'border-slate-700' : 'border-slate-200'}`}>
                       {[
-                        { id: 'cards', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg> },
-                        { id: 'table', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18M10 3v18M3 3h18v18H3z" /></svg> },
-                        { id: 'list',  icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg> },
+                        { id: 'cards', icon: <Squares2X2Icon className="w-3.5 h-3.5" /> },
+                        { id: 'table', icon: <TableCellsIcon className="w-3.5 h-3.5" /> },
+                        { id: 'list',  icon: <ListBulletIcon className="w-3.5 h-3.5" /> },
                       ].map(v => (
                         <button key={v.id} onClick={() => setViewMode(v.id)} title={v.id.charAt(0).toUpperCase() + v.id.slice(1)}
                           className={`px-2.5 py-1.5 transition-colors ${viewMode === v.id
@@ -275,7 +278,7 @@ const StudentModule = () => {
                 {/* Search + enrollment filter */}
                 <div className="flex gap-3 mb-3">
                   <div className="relative flex-1">
-                    <svg className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${dark ? 'text-slate-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <MagnifyingGlassIcon className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${dark ? 'text-slate-500' : 'text-slate-400'}`} />
                     <input value={listSearch} onChange={e => setListSearch(e.target.value)} placeholder="Search name or number..."
                       className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-sm outline-none transition-colors ${dark ? 'bg-slate-800 border-slate-600 text-slate-100 placeholder-slate-500 focus:border-brand-400' : 'bg-white border-slate-200 text-slate-700 placeholder-slate-400 focus:border-brand-400'}`} />
                   </div>
@@ -331,24 +334,50 @@ const StudentModule = () => {
 
                   // ── CARDS view ──
                   if (viewMode === 'cards') return (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[420px] overflow-y-auto pr-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pr-1">
                       {filtered.map(s => (
                         <div key={s.id} onClick={() => handleStudentClick(s.id)}
-                          className={`p-4 rounded-xl border cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md ${dark ? 'bg-slate-800 border-slate-700 hover:border-brand-500/40' : 'bg-slate-50 border-slate-200 hover:border-brand-400/50 hover:shadow-brand-500/10'}`}>
-                          <div className="flex items-center gap-3">
-                            <Avatar student={s} size="lg" />
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-sm font-semibold truncate ${boldText}`}>{s.first_name} {s.last_name}</p>
-                              <p className={`text-xs truncate ${labelText}`}>{s.student_number || `ID: ${s.id}`}</p>
+                          className={`group relative rounded-2xl border cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg overflow-hidden ${dark ? 'bg-slate-800 border-slate-700 hover:border-brand-500/50 hover:shadow-brand-500/10' : 'bg-white border-slate-200 hover:border-brand-400/60 hover:shadow-brand-500/10'}`}>
+                          {/* Top accent bar */}
+                          <div className={`h-1 w-full ${s.enrollment_status === 'Enrolled' ? 'bg-gradient-to-r from-orange-400 to-orange-500' : 'bg-gradient-to-r from-slate-300 to-slate-400'}`} />
+                          <div className="p-5">
+                            {/* Header row */}
+                            <div className="flex items-start gap-3 mb-4">
+                              <div className="relative shrink-0">
+                                <Avatar student={s} size="lg" />
+                                {s.enrollment_status === 'Enrolled' && (
+                                  <CheckCircleSolid className="w-4 h-4 text-green-500 absolute -bottom-0.5 -right-0.5 bg-white rounded-full" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm font-bold truncate leading-tight ${boldText}`}>{s.first_name} {s.last_name}</p>
+                                <div className={`flex items-center gap-1 mt-0.5 text-xs ${labelText}`}>
+                                  <IdentificationIcon className="w-3 h-3 shrink-0" />
+                                  <span className="font-mono">{s.student_number || `ID: ${s.id}`}</span>
+                                </div>
+                              </div>
+                              <ChevronRightIcon className={`w-4 h-4 shrink-0 mt-0.5 transition-transform group-hover:translate-x-0.5 ${dark ? 'text-slate-600' : 'text-slate-300'}`} />
                             </div>
-                            {s.enrollment_status === 'Enrolled'
-                              ? <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/15 text-green-400 shrink-0">Enrolled</span>
-                              : <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-200 text-slate-600'}`}>{s.enrollment_status}</span>}
-                          </div>
-                          <div className={`mt-2 pt-2 border-t flex gap-3 text-xs ${dark ? 'border-slate-700 text-slate-400' : 'border-slate-200 text-slate-500'}`}>
-                            <span>{s.program || 'No program'}</span>
-                            <span>·</span>
-                            <span>{s.year_level || 'N/A'}</span>
+                            {/* Info rows */}
+                            <div className={`space-y-1.5 text-xs border-t pt-3 ${dark ? 'border-slate-700' : 'border-slate-100'}`}>
+                              <div className={`flex items-center gap-1.5 ${labelText}`}>
+                                <AcademicCapIcon className="w-3.5 h-3.5 shrink-0" />
+                                <span className="truncate">{s.program || 'No program'}</span>
+                              </div>
+                              <div className={`flex items-center gap-1.5 ${labelText}`}>
+                                <CalendarDaysIcon className="w-3.5 h-3.5 shrink-0" />
+                                <span>{s.year_level || 'N/A'}</span>
+                              </div>
+                            </div>
+                            {/* Footer badge */}
+                            <div className="mt-3 flex justify-end">
+                              {s.enrollment_status === 'Enrolled'
+                                ? <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-green-500/15 text-green-500">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                    Enrolled
+                                  </span>
+                                : <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>{s.enrollment_status}</span>}
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -357,9 +386,9 @@ const StudentModule = () => {
 
                   // ── TABLE view ──
                   if (viewMode === 'table') return (
-                    <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
+                    <div className="overflow-x-auto">
                       <table className="w-full text-sm">
-                        <thead className={`sticky top-0 text-xs uppercase tracking-wider ${dark ? 'bg-slate-900 text-slate-500' : 'bg-slate-50 text-slate-400'}`}>
+                        <thead className={`text-xs uppercase tracking-wider ${dark ? 'bg-slate-900 text-slate-500' : 'bg-slate-50 text-slate-400'}`}>
                           <tr>
                             <th className="px-3 py-2.5 text-left font-bold">Student</th>
                             <th className="px-3 py-2.5 text-left font-bold hidden sm:table-cell">Number</th>
@@ -395,24 +424,37 @@ const StudentModule = () => {
 
                   // ── LIST view (default) ──
                   return (
-                    <div className={`divide-y max-h-[420px] overflow-y-auto pr-1 ${divider}`}>
+                    <div className={`divide-y pr-1 ${divider}`}>
                       {filtered.map(s => (
                         <div key={s.id} onClick={() => handleStudentClick(s.id)}
-                          className={`py-4 flex items-center justify-between group cursor-pointer -mx-4 px-4 rounded-lg transition-colors ${rowHover}`}>
-                          <div className="flex items-center space-x-3">
+                          className={`py-3.5 flex items-center justify-between group cursor-pointer -mx-4 px-4 rounded-lg transition-colors ${rowHover}`}>
+                          <div className="flex items-center gap-3">
                             <Avatar student={s} />
                             <div>
                               <p className={`text-sm font-semibold group-hover:text-brand-500 transition-colors ${boldText}`}>
                                 {s.first_name} {s.middle_name ? s.middle_name[0] + '. ' : ''}{s.last_name}
                               </p>
-                              <p className={`text-xs ${labelText}`}>{s.program || 'N/A'} · {s.year_level || 'N/A'}</p>
-                              <p className={`text-xs ${labelText}`}>{s.student_number ? `No. ${s.student_number}` : `ID: ${s.id}`}</p>
+                              <div className={`flex items-center gap-3 mt-0.5 text-xs ${labelText}`}>
+                                <span className="flex items-center gap-1">
+                                  <AcademicCapIcon className="w-3 h-3" />{s.program || 'N/A'}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <CalendarDaysIcon className="w-3 h-3" />{s.year_level || 'N/A'}
+                                </span>
+                                <span className="flex items-center gap-1 font-mono">
+                                  <IdentificationIcon className="w-3 h-3" />{s.student_number || s.id}
+                                </span>
+                              </div>
                             </div>
                           </div>
-                          <div className="text-right">
+                          <div className="flex items-center gap-2">
                             {s.enrollment_status === 'Enrolled'
-                              ? <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/15 text-green-400">Enrolled</span>
+                              ? <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/15 text-green-500">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                  Enrolled
+                                </span>
                               : <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-800'}`}>{s.enrollment_status}</span>}
+                            <ChevronRightIcon className={`w-4 h-4 transition-transform group-hover:translate-x-0.5 ${dark ? 'text-slate-600' : 'text-slate-300'}`} />
                           </div>
                         </div>
                       ))}
@@ -428,7 +470,7 @@ const StudentModule = () => {
           {activeTab !== 'overview' && !selectedStudent && (
             <div className="h-full flex flex-col items-center justify-center text-center min-h-[400px]">
               <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${dark ? 'bg-slate-800' : 'bg-slate-100'}`}>
-                <svg className={`w-8 h-8 ${dark ? 'text-slate-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                <UserGroupIcon className={`w-8 h-8 ${dark ? 'text-slate-500' : 'text-slate-400'}`} />
               </div>
               <h3 className={`text-lg font-bold mb-1 ${boldText}`}>No Student Selected</h3>
               <p className={labelText}>Please select a student from the Overview tab to view their detailed profile.</p>

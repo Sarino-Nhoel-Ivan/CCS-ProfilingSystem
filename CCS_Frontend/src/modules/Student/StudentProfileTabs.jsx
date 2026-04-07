@@ -1,6 +1,14 @@
 import React from 'react';
 import { useDarkMode } from '../../context/DarkModeContext';
 import { STORAGE_URL } from '../../utils/config';
+import {
+  CheckBadgeIcon,
+  SparklesIcon,
+  AcademicCapIcon,
+  CalendarDaysIcon,
+  TagIcon,
+} from '@heroicons/react/24/outline';
+import { CheckBadgeIcon as CheckBadgeSolid } from '@heroicons/react/24/solid';
 
 // Helpers
 const getAge = (birthDate) => {
@@ -340,33 +348,72 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
           <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Skills & Certifications</h3>
           {student.skills && student.skills.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {student.skills.map(skill => (
-                <div key={skill.id} className={`border p-4 rounded-xl ${skillCard}`}>
-                  <div className="mb-2">
-                    <span className="text-xs font-bold text-white bg-brand-500 px-2 py-0.5 rounded uppercase tracking-wider">{skill.skill_category}</span>
-                  </div>
-                  <h4 className={`font-bold text-sm mb-1 ${boldText}`}>{skill.skill_name}</h4>
-                  <p className={`text-xs mb-3 line-clamp-2 ${subText}`}>{skill.description}</p>
-                  <div className={`mt-auto pt-3 border-t flex justify-between items-center ${skillFoot}`}>
-                    <span className={`text-xs font-medium border px-2 py-1 rounded ${skillLevel}`}>Level: {skill.pivot?.skill_level || 'N/A'}</span>
-                    {skill.pivot?.certification && (
-                      <span className={`text-xs flex items-center font-medium ${dark ? 'text-green-400' : 'text-green-600'}`}>
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        Certified
-                      </span>
-                    )}
-                  </div>
-                  {skill.pivot?.certification && (
-                    <div className={`mt-2 text-xs ${subText}`}>
-                      <p className="font-semibold">{skill.pivot.certification_name}</p>
-                      <p>Date: {skill.pivot.certification_date}</p>
+              {student.skills.map(skill => {
+                const isCertified = skill.pivot?.certification;
+                const isAcademic  = skill.skill_category?.toLowerCase() === 'academic';
+                return (
+                  <div key={skill.id} className={`relative rounded-2xl border overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-xl group ${dark ? `skillCard hover:shadow-brand-500/20 hover:border-brand-500/40` : `skillCard hover:shadow-orange-200/80 hover:border-orange-300/60`} ${skillCard}`}>
+                    {/* Top accent */}
+                    <div className={`h-1 w-full ${isAcademic ? 'bg-gradient-to-r from-brand-400 to-brand-600' : 'bg-gradient-to-r from-orange-400 to-orange-500'}`} />
+
+                    <div className="p-5">
+                      {/* Category badge */}
+                      <div className="flex items-center justify-between mb-3">
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${isAcademic ? (dark ? 'bg-brand-900/40 text-brand-300' : 'bg-brand-50 text-brand-600') : (dark ? 'bg-orange-900/40 text-orange-300' : 'bg-orange-50 text-orange-600')}`}>
+                          {isAcademic ? <AcademicCapIcon className="w-3 h-3" /> : <SparklesIcon className="w-3 h-3" />}
+                          {skill.skill_category}
+                        </span>
+                        {isCertified && (
+                          <CheckBadgeSolid className={`w-5 h-5 ${dark ? 'text-green-400' : 'text-green-500'}`} />
+                        )}
+                      </div>
+
+                      {/* Skill name & description */}
+                      <h4 className={`font-bold text-sm mb-1 ${boldText}`}>{skill.skill_name}</h4>
+                      <p className={`text-xs mb-4 line-clamp-2 ${subText}`}>{skill.description || 'No description available.'}</p>
+
+                      {/* Level + certified footer */}
+                      <div className={`pt-3 border-t flex items-center justify-between ${skillFoot}`}>
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-medium border px-2.5 py-1 rounded-lg ${skillLevel}`}>
+                          <TagIcon className="w-3 h-3" />
+                          {skill.pivot?.skill_level || 'N/A'}
+                        </span>
+                        {isCertified
+                          ? <span className={`inline-flex items-center gap-1 text-xs font-semibold ${dark ? 'text-green-400' : 'text-green-600'}`}>
+                              <CheckBadgeIcon className="w-4 h-4" />
+                              Certified
+                            </span>
+                          : <span className={`text-xs ${subText}`}>Not certified</span>
+                        }
+                      </div>
+
+                      {/* Certification details */}
+                      {isCertified && (skill.pivot.certification_name || skill.pivot.certification_date) && (
+                        <div className={`mt-3 p-3 rounded-xl text-xs space-y-1 ${dark ? 'bg-green-900/20 border border-green-800/40' : 'bg-green-50 border border-green-100'}`}>
+                          {skill.pivot.certification_name && (
+                            <p className={`font-semibold flex items-center gap-1.5 ${dark ? 'text-green-300' : 'text-green-700'}`}>
+                              <CheckBadgeIcon className="w-3.5 h-3.5 shrink-0" />
+                              {skill.pivot.certification_name}
+                            </p>
+                          )}
+                          {skill.pivot.certification_date && (
+                            <p className={`flex items-center gap-1.5 ${dark ? 'text-green-400/70' : 'text-green-600/80'}`}>
+                              <CalendarDaysIcon className="w-3.5 h-3.5 shrink-0" />
+                              {skill.pivot.certification_date}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           ) : (
-            <p className={`text-sm italic ${subText}`}>No skills recorded.</p>
+            <div className={`flex flex-col items-center justify-center py-12 rounded-2xl border ${dark ? 'border-slate-700 bg-slate-800/30' : 'border-slate-200 bg-slate-50'}`}>
+              <SparklesIcon className={`w-10 h-10 mb-3 ${dark ? 'text-slate-600' : 'text-slate-300'}`} />
+              <p className={`text-sm font-medium ${subText}`}>No skills recorded.</p>
+            </div>
           )}
         </div>
       )}

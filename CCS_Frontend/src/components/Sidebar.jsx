@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   UserIcon, UsersIcon, BookOpenIcon, CalendarIcon,
   StarIcon, MagnifyingGlassIcon, Bars3Icon,
-  ArrowRightOnRectangleIcon,
+  ArrowRightOnRectangleIcon, HomeIcon,
 } from '@heroicons/react/24/outline';
 import { useDarkMode } from '../context/DarkModeContext';
 
@@ -12,6 +12,7 @@ const Sidebar = ({ currentModule, setCurrentModule, isOpen, setIsOpen, user, onL
   const expanded = isOpen || hovered;
 
   const modules = [
+    { id: 'dashboard',   label: 'Dashboard',            Icon: HomeIcon },
     { id: 'student',     label: 'Student Information',  Icon: UserIcon },
     { id: 'faculty',     label: 'Faculty Information',  Icon: UsersIcon },
     { id: 'instruction', label: 'Instruction',          Icon: BookOpenIcon },

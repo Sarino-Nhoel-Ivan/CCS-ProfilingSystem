@@ -8,6 +8,7 @@ import InstructionModule from './modules/Instruction';
 import SchedulingModule from './modules/Scheduling';
 import EventsModule from './modules/Events';
 import SearchModule from './modules/Search';
+import AdminDashboard from './modules/Dashboard';
 import StudentLogin from './pages/StudentLogin';
 import FacultyLogin from './pages/FacultyLogin';
 import AdminLogin from './pages/AdminLogin';
@@ -26,7 +27,7 @@ const getStoredUser = () => {
 
 /* ── Admin layout — keeps all existing sidebar/topnav design ── */
 function AdminLayout({ user, onLogout }) {
-  const [currentModule, setCurrentModule] = useState('student');
+  const [currentModule, setCurrentModule] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(
     () => localStorage.getItem('adminDarkMode') === 'true'
@@ -55,7 +56,8 @@ function AdminLayout({ user, onLogout }) {
           <Topnav currentModule={currentModule} darkMode={darkMode} onToggleDark={handleToggleDark} />
           <main className={`flex-1 overflow-x-hidden overflow-y-auto p-8 transition-colors duration-300 ${darkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
             <div className="max-w-7xl mx-auto space-y-6 h-full">
-              {currentModule === 'student'     ? <StudentModule />     :
+              {currentModule === 'dashboard'   ? <AdminDashboard />   :
+               currentModule === 'student'     ? <StudentModule />     :
                currentModule === 'faculty'     ? <FacultyModule />     :
                currentModule === 'instruction' ? <InstructionModule /> :
                currentModule === 'scheduling'  ? <SchedulingModule />  :
