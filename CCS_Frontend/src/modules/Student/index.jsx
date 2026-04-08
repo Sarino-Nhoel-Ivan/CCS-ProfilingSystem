@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../utils/api';
 import { STORAGE_URL } from '../../utils/config';
 import {
@@ -37,6 +38,7 @@ const Avatar = ({ student, size = 'md' }) => {
 
 const StudentModule = () => {
   const dark = useDarkMode();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [students, setStudents] = useState([]);
   const [stats, setStats] = useState({ total: 0, enrolled: 0, notEnrolled: 0 });
@@ -97,17 +99,8 @@ const StudentModule = () => {
     fetchStudents();
   }, []);
 
-  const handleStudentClick = async (id) => {
-    try {
-      setIsLoading(true);
-      const data = await api.students.get(id);
-      setSelectedStudent(data);
-      setActiveTab('personal_details');
-    } catch (error) {
-      console.error("Failed to load student details:", error);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleStudentClick = (id) => {
+    navigate(`/admin/users/${id}`);
   };
 
   const reloadStudents = async () => {

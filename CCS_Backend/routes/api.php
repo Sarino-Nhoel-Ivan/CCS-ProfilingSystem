@@ -59,8 +59,10 @@ Route::post('/students/advanced-search', [StudentController::class, 'advancedSea
 Route::get('/faculties/export/csv',      [\App\Http\Controllers\FacultyController::class, 'export']);
 
 // ══════════════════════════════════════════════════════════════
-// USERS ROUTES  (/admin/users)
-// Full CRUD for student profiles and all nested sub-resources
+// USERS ROUTES  (/admin/users  →  /admin/users/:id)
+// Dynamic route: clicking a student navigates to /admin/users/:id
+// which loads their full profile via GET /api/students/{id}
+// Same dynamic pattern applies to /student/users/:id and /faculty/users/:id
 // ══════════════════════════════════════════════════════════════
 Route::apiResource('students', StudentController::class);
 
