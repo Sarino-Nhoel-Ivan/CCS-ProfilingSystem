@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../utils/api';
+import { useCurrentUser } from '../context/UserContext';
 import {
-  MagnifyingGlassIcon, SunIcon, MoonIcon, BellIcon,
+  MagnifyingGlassIcon, SunIcon, MoonIcon, BellIcon, UserCircleIcon,
 } from '@heroicons/react/24/outline';
 
 const Topnav = ({ currentModule, userName = "Admin User", darkMode = false, onToggleDark }) => {
+  // Part 4: Global State — read logged-in user from UserContext (global state)
+  const currentUser = useCurrentUser();
+  const displayName = currentUser?.name || currentUser?.email || userName;
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -171,6 +175,17 @@ const Topnav = ({ currentModule, userName = "Admin User", darkMode = false, onTo
           <span className={`absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 border-2 rounded-full ${darkMode ? 'border-slate-900' : 'border-white'}`}></span>
           <BellIcon className="w-6 h-6" />
         </button>
+
+        {/* Part 4: Logged-in user name — shown on all admin pages via global UserContext */}
+        <div className={`flex items-center gap-2 pl-4 border-l ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${darkMode ? 'bg-brand-900/40 text-brand-400' : 'bg-brand-50 text-brand-600'}`}>
+            {displayName.slice(0, 2).toUpperCase()}
+          </div>
+          <div className="hidden sm:block">
+            <p className={`text-xs font-semibold leading-tight ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>{displayName}</p>
+            <p className={`text-[10px] leading-tight ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Administrator</p>
+          </div>
+        </div>
 
       </div>
     </header>
