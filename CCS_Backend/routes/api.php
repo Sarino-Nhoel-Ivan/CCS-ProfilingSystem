@@ -28,6 +28,17 @@ use App\Http\Controllers\OtpController;
 |   Clicking a user from the list navigates to their detail page
 |   without a full page reload (SPA behavior via React Router).
 |
+| Part 3 — Props vs State:
+|   Parent (StudentModule / Users Page):
+|     - Stores user list in STATE: const [students, setStudents] = useState([])
+|     - Fetches from this API and keeps data in state
+|     - Passes individual student data to child via PROPS
+|   Child (StudentCard component):
+|     - Receives `student` object as prop — no own data fetching
+|     - Receives `onSelect` callback prop to notify parent on click
+|     - Purely presentational: renders what it receives via props
+|   Flow: Parent (Users Page) → props → Child (StudentCard)
+|
 | The routes below are the SERVER-SIDE API endpoints that supply data
 | to those frontend pages via HTTP requests.
 |

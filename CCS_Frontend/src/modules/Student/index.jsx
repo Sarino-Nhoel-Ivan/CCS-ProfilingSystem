@@ -36,6 +36,80 @@ const Avatar = ({ student, size = 'md' }) => {
   );
 };
 
+/*
+ * Part 3: Props vs State
+ * ─────────────────────────────────────────────────────────────
+ * Parent (StudentModule / Users Page):
+ *   - Stores the user list in STATE: const [students, setStudents] = useState([])
+ *   - Fetches data from the API and keeps it in state
+ *   - Passes individual student data DOWN to child components via PROPS
+ *
+ * Child (StudentCard):
+ *   - Receives `student` object as a prop — does NOT manage its own data
+ *   - Receives `onSelect` callback prop to notify the parent when clicked
+ *   - Purely presentational: renders what it receives via props
+ *
+ * Flow: Parent (Users Page) → props → Child (StudentCard)
+ */
+
+/**
+ * StudentCard — Child component (Part 3)
+ * Receives student data via props from the parent StudentModule.
+ * @param {object}   student  - student data passed as prop from parent state
+ * @param {function} onSelect - callback prop to notify parent of selection
+ * @param {boolean}  dark     - theme prop passed down from parent
+ */
+const StudentCard = ({ student: s, onSelect, dark }) => {
+  const boldText  = dark ? 'text-slate-100' : 'text-slate-800';
+  const labelText = dark ? 'text-slate-400' : 'text-slate-500';
+  return (
+    <div onClick={() => onSelect(s.id)}
+      className={`group relative rounded-2xl border cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg overflow-hidden ${dark ? 'bg-slate-800 border-slate-700 hover:border-brand-500/50 hover:shadow-brand-500/10' : 'bg-white border-slate-200 hover:border-brand-400/60 hover:shadow-brand-500/10'}`}>
+      {/* Top accent bar */}
+      <div className={`h-1 w-full ${s.enrollment_status === 'Enrolled' ? 'bg-gradient-to-r from-orange-400 to-orange-500' : 'bg-gradient-to-r from-slate-300 to-slate-400'}`} />
+      <div className="p-5">
+        {/* Header row */}
+        <div className="flex items-start gap-3 mb-4">
+          <div className="relative shrink-0">
+            <Avatar student={s} size="lg" />
+            {s.enrollment_status === 'Enrolled' && (
+              <CheckCircleSolid className="w-4 h-4 text-green-500 absolute -bottom-0.5 -right-0.5 bg-white rounded-full" />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className={`text-sm font-bold truncate leading-tight ${boldText}`}>{s.first_name} {s.last_name}</p>
+            <div className={`flex items-center gap-1 mt-0.5 text-xs ${labelText}`}>
+              <IdentificationIcon className="w-3 h-3 shrink-0" />
+              <span className="font-mono">{s.student_number || `ID: ${s.id}`}</span>
+            </div>
+          </div>
+          <ChevronRightIcon className={`w-4 h-4 shrink-0 mt-0.5 transition-transform group-hover:translate-x-0.5 ${dark ? 'text-slate-600' : 'text-slate-300'}`} />
+        </div>
+        {/* Info rows */}
+        <div className={`space-y-1.5 text-xs border-t pt-3 ${dark ? 'border-slate-700' : 'border-slate-100'}`}>
+          <div className={`flex items-center gap-1.5 ${labelText}`}>
+            <AcademicCapIcon className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">{s.program || 'No program'}</span>
+          </div>
+          <div className={`flex items-center gap-1.5 ${labelText}`}>
+            <CalendarDaysIcon className="w-3.5 h-3.5 shrink-0" />
+            <span>{s.year_level || 'N/A'}</span>
+          </div>
+        </div>
+        {/* Footer badge */}
+        <div className="mt-3 flex justify-end">
+          {s.enrollment_status === 'Enrolled'
+            ? <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-green-500/15 text-green-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                Enrolled
+              </span>
+            : <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>{s.enrollment_status}</span>}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const StudentModule = () => {
   const dark = useDarkMode();
   const navigate = useNavigate();
@@ -341,53 +415,11 @@ const StudentModule = () => {
                   if (filtered.length === 0) return <div className={`py-8 text-center text-sm ${labelText}`}>No students match your search.</div>;
 
                   // ── CARDS view ──
+                  // Part 3: Parent passes student data (from state) to StudentCard child via props
                   if (viewMode === 'cards') return (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pr-1">
                       {filtered.map(s => (
-                        <div key={s.id} onClick={() => handleStudentClick(s.id)}
-                          className={`group relative rounded-2xl border cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg overflow-hidden ${dark ? 'bg-slate-800 border-slate-700 hover:border-brand-500/50 hover:shadow-brand-500/10' : 'bg-white border-slate-200 hover:border-brand-400/60 hover:shadow-brand-500/10'}`}>
-                          {/* Top accent bar */}
-                          <div className={`h-1 w-full ${s.enrollment_status === 'Enrolled' ? 'bg-gradient-to-r from-orange-400 to-orange-500' : 'bg-gradient-to-r from-slate-300 to-slate-400'}`} />
-                          <div className="p-5">
-                            {/* Header row */}
-                            <div className="flex items-start gap-3 mb-4">
-                              <div className="relative shrink-0">
-                                <Avatar student={s} size="lg" />
-                                {s.enrollment_status === 'Enrolled' && (
-                                  <CheckCircleSolid className="w-4 h-4 text-green-500 absolute -bottom-0.5 -right-0.5 bg-white rounded-full" />
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-bold truncate leading-tight ${boldText}`}>{s.first_name} {s.last_name}</p>
-                                <div className={`flex items-center gap-1 mt-0.5 text-xs ${labelText}`}>
-                                  <IdentificationIcon className="w-3 h-3 shrink-0" />
-                                  <span className="font-mono">{s.student_number || `ID: ${s.id}`}</span>
-                                </div>
-                              </div>
-                              <ChevronRightIcon className={`w-4 h-4 shrink-0 mt-0.5 transition-transform group-hover:translate-x-0.5 ${dark ? 'text-slate-600' : 'text-slate-300'}`} />
-                            </div>
-                            {/* Info rows */}
-                            <div className={`space-y-1.5 text-xs border-t pt-3 ${dark ? 'border-slate-700' : 'border-slate-100'}`}>
-                              <div className={`flex items-center gap-1.5 ${labelText}`}>
-                                <AcademicCapIcon className="w-3.5 h-3.5 shrink-0" />
-                                <span className="truncate">{s.program || 'No program'}</span>
-                              </div>
-                              <div className={`flex items-center gap-1.5 ${labelText}`}>
-                                <CalendarDaysIcon className="w-3.5 h-3.5 shrink-0" />
-                                <span>{s.year_level || 'N/A'}</span>
-                              </div>
-                            </div>
-                            {/* Footer badge */}
-                            <div className="mt-3 flex justify-end">
-                              {s.enrollment_status === 'Enrolled'
-                                ? <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-green-500/15 text-green-500">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                    Enrolled
-                                  </span>
-                                : <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>{s.enrollment_status}</span>}
-                            </div>
-                          </div>
-                        </div>
+                        <StudentCard key={s.id} student={s} onSelect={handleStudentClick} dark={dark} />
                       ))}
                     </div>
                   );
