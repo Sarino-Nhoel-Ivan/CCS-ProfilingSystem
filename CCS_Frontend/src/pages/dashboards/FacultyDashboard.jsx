@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, createContext, useContext, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../../utils/api';
 
 const ThemeCtx = createContext(true);
@@ -941,7 +942,13 @@ const StudentsPanel = ({facultyId,facultyName}) => {
 
 /* ════ MAIN COMPONENT ════ */
 const FacultyDashboard = ({user,onLogout}) => {
-  const [active,setActive]=useState('dashboard');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [active,setActive]=useState(()=>searchParams.get('section')||'dashboard');
+
+  const navigateTo = (section) => {
+    setActive(section);
+    setSearchParams({ section }, { replace: true });
+  };
   const [sidebarPinned,setSidebarPinned]=useState(false);
   const [sidebarHovered,setSidebarHovered]=useState(false);
   const [dark,setDark]=useState(()=>localStorage.getItem('fd_theme')!=='light');
@@ -1008,7 +1015,7 @@ const FacultyDashboard = ({user,onLogout}) => {
             {sidebarExpanded&&<div className="min-w-0"><p className={`text-sm font-bold truncate ${dark?'text-slate-100':'text-slate-800'}`}>CCS Faculty</p><p className={`text-[10px] truncate ${dark?'text-slate-500':'text-slate-400'}`}>Profile Hub</p></div>}
           </div>
           <nav className={`flex-1 overflow-y-auto overflow-x-hidden py-4 space-y-1 ${sidebarExpanded?'px-3':'px-2'}`}>
-            {NAV_ITEMS.map(item=><NavLink key={item.id} item={item} active={active} sidebarExpanded={sidebarExpanded} onSelect={setActive}/>)}
+            {NAV_ITEMS.map(item=><NavLink key={item.id} item={item} active={active} sidebarExpanded={sidebarExpanded} onSelect={navigateTo}/>)}
           </nav>
           <div className={`border-t py-4 space-y-1 ${dark?'border-slate-800':'border-slate-100'} ${sidebarExpanded?'px-3':'px-2'}`}>
             <button onClick={toggleTheme} title={!sidebarExpanded?(dark?'Light Mode':'Dark Mode'):''} className={`w-full flex items-center py-3 rounded-xl transition-all ${sidebarExpanded?'px-4':'px-0 justify-center'} ${dark?'text-slate-400 hover:bg-slate-800 hover:text-slate-200':'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}>

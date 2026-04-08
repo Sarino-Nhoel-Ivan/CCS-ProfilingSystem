@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../utils/api';
 import AddFacultyModal from './AddFacultyModal';
 import EditFacultyModal from './EditFacultyModal';
@@ -7,6 +8,8 @@ import { useDarkMode } from '../../context/DarkModeContext';
 
 const FacultyModule = () => {
   const dark = useDarkMode();
+  const navigate = useNavigate();
+  const { id: routeId } = useParams();
   const card      = dark ? 'bg-slate-900 border-slate-700/60'  : 'bg-white border-slate-100';
   const boldText  = dark ? 'text-slate-100' : 'text-slate-800';
   const labelText = dark ? 'text-slate-400' : 'text-slate-500';
@@ -42,7 +45,18 @@ const FacultyModule = () => {
 
   useEffect(() => { reloadFaculties(); }, []);
 
-  const handleFacultyClick  = (f) => { setSelectedFaculty(f); setIsDetailModalOpen(true); };
+  const handleFacultyClick  = (f) => {
+    setSelectedFaculty(f);
+    setIsDetailModalOpen(true);
+    navigate(`/admin/reports/${f.id}`, { replace: true });
+  };
+
+  // Load faculty from URL param on mount
+  useEffect(() => {
+    if (routeId) {
+      api.faculties.get(routeId).then(f => { setSelectedFaculty(f); setIsDetailModalOpen(true); }).catch(() => {});
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const handleEditFaculty   = (f) => { setSelectedFaculty(f); setIsEditModalOpen(true); };
   const handleDeleteFaculty = async (id) => {
     if (window.confirm("Are you sure you want to delete this faculty member? This action cannot be undone.")) {
@@ -158,7 +172,7 @@ const FacultyModule = () => {
       </div>
 
       <AddFacultyModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onFacultyAdded={() => reloadFaculties()} />
-      <FacultyDetailModal isOpen={isDetailModalOpen} onClose={() => { setIsDetailModalOpen(false); setSelectedFaculty(null); }}
+      <FacultyDetailModal isOpen={isDetailModalOpen} onClose={() => { setIsDetailModalOpen(false); setSelectedFaculty(null); navigate('/admin/reports', { replace: true }); }}
         faculty={selectedFaculty}
         onEditClick={(f) => { setIsDetailModalOpen(false); handleEditFaculty(f); }}
         onDeleteClick={handleDeleteFaculty} />

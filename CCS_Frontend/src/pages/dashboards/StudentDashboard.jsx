@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../../utils/api';
 import { STORAGE_URL } from '../../utils/config';
 import {
@@ -759,7 +760,13 @@ const ForceChangePasswordModal = ({ dark, onChanged }) => {
    MAIN COMPONENT
 ════════════════════════════════════════════════ */
 const StudentDashboard = ({ user, onLogout }) => {
-  const [active, setActive]             = useState('dashboard');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [active, setActive] = useState(() => searchParams.get('section') || 'dashboard');
+
+  const navigateTo = (section) => {
+    navigateTo(section);
+    setSearchParams({ section }, { replace: true });
+  };
   const [tasks, setTasks]               = useState(TASKS_DEFAULT);
   const [sidebarPinned, setSidebarPinned] = useState(false);
   const [sidebarHovered, setSidebarHovered] = useState(false);
@@ -861,7 +868,7 @@ const StudentDashboard = ({ user, onLogout }) => {
     const isActive = active === item.id;
     const IconComp = item.Icon;
     return (
-      <button onClick={() => setActive(item.id)}
+      <button onClick={() => navigateTo(item.id)}
         title={!sidebarExpanded ? item.label : ''}
         className={`w-full flex items-center py-3 rounded-xl transition-all duration-300 group relative ${sidebarExpanded ? 'px-4' : 'px-0 justify-center'} ${isActive
           ? 'bg-brand-600/10 text-brand-400 ring-1 ring-brand-500/50'
@@ -993,7 +1000,7 @@ const StudentDashboard = ({ user, onLogout }) => {
                     </span>
                   )}
                 </div>
-                <button onClick={() => setActive('violations')}
+                <button onClick={() => navigateTo('violations')}
                   className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-all border ${
                     hasPending
                       ? high.length > 0
@@ -1058,7 +1065,7 @@ const StudentDashboard = ({ user, onLogout }) => {
                       );
                     })}
                     {pending.length > 3 && (
-                      <button onClick={() => setActive('violations')}
+                      <button onClick={() => navigateTo('violations')}
                         className={`w-full text-center text-xs font-semibold py-2.5 rounded-xl border transition-all ${
                           dark ? 'border-slate-700 text-slate-400 hover:bg-slate-800' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
                         }`}>
@@ -1079,7 +1086,7 @@ const StudentDashboard = ({ user, onLogout }) => {
           <div className={`lg:col-span-2 rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
             <div className={`flex items-center justify-between px-5 py-3.5 border-b ${dark ? 'border-slate-700/60 bg-slate-900' : 'border-slate-100 bg-slate-50'}`}>
               <div className="flex items-center gap-2"><ClipboardDocumentCheckIcon className="w-4 h-4 text-brand-500" /><h4 className="text-xs font-bold uppercase tracking-widest text-brand-500">My Pending Tasks</h4></div>
-              <button onClick={() => setActive('tasks')} className={`text-[10px] font-semibold px-2 py-1 rounded-lg transition-all ${dark ? 'text-brand-400 hover:bg-brand-500/10' : 'text-brand-600 hover:bg-brand-50'}`}>View all →</button>
+              <button onClick={() => navigateTo('tasks')} className={`text-[10px] font-semibold px-2 py-1 rounded-lg transition-all ${dark ? 'text-brand-400 hover:bg-brand-500/10' : 'text-brand-600 hover:bg-brand-50'}`}>View all →</button>
             </div>
             <div className="p-5 space-y-4">
               {/* Progress bar */}
@@ -1120,7 +1127,7 @@ const StudentDashboard = ({ user, onLogout }) => {
             <h3 className={`text-xs font-bold uppercase tracking-wider ${dark ? 'text-slate-400' : 'text-slate-500'}`}>🔗 Quick Navigation</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {quickLinks.map(ql => (
-                <button key={ql.id} onClick={() => setActive(ql.id)}
+                <button key={ql.id} onClick={() => navigateTo(ql.id)}
                   className={`text-left p-4 rounded-2xl border transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:border-brand-400/60 hover:shadow-brand-500/20 ${dark ? `bg-gradient-to-br ${ql.color}` : `${ql.color} shadow-sm`}`}>
                   <ql.Icon className={`w-7 h-7 mb-2 ${ql.iconColor}`} />
                   <p className={`text-xs font-bold leading-tight ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{ql.label}</p>
@@ -2521,7 +2528,7 @@ const StudentDashboard = ({ user, onLogout }) => {
                         <p className={`text-sm ${dark ? 'text-slate-500' : 'text-slate-400'}`}>No notifications yet</p>
                       </div>
                     ) : notifications.map(n => (
-                      <button key={n.id} onClick={() => { setActive(n.nav); setNotifOpen(false); }}
+                      <button key={n.id} onClick={() => { navigateTo(n.nav); setNotifOpen(false); }}
                         className={`w-full text-left flex items-start gap-3 px-4 py-3 border-b transition-colors ${dark ? 'border-slate-800 hover:bg-slate-800' : 'border-slate-50 hover:bg-slate-50'}`}>
                         <n.Icon className={`w-5 h-5 shrink-0 mt-0.5 ${n.iconCls}`} />
                         <div className="flex-1 min-w-0">

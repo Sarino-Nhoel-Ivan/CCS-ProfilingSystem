@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../utils/api';
 import { STORAGE_URL } from '../../utils/config';
 import {
@@ -39,6 +39,7 @@ const Avatar = ({ student, size = 'md' }) => {
 const StudentModule = () => {
   const dark = useDarkMode();
   const navigate = useNavigate();
+  const { id: routeId } = useParams();
   const [activeTab, setActiveTab] = useState('overview');
   const [students, setStudents] = useState([]);
   const [stats, setStats] = useState({ total: 0, enrolled: 0, notEnrolled: 0 });
@@ -99,9 +100,24 @@ const StudentModule = () => {
     fetchStudents();
   }, []);
 
-  const handleStudentClick = (id) => {
-    navigate(`/admin/users/${id}`);
+  const handleStudentClick = async (id) => {
+    try {
+      setIsLoading(true);
+      const data = await api.students.get(id);
+      setSelectedStudent(data);
+      setActiveTab('personal_details');
+      navigate(`/admin/users/${id}`, { replace: true });
+    } catch (error) {
+      console.error("Failed to load student details:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  // Load student from URL param on mount (e.g. direct link or page refresh)
+  useEffect(() => {
+    if (routeId) handleStudentClick(routeId);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const reloadStudents = async () => {
     try {
@@ -217,7 +233,7 @@ const StudentModule = () => {
             <button
               key={tab.id}
               onClick={() => {
-                if (tab.id === 'overview') setSelectedStudent(null);
+                if (tab.id === 'overview') { setSelectedStudent(null); navigate('/admin/users', { replace: true }); }
                 setActiveTab(tab.id);
               }}
               className={`px-6 py-4 text-sm font-medium transition-all relative ${

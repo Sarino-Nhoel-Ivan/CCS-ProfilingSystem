@@ -9,7 +9,6 @@ import SchedulingModule from './modules/Scheduling';
 import EventsModule from './modules/Events';
 import SearchModule from './modules/Search';
 import AdminDashboard from './modules/Dashboard';
-import StudentDetailPage from './pages/StudentDetailPage';
 import StudentLogin from './pages/StudentLogin';
 import FacultyLogin from './pages/FacultyLogin';
 import AdminLogin from './pages/AdminLogin';
@@ -88,8 +87,9 @@ function AdminLayout({ user, onLogout }) {
               <Routes>
                 <Route path="dashboard"   element={<AdminDashboard />} />
                 <Route path="users"       element={<StudentModule />} />
-                <Route path="users/:id"   element={<StudentDetailPage backPath="/admin/users" />} />
+                <Route path="users/:id"   element={<StudentModule />} />
                 <Route path="reports"     element={<FacultyModule />} />
+                <Route path="reports/:id" element={<FacultyModule />} />
                 <Route path="instruction" element={<InstructionModule />} />
                 <Route path="scheduling"  element={<SchedulingModule />} />
                 <Route path="events"      element={<EventsModule />} />
@@ -190,19 +190,7 @@ function App() {
           : <Navigate to="/student/login" replace />}
       />
       <Route
-        path="/student/users/:id"
-        element={user?.role === 'student'
-          ? <StudentDashboard user={user} onLogout={handleLogout} />
-          : <Navigate to="/student/login" replace />}
-      />
-      <Route
         path="/faculty"
-        element={user?.role === 'faculty'
-          ? <FacultyDashboard user={user} onLogout={handleLogout} />
-          : <Navigate to="/faculty/login" replace />}
-      />
-      <Route
-        path="/faculty/users/:id"
         element={user?.role === 'faculty'
           ? <FacultyDashboard user={user} onLogout={handleLogout} />
           : <Navigate to="/faculty/login" replace />}

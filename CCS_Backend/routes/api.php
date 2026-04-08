@@ -12,16 +12,21 @@ use App\Http\Controllers\OtpController;
 | API Routes — CCS Profiling System
 |--------------------------------------------------------------------------
 |
-| NOTE ON CLIENT-SIDE ROUTING (Part 1):
-| The admin panel uses React Router for client-side navigation with the
-| following routes defined in the frontend (CCS_Frontend/src/App.jsx):
+| NOTE ON CLIENT-SIDE ROUTING (Part 1 & Part 2):
 |
-|   /admin/dashboard  →  Dashboard overview (students, faculty, events stats)
+| Part 1 — Static client-side routes (React Router, no page reload):
+|   /admin/dashboard  →  Dashboard overview
 |   /admin/users      →  Student Information module
 |   /admin/reports    →  Faculty Information module
 |
-| These are browser-side routes handled by React Router — they do NOT go
-| through Laravel. Navigation switches pages without a full page reload (SPA).
+| Part 2 — Dynamic client-side routes:
+|   /admin/users/:id  →  Opens specific student's detail view
+|   /admin/reports/:id→  Opens specific faculty member's detail view
+|   /student?section= →  Student dashboard section (profile, academic, etc.)
+|   /faculty?section= →  Faculty dashboard section (profile, subjects, etc.)
+|
+|   Clicking a user from the list navigates to their detail page
+|   without a full page reload (SPA behavior via React Router).
 |
 | The routes below are the SERVER-SIDE API endpoints that supply data
 | to those frontend pages via HTTP requests.
@@ -59,10 +64,8 @@ Route::post('/students/advanced-search', [StudentController::class, 'advancedSea
 Route::get('/faculties/export/csv',      [\App\Http\Controllers\FacultyController::class, 'export']);
 
 // ══════════════════════════════════════════════════════════════
-// USERS ROUTES  (/admin/users  →  /admin/users/:id)
-// Dynamic route: clicking a student navigates to /admin/users/:id
-// which loads their full profile via GET /api/students/{id}
-// Same dynamic pattern applies to /student/users/:id and /faculty/users/:id
+// USERS ROUTES  (/admin/users)
+// Full CRUD for student profiles and all nested sub-resources
 // ══════════════════════════════════════════════════════════════
 Route::apiResource('students', StudentController::class);
 
