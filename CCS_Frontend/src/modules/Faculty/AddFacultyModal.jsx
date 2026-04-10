@@ -59,10 +59,29 @@ const AddFacultyModal = ({ isOpen, onClose, onFacultyAdded }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
     setError(null);
+
+    // Frontend validation
+    if (!formData.email || !formData.email.trim()) {
+      setError('Email address is required.');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email.trim())) {
+      setError('Please enter a valid email address (e.g. faculty@pnc.edu.ph).');
+      return;
+    }
+    if (!formData.department_id) {
+      setError('Please select a department.');
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
-      await api.faculties.create(formData);
+      await api.faculties.create({
+        ...formData,
+        email: formData.email.trim(),
+      });
       onFacultyAdded();
       onClose();
       setFormData({...formData, first_name: '', last_name: '', email: '', contact_number: ''});
@@ -171,7 +190,7 @@ const AddFacultyModal = ({ isOpen, onClose, onFacultyAdded }) => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className={lbl}>Email Address *</label>
-                    <input required type="email" name="email" value={formData.email} onChange={handleChange} className={inp} />
+                    <input required type="email" name="email" value={formData.email} onChange={handleChange} placeholder="e.g. faculty@pnc.edu.ph" className={inp} />
                   </div>
                   <div>
                     <label className={lbl}>Contact Number</label>
