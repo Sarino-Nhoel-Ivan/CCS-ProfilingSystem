@@ -1,5 +1,14 @@
 import React from 'react';
 import { useDarkMode } from '../../context/DarkModeContext';
+import { STORAGE_URL } from '../../utils/config';
+import {
+  CheckBadgeIcon,
+  SparklesIcon,
+  AcademicCapIcon,
+  CalendarDaysIcon,
+  TagIcon,
+} from '@heroicons/react/24/outline';
+import { CheckBadgeIcon as CheckBadgeSolid } from '@heroicons/react/24/solid';
 
 // Helpers
 const getAge = (birthDate) => {
@@ -100,8 +109,22 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
 
       {/* Student Header Summary */}
       <div className={`flex items-center space-x-6 mb-8 pb-6 border-b ${divider}`}>
-        <div className={`w-20 h-20 rounded-full flex items-center justify-center font-bold text-2xl shrink-0 ${getYearLevelColor(student.year_level, dark)}`}>
-          {student.first_name[0]}{student.last_name[0]}
+        <div className="w-20 h-20 rounded-full shrink-0 overflow-hidden">
+          {(() => {
+            const src = student.profile_photo
+              ? (student.profile_photo.startsWith('http')
+                  ? student.profile_photo
+                  : `${STORAGE_URL}/${student.profile_photo}`)
+              : null;
+            return src
+              ? <img src={src} alt={`${student.first_name} ${student.last_name}`} className="w-full h-full object-cover"
+                  onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }} />
+              : null;
+          })()}
+          <div className={`w-full h-full flex items-center justify-center font-bold text-2xl ${getYearLevelColor(student.year_level, dark)}`}
+            style={{ display: student.profile_photo ? 'none' : 'flex' }}>
+            {student.first_name[0]}{student.last_name[0]}
+          </div>
         </div>
         <div className="flex-1">
           <div className="flex justify-between items-start">
@@ -296,99 +319,6 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
             </div>
           </div>
 
-          {/* Skills & Certifications */}
-          <div className={`pt-4 border-t ${divider}`}>
-            <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Skills & Certifications</h3>
-            {student.skills && student.skills.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {student.skills.map(skill => (
-                  <div key={skill.id} className={`border p-4 rounded-xl ${skillCard}`}>
-                    <div className="mb-2">
-                      <span className="text-xs font-bold text-white bg-brand-500 px-2 py-0.5 rounded uppercase tracking-wider">{skill.skill_category}</span>
-                    </div>
-                    <h4 className={`font-bold text-sm mb-1 ${boldText}`}>{skill.skill_name}</h4>
-                    <p className={`text-xs mb-3 line-clamp-2 ${subText}`}>{skill.description}</p>
-                    <div className={`mt-auto pt-3 border-t flex justify-between items-center ${skillFoot}`}>
-                      <span className={`text-xs font-medium border px-2 py-1 rounded ${skillLevel}`}>Level: {skill.pivot?.skill_level || 'N/A'}</span>
-                      {skill.pivot?.certification && (
-                        <span className={`text-xs flex items-center font-medium ${dark ? 'text-green-400' : 'text-green-600'}`}>
-                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                          Certified
-                        </span>
-                      )}
-                    </div>
-                    {skill.pivot?.certification && (
-                      <div className={`mt-2 text-xs ${subText}`}>
-                        <p className="font-semibold">{skill.pivot.certification_name}</p>
-                        <p>Date: {skill.pivot.certification_date}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className={`text-sm italic ${subText}`}>No skills recorded.</p>
-            )}
-          </div>
-
-          {/* Academic Background */}
-          <div className={`pt-4 border-t ${divider}`}>
-            <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Academic Background</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className={`p-4 rounded-lg space-y-3 ${addrBox}`}>
-                {[['LRN', student.lrn], ['Last School Attended', student.last_school_attended], ['Last Year Attended', student.last_year_attended]].map(([label, val]) => (
-                  <div key={label} className="flex justify-between">
-                    <span className={`text-sm ${labelRow}`}>{label}</span>
-                    <span className={`font-medium text-sm text-right max-w-[60%] ${valueRow}`}>{val || 'N/A'}</span>
-                  </div>
-                ))}
-              </div>
-              <div className={`border p-4 rounded-lg ${honorsBox}`}>
-                <span className={`text-xs font-bold uppercase block mb-2 ${dark ? 'text-amber-400' : 'text-amber-700'}`}>Honors / Awards Received</span>
-                <p className={`text-sm ${valueRow}`}>{student.honors_received || 'None recorded'}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Academic History */}
-          <div className={`pt-4 border-t ${divider}`}>
-            <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Academic History</h3>
-            {student.academic_histories && student.academic_histories.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className={`${theadRow}`}>
-                      <th className="p-3 font-semibold rounded-tl-lg">School Year</th>
-                      <th className="p-3 font-semibold">Semester</th>
-                      <th className="p-3 font-semibold text-center">GPA</th>
-                      <th className="p-3 font-semibold">Standing</th>
-                      <th className="p-3 font-semibold text-right rounded-tr-lg">Units</th>
-                    </tr>
-                  </thead>
-                  <tbody className={`divide-y ${tbDivide}`}>
-                    {student.academic_histories.map(ah => (
-                      <tr key={ah.id} className={trHover}>
-                        <td className={`p-3 ${valueRow}`}>{ah.school_year}</td>
-                        <td className={`p-3 ${valueRow}`}>{ah.semester}</td>
-                        <td className="p-3 text-center font-bold text-brand-500">{ah.gpa}</td>
-                        <td className="p-3">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            ah.academic_standing === 'Good Standing'
-                              ? (dark ? 'bg-green-900/40 text-green-300' : 'bg-green-100 text-green-700')
-                              : (dark ? 'bg-yellow-900/40 text-yellow-300' : 'bg-yellow-100 text-yellow-700')
-                          }`}>{ah.academic_standing}</span>
-                        </td>
-                        <td className={`p-3 text-right ${subText}`}>{ah.completed_units} / {ah.total_units}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className={`text-sm italic ${subText}`}>No academic history recorded.</p>
-            )}
-          </div>
-
           {/* Affiliations */}
           <div className={`pt-4 border-t ${divider}`}>
             <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Affiliations & Organizations</h3>
@@ -412,53 +342,351 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
             )}
           </div>
 
-          {/* Violations */}
-          <div className={`pt-4 border-t ${divider}`}>
-            <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Violations / Disciplinary Records</h3>
-            {student.violations && student.violations.length > 0 ? (
-              <div className="space-y-4">
-                {student.violations.map(v => (
-                  <div key={v.id} className={`border p-4 rounded-xl ${
-                    v.severity_level === 'High'
-                      ? (dark ? 'border-red-800/50 bg-red-900/20' : 'border-red-200 bg-red-50/30')
-                      : v.severity_level === 'Medium'
-                      ? (dark ? 'border-yellow-800/50 bg-yellow-900/20' : 'border-yellow-200 bg-yellow-50/30')
-                      : (dark ? 'border-slate-700' : 'border-slate-200')
-                  }`}>
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h4 className={`font-bold text-sm ${boldText}`}>{v.violation_type}</h4>
-                        <p className={`text-xs mt-1 ${subText}`}>Reported: {v.date_reported} by {v.reported_by}</p>
+        </div>
+      )}
+
+      {/* Skills & Certifications Tab */}
+      {activeTab === 'skills_certifications' && (
+        <div className="space-y-6">
+          <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Skills & Certifications</h3>
+          {student.skills && student.skills.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {student.skills.map(skill => {
+                const isCertified = skill.pivot?.certification;
+                const isAcademic  = skill.skill_category?.toLowerCase() === 'academic';
+                return (
+                  <div key={skill.id} className={`relative rounded-2xl border overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-xl group ${dark ? `skillCard hover:shadow-brand-500/20 hover:border-brand-500/40` : `skillCard hover:shadow-orange-200/80 hover:border-orange-300/60`} ${skillCard}`}>
+                    {/* Top accent */}
+                    <div className={`h-1 w-full ${isAcademic ? 'bg-gradient-to-r from-brand-400 to-brand-600' : 'bg-gradient-to-r from-orange-400 to-orange-500'}`} />
+
+                    <div className="p-5">
+                      {/* Category badge */}
+                      <div className="flex items-center justify-between mb-3">
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${isAcademic ? (dark ? 'bg-brand-900/40 text-brand-300' : 'bg-brand-50 text-brand-600') : (dark ? 'bg-orange-900/40 text-orange-300' : 'bg-orange-50 text-orange-600')}`}>
+                          {isAcademic ? <AcademicCapIcon className="w-3 h-3" /> : <SparklesIcon className="w-3 h-3" />}
+                          {skill.skill_category}
+                        </span>
+                        {isCertified && (
+                          <CheckBadgeSolid className={`w-5 h-5 ${dark ? 'text-green-400' : 'text-green-500'}`} />
+                        )}
                       </div>
-                      <span className={`px-2 py-1 rounded text-xs font-bold uppercase tracking-wider ${
-                        v.severity_level === 'High'
-                          ? (dark ? 'bg-red-900/40 text-red-300' : 'bg-red-100 text-red-700')
-                          : v.severity_level === 'Medium'
-                          ? (dark ? 'bg-yellow-900/40 text-yellow-300' : 'bg-yellow-100 text-yellow-700')
-                          : (dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-700')
-                      }`}>{v.severity_level}</span>
+
+                      {/* Skill name & description */}
+                      <h4 className={`font-bold text-sm mb-1 ${boldText}`}>{skill.skill_name}</h4>
+                      <p className={`text-xs mb-4 line-clamp-2 ${subText}`}>{skill.description || 'No description available.'}</p>
+
+                      {/* Level + certified footer */}
+                      <div className={`pt-3 border-t flex items-center justify-between ${skillFoot}`}>
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-medium border px-2.5 py-1 rounded-lg ${skillLevel}`}>
+                          <TagIcon className="w-3 h-3" />
+                          {skill.pivot?.skill_level || 'N/A'}
+                        </span>
+                        {isCertified
+                          ? <span className={`inline-flex items-center gap-1 text-xs font-semibold ${dark ? 'text-green-400' : 'text-green-600'}`}>
+                              <CheckBadgeIcon className="w-4 h-4" />
+                              Certified
+                            </span>
+                          : <span className={`text-xs ${subText}`}>Not certified</span>
+                        }
+                      </div>
+
+                      {/* Certification details */}
+                      {isCertified && (skill.pivot.certification_name || skill.pivot.certification_date) && (
+                        <div className={`mt-3 p-3 rounded-xl text-xs space-y-1 ${dark ? 'bg-green-900/20 border border-green-800/40' : 'bg-green-50 border border-green-100'}`}>
+                          {skill.pivot.certification_name && (
+                            <p className={`font-semibold flex items-center gap-1.5 ${dark ? 'text-green-300' : 'text-green-700'}`}>
+                              <CheckBadgeIcon className="w-3.5 h-3.5 shrink-0" />
+                              {skill.pivot.certification_name}
+                            </p>
+                          )}
+                          {skill.pivot.certification_date && (
+                            <p className={`flex items-center gap-1.5 ${dark ? 'text-green-400/70' : 'text-green-600/80'}`}>
+                              <CalendarDaysIcon className="w-3.5 h-3.5 shrink-0" />
+                              {skill.pivot.certification_date}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <p className={`text-sm mt-3 mb-3 ${dark ? 'text-slate-300' : 'text-slate-700'}`}>{v.description}</p>
-                    <div className={`p-3 rounded border text-sm ${actionBox}`}>
-                      <p className={`font-semibold text-xs uppercase mb-1 ${boldText}`}>Action Taken</p>
-                      <p className={`mb-2 ${dark ? 'text-slate-400' : 'text-slate-600'}`}>{v.action_taken || 'Pending'}</p>
-                      <div className={`flex justify-between items-center text-xs border-t pt-2 ${dark ? 'border-slate-700 text-slate-500' : 'border-slate-50 text-slate-500'}`}>
-                        <span>Status: <strong className={v.status === 'Resolved' ? 'text-green-500' : 'text-yellow-500'}>{v.status}</strong></span>
-                        <span>Resolution Date: {v.resolution_date || 'N/A'}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className={`flex flex-col items-center justify-center py-12 rounded-2xl border ${dark ? 'border-slate-700 bg-slate-800/30' : 'border-slate-200 bg-slate-50'}`}>
+              <SparklesIcon className={`w-10 h-10 mb-3 ${dark ? 'text-slate-600' : 'text-slate-300'}`} />
+              <p className={`text-sm font-medium ${subText}`}>No skills recorded.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Academic History Tab */}
+      {activeTab === 'academic_history' && (
+        <div className="space-y-5">
+
+          {/* Section header */}
+          <div className={`flex items-center justify-between pb-4 border-b ${divider}`}>
+            <div className="flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${dark ? 'bg-blue-900/40 text-blue-400' : 'bg-blue-50 text-blue-500'}`}>
+                <AcademicCapIcon className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className={`text-base font-bold ${boldText}`}>Academic History</h3>
+                <p className={`text-xs ${subText}`}>Schools attended and academic performance records</p>
+              </div>
+            </div>
+            {student.academic_histories && student.academic_histories.length > 0 && (
+              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
+                {student.academic_histories.length} record{student.academic_histories.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+
+          {student.academic_histories && student.academic_histories.length > 0 ? (
+            <div className="space-y-4">
+              {student.academic_histories.map((ah, idx) => {
+                const isGoodStanding = ah.academic_standing === 'Good Standing';
+                const gpa = parseFloat(ah.gpa);
+                // Philippine GPA: 1.0 is highest, 5.0 is failing — normalize for ring (1.0=100%, 5.0=0%)
+                const gpaPct = !isNaN(gpa) ? Math.round(Math.max(0, Math.min(100, ((5 - gpa) / 4) * 100))) : 0;
+                const gpaColor = gpa <= 1.5 ? '#22c55e' : gpa <= 2.5 ? '#f97316' : gpa <= 3.0 ? '#eab308' : '#ef4444';
+                const completedUnits = parseInt(ah.completed_units) || 0;
+                const totalUnits    = parseInt(ah.total_units) || 0;
+                const unitsPct = totalUnits > 0 ? Math.round((completedUnits / totalUnits) * 100) : 0;
+
+                return (
+                  <div key={ah.id} className={`relative rounded-2xl border overflow-hidden transition-all duration-200 hover:shadow-lg ${dark ? 'bg-slate-800/60 border-slate-700 hover:border-slate-600' : 'bg-white border-slate-200 hover:border-slate-300'}`}>
+                    {/* Top accent */}
+                    <div className={`h-1 w-full ${isGoodStanding ? 'bg-gradient-to-r from-green-400 to-emerald-500' : 'bg-gradient-to-r from-yellow-400 to-amber-500'}`} />
+
+                    <div className="p-5">
+                      <div className="flex items-start gap-4">
+
+                        {/* GPA Ring */}
+                        <div className="shrink-0 flex flex-col items-center gap-1">
+                          <div className="relative w-16 h-16">
+                            <svg className="w-16 h-16 -rotate-90" viewBox="0 0 36 36">
+                              <circle cx="18" cy="18" r="15.9" fill="none" stroke={dark ? '#1e293b' : '#f1f5f9'} strokeWidth="3" />
+                              <circle cx="18" cy="18" r="15.9" fill="none" stroke={gpaColor} strokeWidth="3"
+                                strokeDasharray={`${gpaPct} ${100 - gpaPct}`} strokeLinecap="round" />
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                              <span className={`text-sm font-extrabold leading-none`} style={{ color: gpaColor }}>{ah.gpa || '—'}</span>
+                              <span className={`text-[8px] font-bold uppercase ${dark ? 'text-slate-500' : 'text-slate-400'}`}>GPA</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Main content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 flex-wrap">
+                            <div>
+                              <h4 className={`font-bold text-sm leading-tight ${boldText}`}>{ah.school_name || 'Unknown School'}</h4>
+                              <div className={`flex items-center gap-3 mt-1 text-xs ${subText}`}>
+                                <span className="flex items-center gap-1">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                  {ah.school_year}
+                                </span>
+                                <span className={`${dark ? 'text-slate-600' : 'text-slate-300'}`}>·</span>
+                                <span>{ah.semester}</span>
+                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${dark ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
+                                  #{idx + 1}
+                                </span>
+                              </div>
+                            </div>
+                            <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0 ${
+                              isGoodStanding
+                                ? (dark ? 'bg-green-900/40 text-green-300 border border-green-800/50' : 'bg-green-100 text-green-700 border border-green-200')
+                                : (dark ? 'bg-yellow-900/40 text-yellow-300 border border-yellow-800/50' : 'bg-yellow-100 text-yellow-700 border border-yellow-200')
+                            }`}>
+                              {isGoodStanding
+                                ? <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                                : <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                              }
+                              {ah.academic_standing || 'N/A'}
+                            </span>
+                          </div>
+
+                          {/* Units progress bar */}
+                          {totalUnits > 0 && (
+                            <div className="mt-3">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className={`text-[10px] font-semibold uppercase tracking-wider ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Units Completed</span>
+                                <span className={`text-[10px] font-bold ${boldText}`}>{completedUnits} / {totalUnits}</span>
+                              </div>
+                              <div className={`h-1.5 rounded-full overflow-hidden ${dark ? 'bg-slate-700' : 'bg-slate-100'}`}>
+                                <div className={`h-full rounded-full transition-all duration-700 ${isGoodStanding ? 'bg-gradient-to-r from-green-400 to-emerald-500' : 'bg-gradient-to-r from-yellow-400 to-amber-500'}`}
+                                  style={{ width: `${unitsPct}%` }} />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Honors */}
+                          {ah.honors && (
+                            <div className={`mt-3 inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg ${dark ? 'bg-amber-900/30 text-amber-300 border border-amber-800/40' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
+                              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                              {ah.honors}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                ))}
+                );
+              })}
+            </div>
+          ) : (
+            <div className={`flex flex-col items-center justify-center py-14 rounded-2xl border ${dark ? 'bg-slate-800/40 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${dark ? 'bg-slate-700' : 'bg-slate-100'}`}>
+                <AcademicCapIcon className={`w-8 h-8 ${dark ? 'text-slate-500' : 'text-slate-400'}`} />
               </div>
-            ) : (
-              <div className={`border p-6 rounded-xl text-center ${dark ? 'bg-green-900/20 border-green-800/40' : 'bg-green-50 border-green-100'}`}>
-                <svg className={`w-12 h-12 mx-auto mb-3 ${dark ? 'text-green-500' : 'text-green-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <h4 className={`text-lg font-bold mb-1 ${dark ? 'text-green-300' : 'text-green-800'}`}>Clean Record</h4>
-                <p className={`text-sm ${dark ? 'text-green-500' : 'text-green-600'}`}>This student has no recorded violations.</p>
+              <h4 className={`text-base font-bold mb-1 ${boldText}`}>No Academic History</h4>
+              <p className={`text-sm ${subText}`}>No academic records have been recorded for this student.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Violations Tab */}
+      {activeTab === 'violations' && (
+        <div className="space-y-5">
+
+          {/* Section header with count badge */}
+          <div className={`flex items-center justify-between pb-4 border-b ${divider}`}>
+            <div className="flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${dark ? 'bg-red-900/40 text-red-400' : 'bg-red-50 text-red-500'}`}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
+              </div>
+              <div>
+                <h3 className={`text-base font-bold ${boldText}`}>Violations / Disciplinary Records</h3>
+                <p className={`text-xs ${subText}`}>Incident and disciplinary history for this student</p>
+              </div>
+            </div>
+            {student.violations && student.violations.length > 0 && (
+              <div className="flex items-center gap-2">
+                {['High','Medium','Low'].map(level => {
+                  const count = student.violations.filter(v => v.severity_level === level).length;
+                  if (!count) return null;
+                  const cls = level === 'High'
+                    ? (dark ? 'bg-red-900/40 text-red-300 border-red-800/50' : 'bg-red-100 text-red-700 border-red-200')
+                    : level === 'Medium'
+                    ? (dark ? 'bg-yellow-900/40 text-yellow-300 border-yellow-800/50' : 'bg-yellow-100 text-yellow-700 border-yellow-200')
+                    : (dark ? 'bg-slate-700 text-slate-300 border-slate-600' : 'bg-slate-100 text-slate-600 border-slate-200');
+                  return (
+                    <span key={level} className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cls}`}>
+                      {count} {level}
+                    </span>
+                  );
+                })}
+                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
+                  {student.violations.length} total
+                </span>
               </div>
             )}
           </div>
 
+          {student.violations && student.violations.length > 0 ? (
+            <div className="space-y-4">
+              {student.violations.map((v, idx) => {
+                const isHigh   = v.severity_level === 'High';
+                const isMedium = v.severity_level === 'Medium';
+                const isResolved = v.status === 'Resolved';
+
+                const cardBg = isHigh
+                  ? (dark ? 'bg-red-950/40 border-red-800/50' : 'bg-red-50/60 border-red-200')
+                  : isMedium
+                  ? (dark ? 'bg-yellow-950/30 border-yellow-800/40' : 'bg-yellow-50/60 border-yellow-200')
+                  : (dark ? 'bg-slate-800/60 border-slate-700' : 'bg-white border-slate-200');
+
+                const accentBar = isHigh
+                  ? 'bg-gradient-to-b from-red-500 to-red-600'
+                  : isMedium
+                  ? 'bg-gradient-to-b from-yellow-400 to-yellow-500'
+                  : (dark ? 'bg-slate-600' : 'bg-slate-300');
+
+                const severityBadge = isHigh
+                  ? (dark ? 'bg-red-900/60 text-red-300 border border-red-700' : 'bg-red-100 text-red-700 border border-red-200')
+                  : isMedium
+                  ? (dark ? 'bg-yellow-900/60 text-yellow-300 border border-yellow-700' : 'bg-yellow-100 text-yellow-700 border border-yellow-200')
+                  : (dark ? 'bg-slate-700 text-slate-300 border border-slate-600' : 'bg-slate-100 text-slate-600 border border-slate-200');
+
+                const severityIcon = isHigh
+                  ? <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                  : isMedium
+                  ? <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                  : <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>;
+
+                return (
+                  <div key={v.id} className={`relative rounded-2xl border overflow-hidden ${cardBg}`}>
+                    {/* Left accent bar */}
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${accentBar}`} />
+
+                    <div className="pl-5 pr-5 pt-4 pb-4">
+                      {/* Header row */}
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`text-[10px] font-bold text-slate-400`}>#{idx + 1}</span>
+                            <h4 className={`font-bold text-sm ${boldText}`}>{v.violation_type}</h4>
+                          </div>
+                          <p className={`text-xs mt-1 flex items-center gap-1.5 ${subText}`}>
+                            <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                            {v.date_reported ? new Date(v.date_reported).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : v.date_reported}
+                            <span className={`mx-1 ${dark ? 'text-slate-600' : 'text-slate-300'}`}>·</span>
+                            <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                            Reported by {v.reported_by}
+                          </p>
+                        </div>
+                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shrink-0 ${severityBadge}`}>
+                          {severityIcon}
+                          {v.severity_level}
+                        </span>
+                      </div>
+
+                      {/* Description */}
+                      {v.description && (
+                        <p className={`text-sm mb-3 leading-relaxed ${dark ? 'text-slate-300' : 'text-slate-700'}`}>
+                          {v.description}
+                        </p>
+                      )}
+
+                      {/* Action taken box */}
+                      <div className={`rounded-xl border p-3.5 ${dark ? 'bg-slate-900/60 border-slate-700' : 'bg-white border-slate-200'}`}>
+                        <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Action Taken</p>
+                        <p className={`text-sm ${dark ? 'text-slate-300' : 'text-slate-700'}`}>{v.action_taken || 'No action recorded yet.'}</p>
+
+                        <div className={`flex items-center justify-between mt-3 pt-2.5 border-t ${dark ? 'border-slate-700' : 'border-slate-100'}`}>
+                          <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
+                            isResolved
+                              ? (dark ? 'bg-green-900/40 text-green-300' : 'bg-green-100 text-green-700')
+                              : (dark ? 'bg-amber-900/40 text-amber-300' : 'bg-amber-100 text-amber-700')
+                          }`}>
+                            {isResolved
+                              ? <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                              : <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" /></svg>
+                            }
+                            {v.status}
+                          </span>
+                          <span className={`text-xs ${subText}`}>
+                            Resolution: <span className={`font-semibold ${boldText}`}>{v.resolution_date || 'N/A'}</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className={`flex flex-col items-center justify-center py-14 rounded-2xl border ${dark ? 'bg-green-950/30 border-green-800/40' : 'bg-green-50/60 border-green-100'}`}>
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${dark ? 'bg-green-900/40' : 'bg-green-100'}`}>
+                <svg className={`w-8 h-8 ${dark ? 'text-green-400' : 'text-green-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <h4 className={`text-base font-bold mb-1 ${dark ? 'text-green-300' : 'text-green-800'}`}>Clean Record</h4>
+              <p className={`text-sm ${dark ? 'text-green-500' : 'text-green-600'}`}>This student has no recorded violations.</p>
+            </div>
+          )}
         </div>
       )}
 

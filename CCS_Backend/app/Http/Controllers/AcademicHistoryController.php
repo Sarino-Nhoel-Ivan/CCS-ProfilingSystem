@@ -16,6 +16,7 @@ class AcademicHistoryController extends Controller
     public function store(Request $request, Student $student)
     {
         $data = $request->validate([
+            'school_name'      => 'nullable|string|max:255',
             'school_year'      => 'required|string|max:20',
             'semester'         => 'required|string|max:50',
             'gpa'              => 'nullable|numeric|min:1|max:5',
@@ -30,6 +31,7 @@ class AcademicHistoryController extends Controller
     public function update(Request $request, Student $student, AcademicHistory $academicHistory)
     {
         $data = $request->validate([
+            'school_name'      => 'nullable|string|max:255',
             'school_year'      => 'required|string|max:20',
             'semester'         => 'required|string|max:50',
             'gpa'              => 'nullable|numeric|min:1|max:5',

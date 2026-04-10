@@ -1,0 +1,86 @@
+
+System Pendings!!
+
+TO DO
+
+- Fix the edit functionality of the edit button in the faculty information page and make sure that the changes will reflect on the faculty details
+- Change the UI format of student and faculty information "Stats" to look the same as the instruction,scheduling and event "Stats"
+- Double check if the light and darkmode is already applied to all elements whether its forms, sections etc.
+- Double check the visibility of all text/fields whether its dark/light mode in every forms modal in every pages
+- Fix the Edit and delete functionality of all forms modal in every pages/module
+- LOG IN AND SIGN UP PAGE 
+- FIX ROUTING OF LOG IN AND SIGN UP MAKE SURE THAT WILL GO THRU ON DATA BASE
+- Fix the backend of all navigations/pages
+- Fix the backend and frontend of comprehensive search and quick search
+- Fix the backend and frontend of login/signin
+- Double check if there are missing fields in forms of every pages
+- Double check the CRUD functionality in every pages if works
+- Add icons on every title of the Modal of every pages
+Scheduling Page
+- Apply the correct option of the Course code, Faculty member, Section in the "Assign Schedule" modal
+
+
+CREATE AN PAGE FOR STUDENTS AND FACULTY 
+
+
+BRAINSTORM WHAT WE NEED TO PUT IN STUDENTS AND FACULTY PAGE
+
+
+accounts password: password123
+
+admin@gmail.com
+student@gmail.com	
+faculty@gmail.com
+
+
+
+student
+ 
+SIDEBAR
+- PROFILE
+- DASHBOARD (ANNOUNCEMENT)
+- GRADES
+- COURSE
+- PENDING TASK
+
+
+student profile-
+
+profile container*
+gender
+civil status
+recidency
+nationality
+religion
+date of birth
+place of birth
+
+
+
+contact information*
+present address
+permanent address
+mobile number
+email address
+
+family background*
+father's name 
+mother's name
+father's occupation 
+mother's occupation 
+guardian contact no.
+
+educational background container*
+last school attended
+last year attended
+learners reference number (LRN)
+
+enrollment details container*
+College
+program
+Date Enrolled
+
+
+
+
+	

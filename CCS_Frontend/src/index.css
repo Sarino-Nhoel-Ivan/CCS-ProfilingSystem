@@ -61,3 +61,65 @@
 .sd-light::-webkit-scrollbar-thumb:hover {
   background: #f26522; /* brand-500 */
 }
+
+/* ── Admin modal scrollbar (dark mode) ── */
+.dark .admin-modal-scroll::-webkit-scrollbar,
+.admin-modal-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+/* Global dark mode scrollbar — applies when bg-slate-950 is on root */
+.bg-slate-950 ::-webkit-scrollbar,
+.bg-slate-950::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.bg-slate-950 ::-webkit-scrollbar-track,
+.bg-slate-950::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+.bg-slate-950 ::-webkit-scrollbar-thumb,
+.bg-slate-950::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+}
+.bg-slate-950 ::-webkit-scrollbar-thumb:hover,
+.bg-slate-950::-webkit-scrollbar-thumb:hover {
+  background: #f26522;
+}
+
+/* Global light mode scrollbar */
+.bg-slate-50 ::-webkit-scrollbar,
+.bg-slate-50::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.bg-slate-50 ::-webkit-scrollbar-track,
+.bg-slate-50::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.bg-slate-50 ::-webkit-scrollbar-thumb,
+.bg-slate-50::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+.bg-slate-50 ::-webkit-scrollbar-thumb:hover,
+.bg-slate-50::-webkit-scrollbar-thumb:hover {
+  background: #f26522;
+}
+
+/* Modal scroll areas */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 5px;
+}
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 9999px;
+}
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #f26522;
+}

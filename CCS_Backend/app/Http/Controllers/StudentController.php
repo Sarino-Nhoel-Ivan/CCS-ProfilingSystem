@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Student;
 use App\Models\MedicalHistory;
 use App\Models\Violation;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 class StudentController extends Controller
 {
@@ -21,7 +24,7 @@ class StudentController extends Controller
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'student_number'           => 'required|string|max:20|unique:students,student_number|regex:/^(22|23|24)\d{5}$/',
+            'student_number'           => ['required', 'string', 'max:20', 'unique:students,student_number', 'regex:/^(22|23|24)\d{5}$/'],
             'first_name'               => 'required|string|max:255',
             'middle_name'              => 'nullable|string|max:255',
             'last_name'                => 'required|string|max:255',
@@ -53,8 +56,101 @@ class StudentController extends Controller
             'last_year_attended'       => 'nullable|string|max:20',
             'honors_received'          => 'nullable|string',
         ]);
+
         $student = Student::create($validatedData);
+
+        // Auto-create login account:
+        // Login: student_number | Temp password: birthday in mm/dd/yyyy format
+        $birthDate   = \Carbon\Carbon::parse($validatedData['birth_date']);
+        $tempPassword = $birthDate->format('m/d/Y');
+
+        \DB::table('users')->insert([
+            'name'                 => $validatedData['student_number'],
+            'email'                => $validatedData['email'],
+            'password'             => Hash::make($tempPassword),
+            'role'                 => 'student',
+            'student_id'           => $student->id,
+            'must_change_password' => true,
+            'created_at'           => now(),
+            'updated_at'           => now(),
+        ]);
+
+        // Send welcome email to student's gmail via Brevo HTTP API
+        try {
+            $fullName = trim($validatedData['first_name'] . ' ' . $validatedData['last_name']);
+            $apiKey   = config('services.brevo.key', env('BREVO_API_KEY'));
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'api-key'      => $apiKey,
+                'Content-Type' => 'application/json',
+            ])->post('https://api.brevo.com/v3/smtp/email', [
+                'sender'      => [
+                    'name'  => config('mail.from.name'),
+                    'email' => config('mail.from.address'),
+                ],
+                'to'          => [['email' => $validatedData['email'], 'name' => $fullName]],
+                'subject'     => 'Your CCS Profiling System Account Has Been Created',
+                'htmlContent' => $this->buildWelcomeEmail($fullName, $validatedData['student_number']),
+            ]);
+            if ($response->successful()) {
+                \Log::info('Welcome email sent to: ' . $validatedData['email']);
+            } else {
+                \Log::error('Welcome email failed: ' . $response->body());
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Welcome email error: ' . $e->getMessage());
+        }
+
         return response()->json($student, 201);
+    }
+
+    private function buildWelcomeEmail(string $name, string $studentNumber): string
+    {
+        $loginUrl = rtrim(env('FRONTEND_URL', 'https://ccs-profiling-system-iota.vercel.app'), '/') . '/student/login';
+        return <<<HTML
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:'Segoe UI',Arial,sans-serif;">
+  <div style="max-width:560px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+    <div style="background:linear-gradient(135deg,#f26522,#e04f0f);padding:32px 40px;text-align:center;">
+      <h1 style="color:#fff;margin:0;font-size:22px;font-weight:800;letter-spacing:-0.5px;">CCS Profiling System</h1>
+      <p style="color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:13px;">Pamantasan ng Cabuyao — College of Computing Studies</p>
+    </div>
+    <div style="padding:36px 40px;">
+      <p style="color:#1e293b;font-size:16px;font-weight:700;margin:0 0 8px;">Hello, {$name}!</p>
+      <p style="color:#475569;font-size:14px;line-height:1.6;margin:0 0 24px;">Your student account has been successfully created by the administration. You can now log in to the <strong>CCS Profile Hub</strong> using the credentials below.</p>
+
+      <div style="background:#fff7f0;border:1.5px solid #fed7aa;border-radius:12px;padding:20px 24px;margin-bottom:24px;">
+        <p style="margin:0 0 12px;font-size:12px;font-weight:700;color:#c2410c;text-transform:uppercase;letter-spacing:0.05em;">Your Login Credentials</p>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            <td style="padding:6px 0;font-size:13px;color:#64748b;width:140px;">Student Number</td>
+            <td style="padding:6px 0;font-size:14px;font-weight:700;color:#1e293b;font-family:monospace;">{$studentNumber}</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;font-size:13px;color:#64748b;">Temporary Password</td>
+            <td style="padding:6px 0;font-size:14px;color:#475569;">Your birthday in <strong>mm/dd/yyyy</strong> format</td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="background:#fef3c7;border:1.5px solid #fcd34d;border-radius:10px;padding:14px 18px;margin-bottom:24px;">
+        <p style="margin:0;font-size:13px;color:#92400e;line-height:1.5;">⚠️ <strong>Important:</strong> Use your birthday (mm/dd/yyyy) as your temporary password. You will be required to change it upon your first login.</p>
+      </div>
+
+      <p style="color:#475569;font-size:13px;line-height:1.6;margin:0 0 24px;">If you have any concerns, please contact the CCS administration office.</p>
+
+      <div style="text-align:center;margin:8px 0 8px;">
+        <a href="{$loginUrl}" style="display:inline-block;background:linear-gradient(135deg,#f26522,#e04f0f);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:12px;box-shadow:0 4px 14px rgba(242,101,34,0.4);">Go to Student Login →</a>
+      </div>
+    </div>
+    <div style="background:#f8fafc;padding:20px 40px;text-align:center;border-top:1px solid #e2e8f0;">
+      <p style="margin:0;font-size:12px;color:#94a3b8;">© 2026 CCS Profiling System · Pamantasan ng Cabuyao</p>
+    </div>
+  </div>
+</body>
+</html>
+HTML;
     }
 
     public function show($id)
@@ -253,7 +349,6 @@ class StudentController extends Controller
                 'file',
                 'max:10240',
                 function ($attribute, $value, $fail) {
-                    // Validate by reading magic bytes — no re-encoding
                     $finfo = finfo_open(FILEINFO_MIME_TYPE);
                     $mime  = finfo_file($finfo, $value->getRealPath());
                     finfo_close($finfo);
@@ -265,21 +360,41 @@ class StudentController extends Controller
             ],
         ]);
 
-        // Delete old photo if exists
-        if ($student->profile_photo) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($student->profile_photo);
+        $cloudinaryUrl = config('cloudinary.cloud_url') ?? env('CLOUDINARY_URL');
+
+        if (empty($cloudinaryUrl) || str_contains($cloudinaryUrl, 'your_')) {
+            return response()->json(['message' => 'Cloudinary is not configured on the server.'], 500);
         }
 
-        // Store the raw file bytes without any processing
-        $file      = $request->file('photo');
-        $ext       = strtolower($file->getClientOriginalExtension()) ?: 'jpg';
-        $filename  = \Illuminate\Support\Str::random(40) . '.' . $ext;
-        $file->storeAs('profile_photos', $filename, 'public');
+        // Delete old Cloudinary photo if exists
+        if ($student->profile_photo && str_starts_with($student->profile_photo, 'http')) {
+            try {
+                \Cloudinary\Configuration\Configuration::instance($cloudinaryUrl);
+                $api = new \Cloudinary\Api\Admin\AdminApi();
+                // Extract public_id: last segment before extension, under our folder
+                $path     = parse_url($student->profile_photo, PHP_URL_PATH);
+                $segments = explode('/', $path);
+                $filename = pathinfo(end($segments), PATHINFO_FILENAME);
+                $api->deleteAssets(['ccs_profile_photos/' . $filename]);
+            } catch (\Throwable $e) {
+                \Log::warning('Cloudinary delete failed: ' . $e->getMessage());
+            }
+        }
 
-        $student->update(['profile_photo' => 'profile_photos/' . $filename]);
+        // Upload to Cloudinary
+        \Cloudinary\Configuration\Configuration::instance($cloudinaryUrl);
+        $uploader = new \Cloudinary\Api\Upload\UploadApi();
+        $result   = $uploader->upload($request->file('photo')->getRealPath(), [
+            'folder'         => 'ccs_profile_photos',
+            'transformation' => [['width' => 400, 'height' => 400, 'crop' => 'fill', 'gravity' => 'face']],
+            'resource_type'  => 'image',
+        ]);
+
+        $photoUrl = $result['secure_url'];
+        $student->update(['profile_photo' => $photoUrl]);
 
         return response()->json([
-            'profile_photo' => 'profile_photos/' . $filename,
+            'profile_photo' => $photoUrl,
             'updated_at'    => $student->fresh()->updated_at,
         ]);
     }

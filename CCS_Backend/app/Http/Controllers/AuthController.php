@@ -288,10 +288,11 @@ class AuthController extends Controller
 
         return response()->json([
             'user'  => [
-                'id'             => $user->id,
-                'student_number' => $user->name,
-                'role'           => $user->role,
-                'student_id'     => $user->student_id,
+                'id'                  => $user->id,
+                'student_number'      => $user->name,
+                'role'                => $user->role,
+                'student_id'          => $user->student_id,
+                'must_change_password'=> (bool) $user->must_change_password,
             ],
             'token' => $token,
         ]);
@@ -342,5 +343,24 @@ class AuthController extends Controller
     {
         $request->user()->currentAccessToken()->delete();
         return response()->json(['message' => 'Logged out successfully.']);
+    }
+
+    /**
+     * Force-change password (first login).
+     */
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'new_password'              => 'required|string|min:8|confirmed',
+            'new_password_confirmation' => 'required|string',
+        ]);
+
+        $user = $request->user();
+        $user->update([
+            'password'             => Hash::make($request->new_password),
+            'must_change_password' => false,
+        ]);
+
+        return response()->json(['message' => 'Password changed successfully.']);
     }
 }

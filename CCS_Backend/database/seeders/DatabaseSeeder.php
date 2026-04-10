@@ -77,5 +77,7 @@ class DatabaseSeeder extends Seeder
                 array_merge($course, ['department_id' => $ccs->id])
             );
         }
+
+        $this->call(SkillSeeder::class);
     }
 }

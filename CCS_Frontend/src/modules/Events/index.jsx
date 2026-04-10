@@ -3,6 +3,11 @@ import { api } from '../../utils/api';
 import AddEventModal from './AddEventModal';
 import EditEventModal from './EditEventModal';
 import { useDarkMode } from '../../context/DarkModeContext';
+import {
+  CalendarDaysIcon, MegaphoneIcon, PlusIcon, MapPinIcon,
+  PencilSquareIcon, TrashIcon, ChevronRightIcon, UsersIcon,
+  AcademicCapIcon, TrophyIcon, SparklesIcon, HeartIcon, StarIcon,
+} from '@heroicons/react/24/outline';
 
 const EventsModule = () => {
   const dark = useDarkMode();
@@ -62,14 +67,25 @@ const EventsModule = () => {
     return c[status] || 'bg-slate-100 text-slate-700';
   };
 
+  const getStatusGlow = (status) => {
+    const map = {
+      Upcoming:  'hover:border-blue-400/60 hover:shadow-blue-400/30',
+      Ongoing:   'hover:border-orange-400/60 hover:shadow-orange-400/30',
+      Completed: 'hover:border-green-400/60 hover:shadow-green-400/30',
+      Cancelled: 'hover:border-red-400/60 hover:shadow-red-400/30',
+    };
+    return map[status] || 'hover:border-slate-400/40 hover:shadow-slate-400/10';
+  };
+
   const getTypeIcon = (type) => {
-    switch (type) {
-      case 'Academic': return 'bg-indigo-50 text-indigo-500';
-      case 'Sports': return 'bg-orange-50 text-orange-500';
-      case 'Cultural': return 'bg-purple-50 text-purple-500';
-      case 'CommunityService': return 'bg-teal-50 text-teal-500';
-      default: return 'bg-slate-50 text-slate-500';
-    }
+    const map = {
+      Academic:         { Icon: AcademicCapIcon, bg: dark ? 'bg-indigo-900/40 text-indigo-300' : 'bg-indigo-50 text-indigo-500' },
+      Sports:           { Icon: TrophyIcon,      bg: dark ? 'bg-orange-900/40 text-orange-300' : 'bg-orange-50 text-orange-500' },
+      Cultural:         { Icon: SparklesIcon,    bg: dark ? 'bg-purple-900/40 text-purple-300' : 'bg-purple-50 text-purple-500' },
+      CommunityService: { Icon: HeartIcon,       bg: dark ? 'bg-teal-900/40 text-teal-300'   : 'bg-teal-50 text-teal-500'     },
+      Other:            { Icon: StarIcon,        bg: dark ? 'bg-slate-700 text-slate-300'     : 'bg-slate-100 text-slate-500'  },
+    };
+    return map[type] || map.Other;
   };
 
   return (
@@ -78,7 +94,7 @@ const EventsModule = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className={`rounded-2xl p-6 shadow-sm border flex items-center transition-colors duration-300 ${card}`}>
           <div className={`w-14 h-14 rounded-xl flex items-center justify-center mr-4 ${dark ? 'bg-brand-900/40 text-brand-400' : 'bg-brand-50 text-brand-600'}`}>
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            <CalendarDaysIcon className="w-8 h-8" />
           </div>
           <div>
             <p className={`text-sm font-medium ${subText}`}>Total Events Hosted</p>
@@ -88,7 +104,7 @@ const EventsModule = () => {
 
         <div className={`rounded-2xl p-6 shadow-sm border flex items-center transition-colors duration-300 ${card}`}>
           <div className={`w-14 h-14 rounded-xl flex items-center justify-center mr-4 ${dark ? 'bg-blue-900/40 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+            <MegaphoneIcon className="w-8 h-8" />
           </div>
           <div>
             <p className={`text-sm font-medium ${subText}`}>Upcoming Activities</p>
@@ -108,9 +124,7 @@ const EventsModule = () => {
             onClick={() => setIsAddModalOpen(true)}
             className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-medium transition-colors shadow-sm shadow-brand-500/30 flex items-center"
           >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-            </svg>
+            <PlusIcon className="w-4 h-4 mr-2" />
             Add Event
           </button>
         </div>
@@ -128,65 +142,82 @@ const EventsModule = () => {
             </div>
           ) : events.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {events.map((event) => (
-                <div key={event.id} className={`border rounded-2xl p-5 shadow-sm hover:shadow-md transition-all group relative ${evCard}`}>
-                  
-                  {/* Status Badge */}
-                  <div className="absolute top-5 right-5">
-                    <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${getStatusColor(event.status)}`}>
-                      {event.status}
-                    </span>
-                  </div>
+              {events.map((event) => {
+                const { Icon: TypeIcon, bg: typeBg } = getTypeIcon(event.eventType);
+                const statusGlow = getStatusGlow(event.status);
+                return (
+                  <div key={event.id}
+                    className={`relative rounded-2xl border overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl ${statusGlow} ${dark ? `bg-slate-800 border-slate-700` : `bg-white border-slate-200`}`}>
 
-                  <div className="flex items-start mb-4 pr-20">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center mr-4 shrink-0 ${getTypeIcon(event.eventType)}`}>
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className={`font-bold text-lg leading-tight mb-1 group-hover:text-brand-500 transition-colors ${boldText}`}>{event.eventName}</h3>
-                      <p className={`text-xs font-medium uppercase tracking-wider ${subText}`}>{event.eventType}</p>
+                    {/* Top accent bar */}
+                    <div className={`h-1 w-full ${
+                      event.status === 'Upcoming'  ? 'bg-gradient-to-r from-blue-400 to-blue-500' :
+                      event.status === 'Ongoing'   ? 'bg-gradient-to-r from-orange-400 to-orange-500' :
+                      event.status === 'Completed' ? 'bg-gradient-to-r from-green-400 to-green-500' :
+                                                     'bg-gradient-to-r from-red-400 to-red-500'}`} />
+
+                    <div className="p-5">
+                      {/* Header */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${typeBg}`}>
+                            <TypeIcon className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className={`font-bold text-base leading-tight truncate ${boldText}`}>{event.eventName}</h3>
+                            <p className={`text-[11px] font-semibold uppercase tracking-wider mt-0.5 ${subText}`}>{event.eventType}</p>
+                          </div>
+                        </div>
+                        <span className={`ml-2 shrink-0 px-2.5 py-1 text-[10px] font-bold rounded-full ${getStatusColor(event.status)}`}>
+                          {event.status}
+                        </span>
+                      </div>
+
+                      {/* Description */}
+                      <p className={`text-sm mb-4 line-clamp-2 min-h-[40px] ${subText}`}>
+                        {event.description || 'No description provided.'}
+                      </p>
+
+                      {/* Info rows */}
+                      <div className={`space-y-2 p-3 rounded-xl border ${infoBox}`}>
+                        <div className={`flex items-center gap-2 text-xs ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
+                          <CalendarDaysIcon className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                          <span className="font-medium truncate">
+                            {new Date(event.eventDate).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <div className={`flex items-center gap-2 text-xs ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
+                          <MapPinIcon className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                          <span className="font-medium truncate">{event.location || 'No location set'}</span>
+                        </div>
+                      </div>
+
+                      {/* Footer */}
+                      <div className={`mt-4 pt-3 border-t flex justify-between items-center ${footerBdr}`}>
+                        <button className={`flex items-center gap-1 text-xs font-semibold transition-colors ${dark ? 'text-brand-400 hover:text-brand-300' : 'text-brand-500 hover:text-brand-600'}`}>
+                          <UsersIcon className="w-3.5 h-3.5" />
+                          View Attendees
+                          <ChevronRightIcon className="w-3 h-3" />
+                        </button>
+                        <div className="flex gap-1">
+                          <button onClick={() => openEditModal(event)}
+                            className={`p-1.5 rounded-lg transition-colors ${dark ? 'text-slate-400 hover:text-brand-400 hover:bg-brand-500/10' : 'text-slate-400 hover:text-brand-600 hover:bg-brand-50'}`}>
+                            <PencilSquareIcon className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleDeleteEvent(event.id)}
+                            className={`p-1.5 rounded-lg transition-colors ${dark ? 'text-slate-400 hover:text-red-400 hover:bg-red-500/10' : 'text-slate-400 hover:text-red-600 hover:bg-red-50'}`}>
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <p className={`text-sm mb-5 line-clamp-2 min-h-[40px] ${subText}`}>{event.description || 'No description provided.'}</p>
-                  <div className={`space-y-3 p-4 rounded-xl border ${infoBox}`}>
-                    <div className="flex items-center text-sm text-slate-600">
-                      <svg className="w-4 h-4 mr-2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span className="font-medium">{new Date(event.eventDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                    <div className="flex items-center text-sm text-slate-600">
-                      <svg className="w-4 h-4 mr-2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span className="font-medium truncate" title={event.location}>{event.location}</span>
-                    </div>
-                  </div>
-                  
-                  <div className={`mt-4 pt-4 border-t flex justify-between items-center ${footerBdr}`}>
-                    <button className="text-sm font-semibold text-brand-500 hover:text-brand-400 flex items-center">
-                      View Attendees <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
-                    </button>
-                    <div className="flex space-x-1">
-                      <button onClick={() => openEditModal(event)} className={`p-1.5 rounded-md transition-colors hover:bg-brand-500/10 ${dark ? 'text-slate-400 hover:text-brand-400' : 'text-slate-400 hover:text-brand-600'}`}>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                      </button>
-                      <button onClick={() => handleDeleteEvent(event.id)} className={`p-1.5 rounded-md transition-colors hover:bg-red-500/10 ${dark ? 'text-slate-400 hover:text-red-400' : 'text-slate-400 hover:text-red-600'}`}>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-slate-500 py-12">
-              <svg className="w-16 h-16 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-              </svg>
+              <CalendarDaysIcon className="w-16 h-16 text-slate-300 mb-4" />
               <p className="text-lg font-medium">No events logged</p>
               <p className="text-sm">Click "Add Event" to schedule an activity.</p>
             </div>

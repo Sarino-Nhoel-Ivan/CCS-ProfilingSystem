@@ -57,7 +57,7 @@ class Student extends Model
 
     public function skills()
     {
-        return $this->belongsToMany(Skill::class)
+        return $this->belongsToMany(Skill::class, 'student_skill')
             ->withPivot('skill_level', 'certification', 'certification_name', 'certification_date')
             ->withTimestamps();
     }

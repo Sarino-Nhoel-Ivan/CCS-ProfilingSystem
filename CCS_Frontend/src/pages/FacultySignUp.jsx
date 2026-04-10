@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const API = 'http://localhost:8000/api';
+const API = import.meta.env.VITE_API_URL || 'https://ccs-profilingsystem-production.up.railway.app/api';
 
 const STYLES = `
   @keyframes spin-slow  { to { transform: rotate(360deg); } }

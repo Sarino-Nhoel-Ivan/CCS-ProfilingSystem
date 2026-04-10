@@ -1,9 +1,11 @@
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://ccs-profilingsystem-production.up.railway.app/api';
 
 export const fetchApi = async (endpoint, options = {}) => {
+  const token = localStorage.getItem('auth_token');
   const defaultHeaders = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
   };
   const config = { ...options, headers: { ...defaultHeaders, ...options.headers } };
   try {
@@ -68,9 +70,10 @@ export const api = {
     uploadPhoto: (studentId, file) => {
       const form = new FormData();
       form.append('photo', file);
+      const token = localStorage.getItem('auth_token');
       return fetch(`${API_BASE_URL}/students/${studentId}/photo`, {
         method: 'POST',
-        headers: { 'Accept': 'application/json' },
+        headers: { 'Accept': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
         body: form,
       }).then(async r => {
         const data = await r.json().catch(() => null);
@@ -91,6 +94,20 @@ export const api = {
     create: (data) => fetchApi('/faculties', { method: 'POST', body: JSON.stringify(data) }),
     update: (id, data) => fetchApi(`/faculties/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id) => fetchApi(`/faculties/${id}`, { method: 'DELETE' }),
+    uploadPhoto: (id, file) => {
+      const form = new FormData();
+      form.append('photo', file);
+      const token = localStorage.getItem('auth_token');
+      return fetch(`${API_BASE_URL}/faculties/${id}/photo`, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        body: form,
+      }).then(async r => {
+        const data = await r.json().catch(() => null);
+        if (!r.ok) throw new Error(data?.message || 'Upload failed');
+        return data;
+      });
+    },
   },
   subjects: {
     getAll: () => fetchApi('/subjects'),
@@ -121,5 +138,8 @@ export const api = {
   },
   search: {
     query: (q) => fetchApi(`/search?query=${encodeURIComponent(q)}`),
+  },
+  auth: {
+    changePassword: (data) => fetchApi('/auth/change-password', { method: 'POST', body: JSON.stringify(data) }),
   },
 };

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Topnav from './components/Topnav';
 import StudentModule from './modules/Student';
@@ -7,7 +7,7 @@ import FacultyModule from './modules/Faculty';
 import InstructionModule from './modules/Instruction';
 import SchedulingModule from './modules/Scheduling';
 import EventsModule from './modules/Events';
-import SearchModule from './modules/Search';
+import AdminDashboard from './modules/Dashboard';
 import StudentLogin from './pages/StudentLogin';
 import FacultyLogin from './pages/FacultyLogin';
 import AdminLogin from './pages/AdminLogin';
@@ -16,6 +16,7 @@ import FacultySignUp from './pages/FacultySignUp';
 import StudentDashboard from './pages/dashboards/StudentDashboard';
 import FacultyDashboard from './pages/dashboards/FacultyDashboard';
 import { DarkModeContext } from './context/DarkModeContext';
+import { UserContext } from './context/UserContext';
 
 const getStoredUser = () => {
   try {
@@ -24,13 +25,40 @@ const getStoredUser = () => {
   } catch { return null; }
 };
 
-/* ── Admin layout — keeps all existing sidebar/topnav design ── */
+// Map URL path → module id for sidebar highlight
+const PATH_TO_MODULE = {
+  '/admin/dashboard': 'dashboard',
+  '/admin/users':     'student',
+  '/admin/reports':   'faculty',
+  '/admin/instruction': 'instruction',
+  '/admin/scheduling':  'scheduling',
+  '/admin/events':      'events',
+};
+
+/* ── Admin layout ── */
 function AdminLayout({ user, onLogout }) {
-  const [currentModule, setCurrentModule] = useState('student');
+  const location  = useLocation();
+  const navigate  = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [darkMode, setDarkMode] = useState(
     () => localStorage.getItem('adminDarkMode') === 'true'
   );
+
+  // Derive currentModule from URL so sidebar stays in sync
+  const currentModule = PATH_TO_MODULE[location.pathname] ?? 'dashboard';
+
+  const setCurrentModule = (id) => {
+    const pathMap = {
+      dashboard:   '/admin/dashboard',
+      student:     '/admin/users',
+      faculty:     '/admin/reports',
+      instruction: '/admin/instruction',
+      scheduling:  '/admin/scheduling',
+      events:      '/admin/events',
+    };
+    navigate(pathMap[id] ?? '/admin/dashboard');
+  };
 
   const handleToggleDark = () => {
     setDarkMode(prev => {
@@ -41,41 +69,39 @@ function AdminLayout({ user, onLogout }) {
   };
 
   return (
-    <DarkModeContext.Provider value={darkMode}>
+    <UserContext.Provider value={user}>
+      <DarkModeContext.Provider value={darkMode}>
       <div className={`flex h-screen w-screen overflow-hidden font-sans relative transition-colors duration-300 ${darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
         <Sidebar
           currentModule={currentModule}
           setCurrentModule={setCurrentModule}
           isOpen={isSidebarOpen}
           setIsOpen={setIsSidebarOpen}
+          onHoverChange={setIsSidebarHovered}
           user={user}
           onLogout={onLogout}
         />
-        <div className={`flex-1 flex flex-col h-full overflow-hidden relative transition-all duration-300 ease-in-out ${isSidebarOpen ? 'ml-64' : 'ml-16'}`}>
-          <Topnav currentModule={currentModule} darkMode={darkMode} onToggleDark={handleToggleDark} />
+        <div className={`flex-1 flex flex-col h-full overflow-hidden relative transition-all duration-300 ease-in-out ${isSidebarOpen || isSidebarHovered ? 'ml-64' : 'ml-16'}`}>
+          <Topnav currentModule={currentModule} darkMode={darkMode} onToggleDark={handleToggleDark} userName={user?.name || user?.email || 'Admin'} />
           <main className={`flex-1 overflow-x-hidden overflow-y-auto p-8 transition-colors duration-300 ${darkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
             <div className="max-w-7xl mx-auto space-y-6 h-full">
-              {currentModule === 'student'     ? <StudentModule />     :
-               currentModule === 'faculty'     ? <FacultyModule />     :
-               currentModule === 'instruction' ? <InstructionModule /> :
-               currentModule === 'scheduling'  ? <SchedulingModule />  :
-               currentModule === 'events'      ? <EventsModule />      :
-               currentModule === 'search'      ? <SearchModule />      : (
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 min-h-[60vh] flex flex-col items-center justify-center text-center">
-                  <div className="w-20 h-20 bg-brand-50 text-brand-500 rounded-full flex items-center justify-center mb-6 shadow-inner">
-                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-800 mb-2">Development in Progress</h3>
-                  <p className="text-slate-500 max-w-md mx-auto">The {currentModule} module is currently being built.</p>
-                </div>
-              )}
+              <Routes>
+                <Route path="dashboard"   element={<AdminDashboard />} />
+                <Route path="users"       element={<StudentModule />} />
+                <Route path="users/:id"   element={<StudentModule />} />
+                <Route path="reports"     element={<FacultyModule />} />
+                <Route path="reports/:id" element={<FacultyModule />} />
+                <Route path="instruction" element={<InstructionModule />} />
+                <Route path="scheduling"  element={<SchedulingModule />} />
+                <Route path="events"      element={<EventsModule />} />
+                <Route path="*"           element={<Navigate to="dashboard" replace />} />
+              </Routes>
             </div>
           </main>
         </div>
       </div>
     </DarkModeContext.Provider>
+    </UserContext.Provider>
   );
 }
 
@@ -86,7 +112,7 @@ function App() {
 
   const dashboardPath = (u) => {
     if (!u) return '/student/login';
-    if (u.role === 'admin') return '/admin';
+    if (u.role === 'admin') return '/admin/dashboard';
     if (u.role === 'faculty') return '/faculty';
     return '/student';
   };
@@ -120,15 +146,11 @@ function App() {
       <Route
         path="/student/login"
         element={!user
-          ? <StudentLogin onLogin={handleLogin} onGoToSignUp={() => navigate('/student/signup')} />
+          ? <StudentLogin onLogin={handleLogin} />
           : <Navigate to={dashboardPath(user)} replace />}
       />
-      <Route
-        path="/student/signup"
-        element={!user
-          ? <StudentSignUp onSignUp={handleSignUp} onGoToLogin={() => navigate('/student/login')} />
-          : <Navigate to={dashboardPath(user)} replace />}
-      />
+      {/* student/signup removed — accounts created by admin only */}
+      <Route path="/student/signup" element={<Navigate to="/student/login" replace />} />
 
       {/* Faculty routes */}
       <Route
@@ -152,12 +174,12 @@ function App() {
           : <Navigate to={dashboardPath(user)} replace />}
       />
 
-      {/* Backward compat redirects */}
-      <Route path="/signup" element={<Navigate to="/student/signup" replace />} />
+      {/* Backward compat redirect */}
+      <Route path="/signup" element={<Navigate to="/student/login" replace />} />
 
       {/* Dashboards */}
       <Route
-        path="/admin"
+        path="/admin/*"
         element={user?.role === 'admin'
           ? <AdminLayout user={user} onLogout={handleLogout} />
           : <Navigate to="/admin/login" replace />}
