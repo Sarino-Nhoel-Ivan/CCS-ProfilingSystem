@@ -360,12 +360,12 @@ HTML;
             ],
         ]);
 
-        // Delete old photo from Cloudinary if exists
+        // Delete old Cloudinary photo if exists
         if ($student->profile_photo && str_starts_with($student->profile_photo, 'http')) {
             try {
-                // Extract public_id from the stored URL
+                // Extract public_id from the Cloudinary URL
                 $publicId = pathinfo(parse_url($student->profile_photo, PHP_URL_PATH), PATHINFO_FILENAME);
-                \Cloudinary\Cloudinary::uploadApi()->destroy('ccs_profiles/' . $publicId);
+                cloudinary()->uploadApi()->destroy('ccs_profile_photos/' . $publicId);
             } catch (\Throwable $e) {
                 \Log::warning('Cloudinary delete failed: ' . $e->getMessage());
             }
@@ -373,16 +373,16 @@ HTML;
 
         // Upload to Cloudinary — persists across Railway redeployments
         $file   = $request->file('photo');
-        $result = \Cloudinary\Cloudinary::uploadApi()->upload($file->getRealPath(), [
-            'folder'         => 'ccs_profiles',
+        $result = cloudinary()->uploadApi()->upload($file->getRealPath(), [
+            'folder'         => 'ccs_profile_photos',
             'transformation' => [['width' => 400, 'height' => 400, 'crop' => 'fill', 'gravity' => 'face']],
         ]);
 
-        $url = $result['secure_url'];
-        $student->update(['profile_photo' => $url]);
+        $photoUrl = $result['secure_url'];
+        $student->update(['profile_photo' => $photoUrl]);
 
         return response()->json([
-            'profile_photo' => $url,
+            'profile_photo' => $photoUrl,
             'updated_at'    => $student->fresh()->updated_at,
         ]);
     }

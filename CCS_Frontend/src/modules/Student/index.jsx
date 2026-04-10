@@ -19,13 +19,20 @@ const Avatar = ({ student, size = 'md' }) => {
   const [imgError, setImgError] = useState(false);
   const sz = size === 'sm' ? 'w-7 h-7 text-xs' : size === 'lg' ? 'w-10 h-10 text-sm' : 'w-9 h-9 text-sm';
   const initials = `${student.first_name?.[0] ?? ''}${student.last_name?.[0] ?? ''}`;
-  if (student.profile_photo && !imgError) {
-    // Cloudinary returns full https:// URLs; legacy paths need STORAGE_URL prefix
-    const src = student.profile_photo.startsWith('http')
-      ? student.profile_photo
-      : `${STORAGE_URL}/${student.profile_photo}?v=${student.updated_at ?? ''}`;
+  // Cloudinary returns full https:// URL; legacy local paths need STORAGE_URL prefix
+  const photoSrc = student.profile_photo
+    ? (student.profile_photo.startsWith('http')
+        ? student.profile_photo
+        : `${STORAGE_URL}/${student.profile_photo}`)
+    : null;
+  if (photoSrc && !imgError) {
     return (
-      <img src={src} alt={initials} className={`${sz} rounded-full object-cover shrink-0`} onError={() => setImgError(true)} />
+      <img
+        src={photoSrc}
+        alt={initials}
+        className={`${sz} rounded-full object-cover shrink-0`}
+        onError={() => setImgError(true)}
+      />
     );
   }
   return (

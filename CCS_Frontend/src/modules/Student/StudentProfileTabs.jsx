@@ -110,16 +110,17 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
       {/* Student Header Summary */}
       <div className={`flex items-center space-x-6 mb-8 pb-6 border-b ${divider}`}>
         <div className="w-20 h-20 rounded-full shrink-0 overflow-hidden">
-          {student.profile_photo
-            ? <img
-                src={student.profile_photo.startsWith('http')
+          {(() => {
+            const src = student.profile_photo
+              ? (student.profile_photo.startsWith('http')
                   ? student.profile_photo
-                  : `${STORAGE_URL}/${student.profile_photo}?v=${student.updated_at ?? Date.now()}`}
-                alt={`${student.first_name} ${student.last_name}`}
-                className="w-full h-full object-cover"
-                onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
-              />
-            : null}
+                  : `${STORAGE_URL}/${student.profile_photo}`)
+              : null;
+            return src
+              ? <img src={src} alt={`${student.first_name} ${student.last_name}`} className="w-full h-full object-cover"
+                  onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }} />
+              : null;
+          })()}
           <div className={`w-full h-full flex items-center justify-center font-bold text-2xl ${getYearLevelColor(student.year_level, dark)}`}
             style={{ display: student.profile_photo ? 'none' : 'flex' }}>
             {student.first_name[0]}{student.last_name[0]}

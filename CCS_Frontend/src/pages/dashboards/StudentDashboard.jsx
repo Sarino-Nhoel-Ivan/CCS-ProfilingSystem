@@ -826,9 +826,9 @@ const StudentDashboard = ({ user, onLogout }) => {
     ? `${student.first_name?.[0] ?? ''}${student.last_name?.[0] ?? ''}`.toUpperCase() || 'ST'
     : (user?.name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() ?? 'ST');
   const photoUrl   = student?.profile_photo
-    ? student.profile_photo.startsWith('http')
-      ? student.profile_photo
-      : `${STORAGE_URL}/${student.profile_photo}?v=${student.updated_at ?? Date.now()}`
+    ? (student.profile_photo.startsWith('http')
+        ? student.profile_photo
+        : `${STORAGE_URL}/${student.profile_photo}`)
     : null;
 
   /* shared avatar component — shows photo or initials fallback */
