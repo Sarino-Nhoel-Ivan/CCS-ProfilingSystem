@@ -79,10 +79,16 @@ const AdminDashboard = () => {
   })).sort((a, b) => b.count - a.count);
 
   const Avatar = ({ student, size = 'sm' }) => {
+    const [imgError, setImgError] = useState(false);
     const sz = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm';
     const initials = `${student.first_name?.[0] ?? ''}${student.last_name?.[0] ?? ''}`;
-    if (student.profile_photo) {
-      return <img src={`${STORAGE_URL}/${student.profile_photo}`} alt={initials} className={`${sz} rounded-full object-cover shrink-0`} />;
+    const photoSrc = student.profile_photo
+      ? (student.profile_photo.startsWith('http')
+          ? student.profile_photo
+          : `${STORAGE_URL}/${student.profile_photo}`)
+      : null;
+    if (photoSrc && !imgError) {
+      return <img src={photoSrc} alt={initials} className={`${sz} rounded-full object-cover shrink-0`} onError={() => setImgError(true)} />;
     }
     return <div className={`${sz} rounded-full bg-brand-600/20 text-brand-400 flex items-center justify-center font-bold shrink-0`}>{initials}</div>;
   };
