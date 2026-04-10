@@ -46,7 +46,10 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
     : null;
   const lbl = `block text-xs font-bold uppercase tracking-wider mb-1.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`;
   const boldText    = dark ? 'text-slate-100' : 'text-slate-900';
-  const sectionHead = `text-sm font-bold uppercase tracking-wider mb-4 border-b pb-2 ${dark ? 'text-brand-400 border-slate-700' : 'text-brand-500 border-brand-100'}`;
+  const sectionHead = `text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`;
+  const SectionTitle = ({ label }) => (
+    <p className={sectionHead}><span className="w-4 h-px bg-orange-400" />{label}</p>
+  );
   const addRowBtn   = `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all mt-3 ${dark ? 'border-brand-500/40 text-brand-400 hover:bg-brand-500/10' : 'border-brand-300 text-brand-600 hover:bg-brand-50'}`;
   const delBtn      = `p-2 rounded-lg border transition-all ${dark ? 'border-slate-600 text-slate-400 hover:bg-red-900/20 hover:border-red-500/40 hover:text-red-400' : 'border-brand-200 text-brand-400 hover:bg-red-50 hover:border-red-300 hover:text-red-500'}`;
 
@@ -211,12 +214,20 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
       <div className="flex min-h-full items-center justify-center p-4 sm:p-0">
         <div className={`relative transform overflow-hidden rounded-2xl text-left shadow-2xl sm:my-8 w-full sm:max-w-4xl border ${modalBg}`}>
 
-          {/* Header */}
-          <div className={`px-6 py-5 border-b flex justify-between items-center ${headerBg}`}>
-            <h3 className={`text-xl font-bold ${boldText}`}>Register New Student</h3>
-            <button onClick={onClose} className={`transition-colors ${dark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
+          {/* Hero Header */}
+          <div className={`px-6 pt-6 pb-5 border-b ${dark ? 'bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700/60' : 'bg-gradient-to-br from-orange-50/60 to-white border-slate-100'}`}>
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-white flex items-center justify-center shadow-lg shadow-orange-500/30 shrink-0">
+                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+              </div>
+              <div>
+                <p className={`text-[10px] font-bold uppercase tracking-widest mb-0.5 ${dark ? 'text-orange-400' : 'text-orange-500'}`}>CCS Profiling System</p>
+                <h3 className={`text-lg font-extrabold leading-tight ${boldText}`}>Register New Student</h3>
+                <p className={`text-xs mt-0.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>Fill in the details below to enroll a new student.</p>
+              </div>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} ref={formScrollRef} className="px-6 py-5 overflow-y-auto max-h-[72vh] space-y-5">
@@ -225,7 +236,7 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
 
             {/* ── PERSONAL INFORMATION ── */}
             <div className={sectionCard}>
-              <h4 className={sectionHead}>Personal Information</h4>
+              <SectionTitle label="Personal Information" />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div><label className={lbl}>Student ID *</label>
                   <input required name="student_number" value={form.student_number} onChange={ch} placeholder="e.g. 2201509"
@@ -237,6 +248,8 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
                     ref={el => fieldRefs.current.first_name = el}
                     className={inpErr('first_name')} />
                   <ErrMsg field="first_name" /></div>
+                <div><label className={lbl}>Middle Name</label>
+                  <input name="middle_name" value={form.middle_name} onChange={ch} className={inp} /></div>
                 <div><label className={lbl}>Last Name *</label>
                   <input required name="last_name" value={form.last_name} onChange={ch}
                     ref={el => fieldRefs.current.last_name = el}
@@ -272,7 +285,7 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
 
             {/* ── ACADEMIC INFORMATION ── */}
             <div className={sectionCard}>
-              <h4 className={sectionHead}>Academic Information</h4>
+              <SectionTitle label="Academic Information" />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div><label className={lbl}>Course *</label>
                   <select required name="program" value={form.program} onChange={ch}
@@ -301,7 +314,7 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
 
             {/* ── SKILLS ── */}
             <div className={sectionCard}>
-              <h4 className={sectionHead}>Skills</h4>
+              <SectionTitle label="Skills" />
               <input value={skillsText} onChange={e => setSkillsText(e.target.value)}
                 placeholder="e.g. Programming, Basketball, Leadership"
                 className={inp} />
@@ -310,7 +323,7 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
 
             {/* ── AFFILIATIONS ── */}
             <div className={sectionCard}>
-              <h4 className={sectionHead}>Affiliations</h4>
+              <SectionTitle label="Affiliations" />
               {affiliations.map((a, i) => (
                 <div key={i} className="grid grid-cols-3 gap-3 mb-3 items-end">
                   <div><label className={lbl}>Organization</label>
@@ -331,7 +344,7 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
 
             {/* ── NON-ACADEMIC ACTIVITIES ── */}
             <div className={sectionCard}>
-              <h4 className={sectionHead}>Non-Academic Activities</h4>
+              <SectionTitle label="Non-Academic Activities" />
               {activities.map((a, i) => (
                 <div key={i} className="grid grid-cols-3 gap-3 mb-3 items-end">
                   <div><label className={lbl}>Activity</label>
@@ -352,7 +365,7 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
 
             {/* ── ACADEMIC HISTORY ── */}
             <div className={sectionCard}>
-              <h4 className={sectionHead}>Academic History</h4>
+              <SectionTitle label="Academic History" />
               {acadHistories.map((h, i) => (
                 <div key={i} className="grid grid-cols-3 gap-3 mb-3 items-end">
                   <div><label className={lbl}>School</label>
@@ -373,7 +386,7 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
 
             {/* ── VIOLATIONS ── */}
             <div className={sectionCard}>
-              <h4 className={sectionHead}>Violations</h4>
+              <SectionTitle label="Violations" />
               {violations.map((v, i) => (
                 <div key={i} className="grid grid-cols-3 gap-3 mb-3 items-end">
                   <div><label className={lbl}>Offense</label>
@@ -395,14 +408,14 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
           </form>
 
           {/* Footer */}
-          <div className={`px-6 py-4 flex flex-row-reverse gap-3 border-t ${footerBg}`}>
-            <button type="button" onClick={handleSubmit} disabled={isSubmitting}
-              className="inline-flex items-center justify-center rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-500 transition-colors disabled:opacity-50 min-w-[150px]">
-              {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Register Student'}
-            </button>
+          <div className={`px-6 py-4 flex justify-end gap-3 border-t ${footerBg}`}>
             <button type="button" onClick={onClose}
-              className={`inline-flex justify-center rounded-lg px-5 py-2.5 text-sm font-semibold shadow-sm ring-1 transition-colors ${dark ? 'bg-slate-700 text-slate-200 ring-slate-600 hover:bg-slate-600' : 'bg-white text-slate-700 ring-slate-300 hover:bg-slate-50'}`}>
+              className={`px-4 py-2 text-sm font-semibold rounded-xl transition-colors ${dark ? 'bg-slate-700 hover:bg-slate-600 text-slate-200' : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-sm'}`}>
               Cancel
+            </button>
+            <button type="button" onClick={handleSubmit} disabled={isSubmitting}
+              className="inline-flex items-center justify-center rounded-xl bg-orange-500 hover:bg-orange-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-orange-500/30 transition-colors disabled:opacity-50 min-w-[150px] gap-2">
+              {isSubmitting ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Registering...</> : 'Register Student'}
             </button>
           </div>
 
