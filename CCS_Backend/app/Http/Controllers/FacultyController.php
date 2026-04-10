@@ -90,20 +90,32 @@ class FacultyController extends Controller
     {
         $request->validate(['photo' => 'required|image|max:10240']);
 
-        // Delete old Cloudinary photo if exists
+        $cloudinaryUrl = config('cloudinary.cloud_url') ?? env('CLOUDINARY_URL');
+
+        if (empty($cloudinaryUrl) || str_contains($cloudinaryUrl, 'your_')) {
+            return response()->json(['message' => 'Cloudinary is not configured on the server.'], 500);
+        }
+
+        // Delete old photo if exists
         if ($faculty->profile_photo && str_starts_with($faculty->profile_photo, 'http')) {
             try {
-                $publicId = pathinfo(parse_url($faculty->profile_photo, PHP_URL_PATH), PATHINFO_FILENAME);
-                cloudinary()->uploadApi()->destroy('ccs_profile_photos/' . $publicId);
+                \Cloudinary\Configuration\Configuration::instance($cloudinaryUrl);
+                $api      = new \Cloudinary\Api\Admin\AdminApi();
+                $path     = parse_url($faculty->profile_photo, PHP_URL_PATH);
+                $segments = explode('/', $path);
+                $filename = pathinfo(end($segments), PATHINFO_FILENAME);
+                $api->deleteAssets(['ccs_profile_photos/' . $filename]);
             } catch (\Throwable $e) {
                 \Log::warning('Cloudinary delete failed: ' . $e->getMessage());
             }
         }
 
-        // Upload to Cloudinary
-        $result = cloudinary()->uploadApi()->upload($request->file('photo')->getRealPath(), [
+        \Cloudinary\Configuration\Configuration::instance($cloudinaryUrl);
+        $uploader = new \Cloudinary\Api\Upload\UploadApi();
+        $result   = $uploader->upload($request->file('photo')->getRealPath(), [
             'folder'         => 'ccs_profile_photos',
             'transformation' => [['width' => 400, 'height' => 400, 'crop' => 'fill', 'gravity' => 'face']],
+            'resource_type'  => 'image',
         ]);
 
         $photoUrl = $result['secure_url'];

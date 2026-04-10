@@ -360,22 +360,34 @@ HTML;
             ],
         ]);
 
+        $cloudinaryUrl = config('cloudinary.cloud_url') ?? env('CLOUDINARY_URL');
+
+        if (empty($cloudinaryUrl) || str_contains($cloudinaryUrl, 'your_')) {
+            return response()->json(['message' => 'Cloudinary is not configured on the server.'], 500);
+        }
+
         // Delete old Cloudinary photo if exists
         if ($student->profile_photo && str_starts_with($student->profile_photo, 'http')) {
             try {
-                // Extract public_id from the Cloudinary URL
-                $publicId = pathinfo(parse_url($student->profile_photo, PHP_URL_PATH), PATHINFO_FILENAME);
-                cloudinary()->uploadApi()->destroy('ccs_profile_photos/' . $publicId);
+                \Cloudinary\Configuration\Configuration::instance($cloudinaryUrl);
+                $api = new \Cloudinary\Api\Admin\AdminApi();
+                // Extract public_id: last segment before extension, under our folder
+                $path     = parse_url($student->profile_photo, PHP_URL_PATH);
+                $segments = explode('/', $path);
+                $filename = pathinfo(end($segments), PATHINFO_FILENAME);
+                $api->deleteAssets(['ccs_profile_photos/' . $filename]);
             } catch (\Throwable $e) {
                 \Log::warning('Cloudinary delete failed: ' . $e->getMessage());
             }
         }
 
-        // Upload to Cloudinary — persists across Railway redeployments
-        $file   = $request->file('photo');
-        $result = cloudinary()->uploadApi()->upload($file->getRealPath(), [
+        // Upload to Cloudinary
+        \Cloudinary\Configuration\Configuration::instance($cloudinaryUrl);
+        $uploader = new \Cloudinary\Api\Upload\UploadApi();
+        $result   = $uploader->upload($request->file('photo')->getRealPath(), [
             'folder'         => 'ccs_profile_photos',
             'transformation' => [['width' => 400, 'height' => 400, 'crop' => 'fill', 'gravity' => 'face']],
+            'resource_type'  => 'image',
         ]);
 
         $photoUrl = $result['secure_url'];
