@@ -207,7 +207,7 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-md" onClick={onClose} />
       <div className="flex min-h-full items-center justify-center p-4 sm:p-0">
         <div className={`relative transform overflow-hidden rounded-2xl text-left shadow-2xl sm:my-8 w-full sm:max-w-4xl border ${modalBg}`}>
 

@@ -211,10 +211,12 @@ HTML;
     public function storeMedical(Request $request, Student $student)
     {
         $data = $request->validate([
-            'bloodtype'                => 'nullable|string|max:10',
-            'existing_conditions'      => 'nullable|string',
-            'emergency_contact_name'   => 'nullable|string|max:255',
-            'emergency_contact_number' => 'nullable|string|max:50',
+            'bloodtype'                      => 'nullable|string|max:10',
+            'existing_conditions'            => 'nullable|string',
+            'emergency_contact_name'         => 'nullable|string|max:255',
+            'emergency_contact_number'       => 'nullable|string|max:50',
+            'emergency_contact_relationship' => 'nullable|string|max:100',
+            'emergency_contact_address'      => 'nullable|string|max:255',
         ]);
         $record = $student->medicalHistories()->create($data);
         return response()->json($record, 201);
@@ -223,10 +225,12 @@ HTML;
     public function updateMedical(Request $request, Student $student, MedicalHistory $medical)
     {
         $data = $request->validate([
-            'bloodtype'                => 'nullable|string|max:10',
-            'existing_conditions'      => 'nullable|string',
-            'emergency_contact_name'   => 'nullable|string|max:255',
-            'emergency_contact_number' => 'nullable|string|max:50',
+            'bloodtype'                      => 'nullable|string|max:10',
+            'existing_conditions'            => 'nullable|string',
+            'emergency_contact_name'         => 'nullable|string|max:255',
+            'emergency_contact_number'       => 'nullable|string|max:50',
+            'emergency_contact_relationship' => 'nullable|string|max:100',
+            'emergency_contact_address'      => 'nullable|string|max:255',
         ]);
         $medical->update($data);
         return response()->json($medical);

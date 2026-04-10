@@ -8,7 +8,7 @@ const DeleteConfirmModal = ({ isOpen, onConfirm, onCancel, studentName }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
+      <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-md" onClick={onCancel} />
 
       {/* Modal */}
       <div className={`relative z-10 w-full max-w-md mx-4 rounded-2xl shadow-xl border p-6 transition-colors ${dark ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'}`}>

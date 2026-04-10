@@ -16,7 +16,7 @@ import {
   ArrowRightIcon, FunnelIcon, PhoneIcon, HeartIcon,
   IdentificationIcon, BookmarkIcon, WrenchScrewdriverIcon,
   TrophyIcon, MegaphoneIcon, LinkIcon, ChartBarIcon,
-  KeyIcon, EyeIcon,
+  KeyIcon, EyeIcon, ArchiveBoxIcon,
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
 
@@ -32,7 +32,6 @@ const NAV = [
   { id: 'skills',       label: 'My Skills',            Icon: LightBulbIcon },
   { id: 'affiliations', label: 'My Affiliations',      Icon: BuildingLibraryIcon },
   { id: 'violations',   label: 'My Violations',        Icon: ExclamationTriangleIcon },
-  { id: 'grades',       label: 'My Grades',            Icon: BookOpenIcon },
   { id: 'tasks',        label: 'My Pending Tasks',     Icon: ClipboardDocumentCheckIcon },
 ];
 
@@ -172,7 +171,7 @@ const Modal = ({ title, subtitle, onClose, children, footer }) => {
   const dark = useTheme();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className={`absolute inset-0 backdrop-blur-sm ${dark ? 'bg-slate-950' : 'bg-slate-900'}`} onClick={onClose} />
+      <div className={`absolute inset-0 backdrop-blur-md ${dark ? 'bg-slate-950/30' : 'bg-slate-900/20'}`} onClick={onClose} />
       <div className={`relative w-full max-w-2xl border rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200'}`}>
         <div className={`flex items-start justify-between px-6 py-5 border-b ${dark ? 'border-slate-700/60' : 'border-slate-100'}`}>
           <div>
@@ -241,12 +240,36 @@ const ErrBox = ({ msg }) => msg ? (
 ════════════════════════════════════════════════ */
 const patchStudent = (student, patch) => api.students.update(student.id, patch);
 
+/* ── Shared client-side validators ── */
+const validators = {
+  name:    (v) => !v || /^[a-zA-ZÀ-ÿ\s'\-.]+$/.test(v.trim()) ? null : 'Only letters, spaces, hyphens and apostrophes allowed.',
+  phone:   (v) => !v || /^09\d{9}$/.test(v.replace(/\s/g, '')) ? null : 'Must start with 09 and be exactly 11 digits.',
+  zip:     (v) => !v || /^\d{4,5}$/.test(v) ? null : 'Zip code must be 4–5 digits.',
+  lrn:     (v) => !v || /^\d{12}$/.test(v) ? null : 'LRN must be exactly 12 digits.',
+  pastDate:(v) => { if (!v) return null; const d = new Date(v); const today = new Date(); today.setHours(0,0,0,0); return d < today ? null : 'Date must be in the past.'; },
+  gpa:     (v) => !v || (parseFloat(v) >= 1.0 && parseFloat(v) <= 5.0) ? null : 'GPA must be between 1.00 and 5.00.',
+};
+const runValidation = (rules) => { for (const [field, check, value] of rules) { const e = check(value); if (e) return `${field}: ${e}`; } return null; };
+
 const PersonalInfoModal = ({ student, onClose, onSaved }) => {
   const dark = useTheme(); const i = mkInp(dark); const s = mkSel(dark);
   const [form, setForm] = useState({ first_name: student.first_name||'', middle_name: student.middle_name||'', last_name: student.last_name||'', suffix: student.suffix||'', gender: student.gender||'Male', birth_date: student.birth_date?.split('T')[0]||'', place_of_birth: student.place_of_birth||'', nationality: student.nationality||'Filipino', civil_status: student.civil_status||'Single', religion: student.religion||'' });
   const [saving, setSaving] = useState(false); const [err, setErr] = useState(null);
   const ch = (e) => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
-  const save = async (e) => { e.preventDefault(); setSaving(true); setErr(null); try { await patchStudent(student, form); onSaved(); } catch (ex) { setErr(ex.message||'Failed to save.'); } finally { setSaving(false); } };
+  const save = async (e) => {
+    e.preventDefault();
+    const vErr = runValidation([
+      ['First Name',     validators.name,     form.first_name],
+      ['Middle Name',    validators.name,     form.middle_name],
+      ['Last Name',      validators.name,     form.last_name],
+      ['Place of Birth', validators.name,     form.place_of_birth],
+      ['Nationality',    validators.name,     form.nationality],
+      ['Date of Birth',  validators.pastDate, form.birth_date],
+    ]);
+    if (vErr) { setErr(vErr); return; }
+    setSaving(true); setErr(null);
+    try { await patchStudent(student, form); onSaved(); } catch (ex) { setErr(ex.message||'Failed to save.'); } finally { setSaving(false); }
+  };
   return (
     <Modal title="Edit Personal Information" onClose={onClose} footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>Save Changes</BtnPrimary></div>}>
       <ErrBox msg={err} />
@@ -256,7 +279,7 @@ const PersonalInfoModal = ({ student, onClose, onSaved }) => {
         <Field label="Last Name" required><input name="last_name" value={form.last_name} onChange={ch} className={i} required /></Field>
         <Field label="Suffix"><input name="suffix" value={form.suffix} onChange={ch} className={i} placeholder="Jr, Sr, III…" /></Field>
         <Field label="Gender" required><Sel name="gender" value={form.gender} onChange={ch} className={s}><option>Male</option><option>Female</option></Sel></Field>
-        <Field label="Birth Date" required><input type="date" name="birth_date" value={form.birth_date} onChange={ch} className={i} required /></Field>
+        <Field label="Birth Date" required><input type="date" name="birth_date" value={form.birth_date} onChange={ch} className={i} required max={new Date(Date.now()-86400000).toISOString().split('T')[0]} /></Field>
         <Field label="Place of Birth" required><input name="place_of_birth" value={form.place_of_birth} onChange={ch} className={i} required /></Field>
         <Field label="Nationality"><input name="nationality" value={form.nationality} onChange={ch} className={i} /></Field>
         <Field label="Civil Status"><Sel name="civil_status" value={form.civil_status} onChange={ch} className={s}><option>Single</option><option>Married</option><option>Widowed</option><option>Separated</option></Sel></Field>
@@ -271,19 +294,31 @@ const ContactInfoModal = ({ student, onClose, onSaved }) => {
   const [form, setForm] = useState({ email: student.email||'', contact_number: student.contact_number||'', alternate_contact_number: student.alternate_contact_number||'', street: student.street||'', barangay: student.barangay||'', city: student.city||'', province: student.province||'', zip_code: student.zip_code||'' });
   const [saving, setSaving] = useState(false); const [err, setErr] = useState(null);
   const ch = (e) => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
-  const save = async (e) => { e.preventDefault(); setSaving(true); setErr(null); try { await patchStudent(student, form); onSaved(); } catch (ex) { setErr(ex.message||'Failed to save.'); } finally { setSaving(false); } };
+  const chPhone = (e) => { const v = e.target.value.replace(/[^\d]/g, ''); setForm(p => ({ ...p, [e.target.name]: v })); };
+  const chZip   = (e) => { const v = e.target.value.replace(/[^\d]/g, ''); setForm(p => ({ ...p, zip_code: v })); };
+  const save = async (e) => {
+    e.preventDefault();
+    const vErr = runValidation([
+      ['Contact Number',   validators.phone, form.contact_number],
+      ['Alternate Number', validators.phone, form.alternate_contact_number],
+      ['Zip Code',         validators.zip,   form.zip_code],
+    ]);
+    if (vErr) { setErr(vErr); return; }
+    setSaving(true); setErr(null);
+    try { await patchStudent(student, form); onSaved(); } catch (ex) { setErr(ex.message||'Failed to save.'); } finally { setSaving(false); }
+  };
   return (
     <Modal title="Edit Contact Information" onClose={onClose} footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>Save Changes</BtnPrimary></div>}>
       <ErrBox msg={err} />
       <form onSubmit={save} className="grid grid-cols-2 gap-4">
         <Field label="Email" required><input type="email" name="email" value={form.email} onChange={ch} className={i} required /></Field>
-        <Field label="Contact Number" required><input name="contact_number" value={form.contact_number} onChange={ch} className={i} required /></Field>
-        <Field label="Alt. Number"><input name="alternate_contact_number" value={form.alternate_contact_number} onChange={ch} className={i} /></Field>
+        <Field label="Contact Number" required><input name="contact_number" value={form.contact_number} onChange={chPhone} className={i} required maxLength={11} placeholder="09XXXXXXXXX" /></Field>
+        <Field label="Alt. Number"><input name="alternate_contact_number" value={form.alternate_contact_number} onChange={chPhone} className={i} maxLength={11} placeholder="09XXXXXXXXX" /></Field>
         <Field label="Street"><input name="street" value={form.street} onChange={ch} className={i} /></Field>
         <Field label="Barangay"><input name="barangay" value={form.barangay} onChange={ch} className={i} /></Field>
         <Field label="City" required><input name="city" value={form.city} onChange={ch} className={i} required /></Field>
         <Field label="Province"><input name="province" value={form.province} onChange={ch} className={i} /></Field>
-        <Field label="Zip Code"><input name="zip_code" value={form.zip_code} onChange={ch} className={i} /></Field>
+        <Field label="Zip Code"><input name="zip_code" value={form.zip_code} onChange={chZip} className={i} maxLength={5} placeholder="e.g. 4025" /></Field>
       </form>
     </Modal>
   );
@@ -296,7 +331,17 @@ const GuardianFormModal = ({ studentId, record, onClose, onSaved }) => {
   const [form, setForm] = useState(record ? { full_name: record.full_name||'', relationship: record.relationship||'Father', occupation: record.occupation||'', contact_number: record.contact_number||'', email: record.email||'', address: record.address||'' } : emptyGuardian());
   const [saving, setSaving] = useState(false); const [err, setErr] = useState(null);
   const ch = (e) => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
-  const save = async (e) => { e.preventDefault(); setSaving(true); setErr(null); try { if (record?.id) await api.students.updateGuardian(studentId, record.id, form); else await api.students.addGuardian(studentId, form); onSaved(); } catch (ex) { setErr(ex.message||'Failed to save.'); } finally { setSaving(false); } };
+  const chPhone = (e) => { const v = e.target.value.replace(/[^\d]/g, ''); setForm(p => ({ ...p, contact_number: v })); };
+  const save = async (e) => {
+    e.preventDefault();
+    const vErr = runValidation([
+      ['Full Name',      validators.name,  form.full_name],
+      ['Contact Number', validators.phone, form.contact_number],
+    ]);
+    if (vErr) { setErr(vErr); return; }
+    setSaving(true); setErr(null);
+    try { if (record?.id) await api.students.updateGuardian(studentId, record.id, form); else await api.students.addGuardian(studentId, form); onSaved(); } catch (ex) { setErr(ex.message||'Failed to save.'); } finally { setSaving(false); }
+  };
   return (
     <Modal title={record ? 'Edit Guardian' : 'Add Guardian'} onClose={onClose} footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>{record ? 'Save Changes' : 'Add Guardian'}</BtnPrimary></div>}>
       <ErrBox msg={err} />
@@ -304,7 +349,7 @@ const GuardianFormModal = ({ studentId, record, onClose, onSaved }) => {
         <Field label="Full Name" required><input name="full_name" value={form.full_name} onChange={ch} className={i} required /></Field>
         <Field label="Relationship" required><Sel name="relationship" value={form.relationship} onChange={ch} className={s}><option>Father</option><option>Mother</option><option>Guardian</option><option>Sibling</option><option>Other</option></Sel></Field>
         <Field label="Occupation"><input name="occupation" value={form.occupation} onChange={ch} className={i} /></Field>
-        <Field label="Contact Number"><input name="contact_number" value={form.contact_number} onChange={ch} className={i} /></Field>
+        <Field label="Contact Number"><input name="contact_number" value={form.contact_number} onChange={chPhone} className={i} maxLength={11} placeholder="09XXXXXXXXX" /></Field>
         <Field label="Email"><input type="email" name="email" value={form.email} onChange={ch} className={i} /></Field>
         <div className="col-span-2"><Field label="Address"><input name="address" value={form.address} onChange={ch} className={i} /></Field></div>
       </form>
@@ -326,7 +371,7 @@ const EnrollmentModal = ({ student, onClose, onSaved }) => {
         <Field label="Section"><input name="section" value={form.section} onChange={ch} className={i} /></Field>
         <Field label="Student Type" required><Sel name="student_type" value={form.student_type} onChange={ch} className={s}><option>Regular</option><option>Irregular</option><option>Transferee</option><option>Returnee</option></Sel></Field>
         <Field label="Enrollment Status" required><Sel name="enrollment_status" value={form.enrollment_status} onChange={ch} className={s}><option>Enrolled</option><option>Not Enrolled</option><option>LOA</option><option>Dropped</option></Sel></Field>
-        <Field label="Date Enrolled" required><input type="date" name="date_enrolled" value={form.date_enrolled} onChange={ch} className={i} required /></Field>
+        <Field label="Date Enrolled" required><input type="date" name="date_enrolled" value={form.date_enrolled} onChange={ch} className={i} required max={new Date().toISOString().split('T')[0]} /></Field>
         <Field label="Program"><input name="program" value={form.program} onChange={ch} className={i} /></Field>
       </form>
     </Modal>
@@ -338,13 +383,20 @@ const EducationalBgModal = ({ student, onClose, onSaved }) => {
   const [form, setForm] = useState({ lrn: student.lrn||'', last_school_attended: student.last_school_attended||'', last_year_attended: student.last_year_attended||'', honors_received: student.honors_received||'' });
   const [saving, setSaving] = useState(false); const [err, setErr] = useState(null);
   const ch = (e) => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
-  const save = async (e) => { e.preventDefault(); setSaving(true); setErr(null); try { await patchStudent(student, form); onSaved(); } catch (ex) { setErr(ex.message||'Failed to save.'); } finally { setSaving(false); } };
+  const chLrn = (e) => { const v = e.target.value.replace(/[^\d]/g, ''); setForm(p => ({ ...p, lrn: v })); };
+  const save = async (e) => {
+    e.preventDefault();
+    const vErr = runValidation([['LRN', validators.lrn, form.lrn]]);
+    if (vErr) { setErr(vErr); return; }
+    setSaving(true); setErr(null);
+    try { await patchStudent(student, form); onSaved(); } catch (ex) { setErr(ex.message||'Failed to save.'); } finally { setSaving(false); }
+  };
   return (
     <Modal title="Edit Educational Background" onClose={onClose} footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>Save Changes</BtnPrimary></div>}>
       <ErrBox msg={err} />
       <form onSubmit={save} className="grid grid-cols-2 gap-4">
-        <Field label="LRN"><input name="lrn" value={form.lrn} onChange={ch} className={i} maxLength={12} /></Field>
-        <Field label="Last Year Attended"><input name="last_year_attended" value={form.last_year_attended} onChange={ch} className={i} /></Field>
+        <Field label="LRN"><input name="lrn" value={form.lrn} onChange={chLrn} className={i} maxLength={12} placeholder="12-digit LRN" /></Field>
+        <Field label="Last Year Attended"><input name="last_year_attended" value={form.last_year_attended} onChange={ch} className={i} placeholder="e.g. 2022-2023" /></Field>
         <div className="col-span-2"><Field label="Last School Attended"><input name="last_school_attended" value={form.last_school_attended} onChange={ch} className={i} /></Field></div>
         <div className="col-span-2"><Field label="Honors / Awards"><textarea name="honors_received" value={form.honors_received} onChange={ch} className={`${i} resize-none`} rows={3} /></Field></div>
       </form>
@@ -354,18 +406,110 @@ const EducationalBgModal = ({ student, onClose, onSaved }) => {
 
 const MedicalModal = ({ student, record, onClose, onSaved }) => {
   const dark = useTheme(); const i = mkInp(dark); const s = mkSel(dark);
-  const [form, setForm] = useState({ bloodtype: record?.bloodtype||'', existing_conditions: record?.existing_conditions||'', emergency_contact_name: record?.emergency_contact_name||'', emergency_contact_number: record?.emergency_contact_number||'' });
+  // Only manage medical fields — never touch emergency contact fields
+  const [form, setForm] = useState({
+    bloodtype:           record?.bloodtype            || '',
+    existing_conditions: record?.existing_conditions  || '',
+  });
   const [saving, setSaving] = useState(false); const [err, setErr] = useState(null);
   const ch = (e) => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
-  const save = async (e) => { e.preventDefault(); setSaving(true); setErr(null); try { if (record?.id) await api.students.updateMedical(student.id, record.id, form); else await api.students.addMedical(student.id, form); onSaved(); } catch (ex) { setErr(ex.message||'Failed to save.'); } finally { setSaving(false); } };
+  const save = async (e) => {
+    e.preventDefault(); setSaving(true); setErr(null);
+    try {
+      // Merge with existing record to preserve emergency contact fields
+      const payload = {
+        bloodtype:                      form.bloodtype,
+        existing_conditions:            form.existing_conditions,
+        // preserve existing emergency contact fields untouched
+        emergency_contact_name:         record?.emergency_contact_name         ?? null,
+        emergency_contact_number:       record?.emergency_contact_number       ?? null,
+        emergency_contact_relationship: record?.emergency_contact_relationship ?? null,
+        emergency_contact_address:      record?.emergency_contact_address      ?? null,
+      };
+      if (record?.id) await api.students.updateMedical(student.id, record.id, payload);
+      else await api.students.addMedical(student.id, payload);
+      onSaved();
+    } catch (ex) { setErr(ex.message || 'Failed to save.'); }
+    finally { setSaving(false); }
+  };
   return (
-    <Modal title={record ? 'Edit Medical Record' : 'Add Medical Record'} onClose={onClose} footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>Save Changes</BtnPrimary></div>}>
+    <Modal title={record ? 'Edit Medical Record' : 'Add Medical Record'} subtitle="Student health information" icon="🏥" onClose={onClose}
+      footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>Save Changes</BtnPrimary></div>}>
       <ErrBox msg={err} />
-      <form onSubmit={save} className="grid grid-cols-2 gap-4">
-        <Field label="Blood Type"><Sel name="bloodtype" value={form.bloodtype} onChange={ch} className={s}><option value="">Select…</option>{['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(b => <option key={b}>{b}</option>)}</Sel></Field>
-        <Field label="Emergency Contact Name"><input name="emergency_contact_name" value={form.emergency_contact_name} onChange={ch} className={i} /></Field>
-        <Field label="Emergency Contact No."><input name="emergency_contact_number" value={form.emergency_contact_number} onChange={ch} className={i} /></Field>
-        <div className="col-span-2"><Field label="Existing Conditions"><textarea name="existing_conditions" value={form.existing_conditions} onChange={ch} className={`${i} resize-none`} rows={3} placeholder="e.g. Asthma, Hypertension…" /></Field></div>
+      <form onSubmit={save} className="space-y-4">
+        <Field label="Blood Type" icon="🩸">
+          <Sel name="bloodtype" value={form.bloodtype} onChange={ch} className={s}>
+            <option value="">Select…</option>
+            {['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(b => <option key={b}>{b}</option>)}
+          </Sel>
+        </Field>
+        <Field label="Existing Conditions / Allergies" icon="🩺">
+          <textarea name="existing_conditions" value={form.existing_conditions} onChange={ch} className={`${i} resize-none`} rows={4} placeholder="e.g. Asthma, Hypertension, Diabetes…" />
+        </Field>
+      </form>
+    </Modal>
+  );
+};
+
+const EmergencyContactModal = ({ student, record, onClose, onSaved }) => {
+  const dark = useTheme(); const i = mkInp(dark); const s = mkSel(dark);
+  // Only manage emergency contact fields — never touch medical fields
+  const [form, setForm] = useState({
+    emergency_contact_name:         record?.emergency_contact_name         || '',
+    emergency_contact_number:       record?.emergency_contact_number       || '',
+    emergency_contact_relationship: record?.emergency_contact_relationship || '',
+    emergency_contact_address:      record?.emergency_contact_address      || '',
+  });
+  const [saving, setSaving] = useState(false); const [err, setErr] = useState(null);
+  const ch = (e) => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
+  const save = async (e) => {
+    e.preventDefault(); setSaving(true); setErr(null);
+    try {
+      // Merge with existing record to preserve medical fields untouched
+      const payload = {
+        ...form,
+        bloodtype:           record?.bloodtype            ?? null,
+        existing_conditions: record?.existing_conditions  ?? null,
+      };
+      if (record?.id) await api.students.updateMedical(student.id, record.id, payload);
+      else await api.students.addMedical(student.id, payload);
+      onSaved();
+    } catch (ex) { setErr(ex.message || 'Failed to save.'); }
+    finally { setSaving(false); }
+  };
+  return (
+    <Modal title={record ? 'Edit Emergency Contact' : 'Add Emergency Contact'} subtitle="Person to contact in case of emergency" icon="🚨" onClose={onClose}
+      footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>Save Changes</BtnPrimary></div>}>
+      <ErrBox msg={err} />
+      <form onSubmit={save} className="space-y-5">
+        <div>
+          <p className={`text-[10px] font-bold uppercase tracking-widest mb-3 flex items-center gap-2 ${dark ? 'text-orange-400/70' : 'text-orange-400'}`}>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+            Contact Person
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <Field label="Full Name" required icon="👤">
+                <input name="emergency_contact_name" value={form.emergency_contact_name} onChange={ch} className={i} required placeholder="Complete name" />
+              </Field>
+            </div>
+            <Field label="Relationship" icon="🔗">
+              <Sel name="emergency_contact_relationship" value={form.emergency_contact_relationship} onChange={ch} className={s}>
+                <option value="">Select…</option>
+                <option>Father</option><option>Mother</option><option>Sibling</option>
+                <option>Spouse</option><option>Relative</option><option>Friend</option><option>Other</option>
+              </Sel>
+            </Field>
+            <Field label="Contact Number" required icon="📱">
+              <input name="emergency_contact_number" value={form.emergency_contact_number} onChange={ch} className={i} required placeholder="09XX-XXX-XXXX" />
+            </Field>
+            <div className="col-span-2">
+              <Field label="Address" icon="🏠">
+                <input name="emergency_contact_address" value={form.emergency_contact_address} onChange={ch} className={i} placeholder="Home address (optional)" />
+              </Field>
+            </div>
+          </div>
+        </div>
       </form>
     </Modal>
   );
@@ -374,23 +518,30 @@ const MedicalModal = ({ student, record, onClose, onSaved }) => {
 /* ════════════════════════════════════════════════
    ACADEMIC HISTORY MODAL
 ════════════════════════════════════════════════ */
-const emptyAH = () => ({ school_year: '', semester: '1st Semester', gpa: '', academic_standing: 'Good Standing', total_units: '', completed_units: '' });
+const emptyAH = () => ({ school_name: '', school_year: '', gpa: '', academic_standing: 'Good Standing', semester: '1st Semester', total_units: 0, completed_units: 0 });
 
 const AcademicModal = ({ studentId, record, onClose, onSaved }) => {
-  const dark = useTheme(); const i = mkInp(dark); const s = mkSel(dark);
+  const dark = useTheme(); const i = mkInp(dark);
   const [form, setForm] = useState(record ? {
-    school_year: record.school_year, semester: record.semester,
-    gpa: record.gpa ?? '', academic_standing: record.academic_standing,
-    total_units: record.total_units, completed_units: record.completed_units,
+    school_name:       record.school_name      ?? '',
+    school_year:       record.school_year      ?? '',
+    gpa:               record.gpa              ?? '',
+    academic_standing: record.academic_standing ?? 'Good Standing',
+    semester:          record.semester          ?? '1st Semester',
+    total_units:       record.total_units       ?? 0,
+    completed_units:   record.completed_units   ?? 0,
   } : emptyAH());
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState(null);
   const ch = (e) => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
   const save = async (e) => {
-    e.preventDefault(); setSaving(true); setErr(null);
+    e.preventDefault();
+    const vErr = runValidation([['GPA', validators.gpa, form.gpa]]);
+    if (vErr) { setErr(vErr); return; }
+    setSaving(true); setErr(null);
     try {
-      const payload = { ...form, gpa: form.gpa || null, total_units: Number(form.total_units), completed_units: Number(form.completed_units) };
+      const payload = { ...form, gpa: form.gpa || null };
       if (record?.id) await api.students.updateAcademicHistory(studentId, record.id, payload);
       else await api.students.addAcademicHistory(studentId, payload);
       onSaved();
@@ -399,24 +550,19 @@ const AcademicModal = ({ studentId, record, onClose, onSaved }) => {
   };
 
   return (
-    <Modal title={record ? 'Edit Academic Record' : 'Add Academic Record'} onClose={onClose}
+    <Modal title={record ? 'Edit Academic Record' : 'Add Academic Record'} subtitle="School, year and GPA" icon="📊" onClose={onClose}
       footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>{record ? 'Save Changes' : 'Add Record'}</BtnPrimary></div>}>
       <ErrBox msg={err} />
-      <form onSubmit={save} className="grid grid-cols-2 gap-4">
-        <Field label="School Year" required><input name="school_year" value={form.school_year} onChange={ch} className={i} placeholder="2025-2026" required /></Field>
-        <Field label="Semester" required>
-          <Sel name="semester" value={form.semester} onChange={ch} className={s}>
-            <option>1st Semester</option><option>2nd Semester</option><option>Summer</option>
-          </Sel>
+      <form onSubmit={save} className="grid grid-cols-3 gap-3">
+        <Field label="School" icon="🏫">
+          <input name="school_name" value={form.school_name} onChange={ch} className={i} placeholder="e.g. Bigaa National HS" />
         </Field>
-        <Field label="GPA"><input type="number" name="gpa" value={form.gpa} onChange={ch} className={i} step="0.01" min="1" max="5" placeholder="e.g. 1.75" /></Field>
-        <Field label="Academic Standing" required>
-          <Sel name="academic_standing" value={form.academic_standing} onChange={ch} className={s}>
-            <option>Good Standing</option><option>Dean's List</option><option>Academic Probation</option><option>Dismissed</option>
-          </Sel>
+        <Field label="Year" icon="📅">
+          <input name="school_year" value={form.school_year} onChange={ch} className={i} placeholder="e.g. 2025-2026" required />
         </Field>
-        <Field label="Total Units" required><input type="number" name="total_units" value={form.total_units} onChange={ch} className={i} min="0" required /></Field>
-        <Field label="Completed Units" required><input type="number" name="completed_units" value={form.completed_units} onChange={ch} className={i} min="0" required /></Field>
+        <Field label="GPA" icon="⭐">
+          <input type="number" name="gpa" value={form.gpa} onChange={ch} className={i} step="0.01" min="1" max="5" placeholder="e.g. 1.75" />
+        </Field>
       </form>
     </Modal>
   );
@@ -565,110 +711,185 @@ const SkillsModal = ({ studentId, currentSkills, onClose, onSaved }) => {
   const tabs = ['Academic', 'Non-Academic'];
   const filtered = allSkills.filter(s =>
     s.skill_category === activeTab &&
-    (s.skill_name.toLowerCase().includes(search.toLowerCase()) || s.skill_category.toLowerCase().includes(search.toLowerCase()))
+    s.skill_name.toLowerCase().includes(search.toLowerCase())
   );
+  const selectedInTab = selected.filter(s => s.skill_category === activeTab);
+
+  const LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
+  const levelColor = (lvl) => {
+    if (lvl === 'Expert')       return dark ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'   : 'bg-amber-100 text-amber-700 border-amber-300';
+    if (lvl === 'Advanced')     return dark ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-emerald-100 text-emerald-700 border-emerald-300';
+    if (lvl === 'Intermediate') return dark ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'     : 'bg-blue-100 text-blue-700 border-blue-300';
+    return dark ? 'bg-slate-700 text-slate-400 border-slate-600' : 'bg-slate-100 text-slate-500 border-slate-300';
+  };
 
   return (
-    <Modal title="Manage Skills" subtitle="Pick your skills and set your proficiency level" onClose={onClose}
-      footer={<div className="flex items-center justify-between w-full"><span className={`text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{selected.length} skill{selected.length !== 1 ? 's' : ''} selected</span><div className="flex gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>Save Skills</BtnPrimary></div></div>}>
-      <ErrBox msg={err} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className={`absolute inset-0 backdrop-blur-md ${dark ? 'bg-slate-950/40' : 'bg-slate-900/20'}`} onClick={onClose} />
+      <div className={`relative w-full max-w-3xl border rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${dark ? 'bg-slate-900 border-orange-500/30' : 'bg-white border-orange-200'}`}
+        style={dark ? { boxShadow: '0 0 40px rgba(249,115,22,0.12)' } : { boxShadow: '0 8px 40px rgba(249,115,22,0.12)' }}>
 
-      {/* Search */}
-      <div className="relative mb-4">
-        <MagnifyingGlassIcon className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${dark ? 'text-slate-500' : 'text-slate-400'}`} />
-        <input value={search} onChange={e => setSearch(e.target.value)} className={`${i} pl-9`} placeholder="Search skills…" />
-      </div>
+        {/* Header */}
+        <div className={`flex items-center justify-between px-6 py-5 border-b rounded-t-2xl ${dark ? 'border-orange-500/20 bg-orange-500/5' : 'border-orange-100 bg-orange-50/60'}`}>
+          <div className="flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 ${dark ? 'bg-orange-500/15 border border-orange-500/30' : 'bg-orange-100 border border-orange-200'}`}>💡</div>
+            <div>
+              <h3 className={`text-base font-bold ${dark ? 'text-slate-100' : 'text-slate-800'}`}>Manage Skills</h3>
+              <p className={`text-xs mt-0.5 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Pick your skills and set your proficiency level</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${dark ? 'bg-orange-500/15 text-orange-300 border-orange-500/30' : 'bg-orange-100 text-orange-600 border-orange-200'}`}>
+              {selected.length} selected
+            </span>
+            <button onClick={onClose} className={`rounded-lg p-1 transition-colors ${dark ? 'text-slate-500 hover:text-slate-300 hover:bg-slate-800' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+        </div>
 
-      {/* Category tabs */}
-      <div className={`flex gap-1 p-1 rounded-xl mb-4 ${dark ? 'bg-slate-900/60' : 'bg-slate-100'}`}>
-        {tabs.map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === tab ? 'bg-brand-500 text-white shadow' : dark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
-            {tab === 'Academic' ? '💻 Academic' : '🏅 Non-Academic'}
-          </button>
-        ))}
-      </div>
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left: skill picker */}
+          <div className={`flex flex-col w-1/2 border-r ${dark ? 'border-orange-500/15' : 'border-orange-100'}`}>
+            {/* Search */}
+            <div className={`px-4 pt-4 pb-3 border-b ${dark ? 'border-orange-500/10' : 'border-orange-50'}`}>
+              <div className="relative">
+                <MagnifyingGlassIcon className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${dark ? 'text-slate-500' : 'text-slate-400'}`} />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search skills…"
+                  className={`${i} pl-9`} />
+              </div>
+            </div>
+            {/* Category tabs */}
+            <div className={`flex gap-1 mx-4 mt-3 mb-2 p-1 rounded-xl ${dark ? 'bg-slate-800' : 'bg-slate-100'}`}>
+              {tabs.map(tab => (
+                <button key={tab} onClick={() => setActiveTab(tab)}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === tab
+                    ? 'bg-brand-500 text-white shadow'
+                    : dark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
+                  {tab === 'Academic' ? '💻 Academic' : '🏅 Non-Academic'}
+                </button>
+              ))}
+            </div>
+            {/* Skill checkboxes */}
+            <div className="flex-1 overflow-y-auto px-4 pb-4">
+              {filtered.length === 0
+                ? <p className={`text-xs text-center py-8 ${dark ? 'text-slate-600' : 'text-slate-400'}`}>No skills found.</p>
+                : <div className="pt-2 space-y-1">
+                    {filtered.map(skill => {
+                      const isOn = selected.some(s => s.skill_id === skill.id);
+                      const lvl = selected.find(s => s.skill_id === skill.id)?.skill_level;
+                      return (
+                        <label key={skill.id}
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-150 ${
+                            isOn
+                              ? dark ? 'bg-orange-500/10 border border-orange-500/30' : 'bg-orange-50 border border-orange-200'
+                              : dark ? 'hover:bg-slate-800 border border-transparent' : 'hover:bg-slate-50 border border-transparent'
+                          }`}>
+                          {/* Custom checkbox */}
+                          <div className={`w-4.5 h-4.5 rounded flex items-center justify-center shrink-0 border-2 transition-all ${
+                            isOn
+                              ? 'bg-brand-500 border-brand-500'
+                              : dark ? 'border-slate-600 bg-slate-800' : 'border-slate-300 bg-white'
+                          }`} style={{ width: '18px', height: '18px' }}
+                            onClick={() => toggle(skill)}>
+                            {isOn && (
+                              <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                          <input type="checkbox" checked={isOn} onChange={() => toggle(skill)} className="sr-only" />
+                          <span className={`text-sm flex-1 ${isOn ? dark ? 'text-orange-100 font-semibold' : 'text-slate-800 font-semibold' : dark ? 'text-slate-300' : 'text-slate-600'}`}>
+                            {skill.skill_name}
+                          </span>
+                          {lvl && (
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full border font-bold shrink-0 ${levelColor(lvl)}`}>{lvl}</span>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+              }
+            </div>
+          </div>
 
-      {/* Skill chips */}
-      <div className={`rounded-xl p-3 mb-5 min-h-[120px] max-h-52 overflow-y-auto ${dark ? 'bg-slate-900 border border-slate-700/60' : 'bg-slate-50 border border-slate-200'}`}>
-        {filtered.length === 0
-          ? <p className={`text-xs text-center py-8 ${dark ? 'text-slate-600' : 'text-slate-400'}`}>No skills found.</p>
-          : <div className="flex flex-wrap gap-2">
-              {filtered.map(skill => {
-                const isOn = selected.some(s => s.skill_id === skill.id);
-                const lvl = selected.find(s => s.skill_id === skill.id)?.skill_level;
-                const meta = LEVEL_META[lvl];
+          {/* Right: selected skills + proficiency */}
+          <div className="flex flex-col w-1/2">
+            <div className={`px-4 py-3 border-b ${dark ? 'border-orange-500/10 bg-orange-500/5' : 'border-orange-50 bg-orange-50/40'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-orange-400/70' : 'text-orange-500'}`}>
+                Selected Skills — Set Proficiency
+              </p>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+              {selected.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 ${dark ? 'bg-slate-800' : 'bg-slate-100'}`}>
+                    <LightBulbIcon className={`w-6 h-6 ${dark ? 'text-slate-600' : 'text-slate-300'}`} />
+                  </div>
+                  <p className={`text-xs font-semibold ${dark ? 'text-slate-500' : 'text-slate-400'}`}>No skills selected yet</p>
+                  <p className={`text-[10px] mt-1 ${dark ? 'text-slate-600' : 'text-slate-400'}`}>Click a skill on the left to add it</p>
+                </div>
+              ) : selected.map(s => {
+                const meta = LEVEL_META[s.skill_level];
                 return (
-                  <button key={skill.id} type="button" onClick={() => toggle(skill)}
-                    className={`group flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 ${
-                      isOn
-                        ? 'bg-brand-500 text-white border-brand-600 shadow-md shadow-brand-500/20 scale-105'
-                        : dark ? 'bg-slate-800 text-slate-400 border-slate-700 hover:border-brand-500/50 hover:text-slate-200' : 'bg-white text-slate-600 border-slate-300 hover:border-brand-400 hover:text-slate-800'
-                    }`}>
-                    {isOn && <CheckCircleSolid className="w-3 h-3" />}
-                    {skill.skill_name}
-                    {meta && <span className={`text-[9px] px-1.5 py-0.5 rounded-full border font-bold ${meta.color}`}>{lvl}</span>}
-                  </button>
+                  <div key={s.skill_id} className={`rounded-xl border overflow-hidden ${dark ? 'bg-slate-800/60 border-orange-500/15' : 'bg-orange-50/40 border-orange-200/60'}`}>
+                    {/* Skill name row */}
+                    <div className={`flex items-center justify-between px-3 py-2 ${dark ? 'bg-slate-900/60' : 'bg-white/60'}`}>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${s.skill_category === 'Academic' ? dark ? 'bg-brand-500/20 text-brand-300 border-brand-500/30' : 'bg-brand-100 text-brand-700 border-brand-200' : dark ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-purple-100 text-purple-700 border-purple-200'}`}>
+                          {s.skill_category === 'Academic' ? '💻' : '🏅'}
+                        </span>
+                        <span className={`text-xs font-semibold truncate ${dark ? 'text-orange-100' : 'text-slate-800'}`}>{s.skill_name}</span>
+                      </div>
+                      <button onClick={() => toggle({ id: s.skill_id })} className={`shrink-0 ml-2 transition-colors ${dark ? 'text-slate-600 hover:text-red-400' : 'text-slate-300 hover:text-red-500'}`}>
+                        <XMarkIcon className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    {/* Level progress bar */}
+                    {meta && <div className={`h-0.5 ${dark ? 'bg-slate-700' : 'bg-orange-100'}`}><div className={`h-full transition-all duration-500 ${meta.bar}`} style={{ width: `${meta.pct}%` }} /></div>}
+                    {/* Controls */}
+                    <div className="px-3 py-2.5 space-y-2">
+                      {/* Level pills */}
+                      <div className="flex gap-1 flex-wrap">
+                        {LEVELS.map(lvl => (
+                          <button key={lvl} type="button" onClick={() => updatePivot(s.skill_id, 'skill_level', s.skill_level === lvl ? '' : lvl)}
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all ${s.skill_level === lvl ? levelColor(lvl) : dark ? 'bg-slate-800 text-slate-500 border-slate-700 hover:border-slate-500' : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'}`}>
+                            {lvl}
+                          </button>
+                        ))}
+                      </div>
+                      {/* Certification toggle */}
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => updatePivot(s.skill_id, 'certification', !s.certification)}
+                          className={`w-8 h-4 rounded-full transition-all relative ${s.certification ? 'bg-brand-500' : dark ? 'bg-slate-700' : 'bg-slate-200'}`}>
+                          <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-all ${s.certification ? 'left-4.5' : 'left-0.5'}`} style={{ left: s.certification ? '18px' : '2px' }} />
+                        </button>
+                        <span className={`text-[10px] font-semibold ${dark ? 'text-orange-300/60' : 'text-slate-500'}`}>Certified</span>
+                      </div>
+                      {s.certification && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <input value={s.certification_name} onChange={e => updatePivot(s.skill_id, 'certification_name', e.target.value)} className={`${i} text-xs py-1.5`} placeholder="Cert. name" />
+                          <input type="date" value={s.certification_date} onChange={e => updatePivot(s.skill_id, 'certification_date', e.target.value)} className={`${i} text-xs py-1.5`} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 );
               })}
             </div>
-        }
-      </div>
-
-      {/* Selected skill details */}
-      {selected.length > 0 && (
-        <div>
-          <p className={`text-[10px] font-bold uppercase tracking-widest mb-3 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
-            Selected — Set Proficiency
-          </p>
-          <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
-            {selected.map(s => {
-              const meta = LEVEL_META[s.skill_level];
-              return (
-                <div key={s.skill_id} className={`rounded-xl border overflow-hidden ${dark ? 'bg-slate-800 border-slate-700/60' : 'bg-white border-slate-200'}`}>
-                  <div className={`flex items-center justify-between px-4 py-2.5 ${dark ? 'bg-slate-900' : 'bg-slate-50'}`}>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${s.skill_category === 'Academic' ? 'bg-brand-500/20 text-brand-300 border-brand-500/30' : 'bg-purple-500/20 text-purple-300 border-purple-500/30'}`}>
-                        {s.skill_category === 'Academic' ? '💻' : '🏅'} {s.skill_category}
-                      </span>
-                      <span className={`text-sm font-semibold ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{s.skill_name}</span>
-                    </div>
-                    <button onClick={() => toggle({ id: s.skill_id })} className={`transition-colors ${dark ? 'text-slate-600 hover:text-red-400' : 'text-slate-300 hover:text-red-500'}`}>
-                      <XMarkIcon className="w-4 h-4" />
-                    </button>
-                  </div>
-                  {/* Level bar */}
-                  {meta && (
-                    <div className={`h-1 ${dark ? 'bg-slate-700' : 'bg-slate-100'}`}>
-                      <div className={`h-full transition-all duration-500 ${meta.bar}`} style={{ width: `${meta.pct}%` }} />
-                    </div>
-                  )}
-                  <div className="px-4 py-3 grid grid-cols-2 gap-3">
-                    <Field label="Proficiency Level">
-                      <Sel value={s.skill_level} onChange={e => updatePivot(s.skill_id, 'skill_level', e.target.value)} className={sl}>
-                        <option value="">Select level</option>
-                        <option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Expert</option>
-                      </Sel>
-                    </Field>
-                    <Field label="Certified?">
-                      <Sel value={s.certification ? 'yes' : 'no'} onChange={e => updatePivot(s.skill_id, 'certification', e.target.value === 'yes')} className={sl}>
-                        <option value="no">No</option><option value="yes">Yes</option>
-                      </Sel>
-                    </Field>
-                    {s.certification && (
-                      <>
-                        <Field label="Certification Name"><input value={s.certification_name} onChange={e => updatePivot(s.skill_id, 'certification_name', e.target.value)} className={i} /></Field>
-                        <Field label="Certification Date"><input type="date" value={s.certification_date} onChange={e => updatePivot(s.skill_id, 'certification_date', e.target.value)} className={i} /></Field>
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
           </div>
         </div>
-      )}
-    </Modal>
+
+        {/* Footer */}
+        <div className={`px-6 py-4 border-t rounded-b-2xl flex items-center justify-between ${dark ? 'border-orange-500/20 bg-slate-900/80' : 'border-orange-100 bg-orange-50/40'}`}>
+          <ErrBox msg={err} />
+          <div className="flex gap-3 ml-auto">
+            <BtnGhost onClick={onClose}>Cancel</BtnGhost>
+            <BtnPrimary loading={saving} onClick={save}>Save Skills</BtnPrimary>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -907,7 +1128,6 @@ const StudentDashboard = ({ user, onLogout }) => {
       { id: 'skills',       label: 'My Skills',        Icon: LightBulbIcon,           desc: `${skillCount} skill${skillCount !== 1 ? 's' : ''} recorded`,              color: dark ? 'from-amber-500/20 to-orange-500/10 border-amber-500/20'  : 'bg-amber-50 border-amber-100',   iconColor: 'text-amber-500'   },
       { id: 'affiliations', label: 'My Affiliations',  Icon: BuildingLibraryIcon,     desc: `${affiliationCount} org${affiliationCount !== 1 ? 's' : ''} joined`,      color: dark ? 'from-purple-500/20 to-pink-500/10 border-purple-500/20'  : 'bg-purple-50 border-purple-100', iconColor: 'text-purple-500'  },
       { id: 'violations',   label: 'My Violations',    Icon: ExclamationTriangleIcon, desc: violationCount ? `${violationCount} record${violationCount !== 1 ? 's' : ''}` : 'Clean record', color: dark ? 'from-red-500/20 to-rose-500/10 border-red-500/20' : 'bg-red-50 border-red-100', iconColor: 'text-red-500' },
-      { id: 'grades',       label: 'My Grades',        Icon: AcademicCapIcon,         desc: 'View your grade report',                                                   color: dark ? 'from-cyan-500/20 to-blue-500/10 border-cyan-500/20'      : 'bg-cyan-50 border-cyan-100',     iconColor: 'text-cyan-500'    },
     ];
 
     return (
@@ -1259,6 +1479,7 @@ const StudentDashboard = ({ user, onLogout }) => {
         {modal === 'enrollment' && <EnrollmentModal    student={s} onClose={() => setModal(null)} onSaved={refresh} />}
         {modal === 'education'  && <EducationalBgModal student={s} onClose={() => setModal(null)} onSaved={refresh} />}
         {modal === 'medical'    && <MedicalModal student={s} record={s?.medical_histories?.[0] ?? null} onClose={() => setModal(null)} onSaved={refresh} />}
+        {modal === 'emergency'  && <EmergencyContactModal student={s} record={s?.medical_histories?.[0] ?? null} onClose={() => setModal(null)} onSaved={refresh} />}
         {guardianModal !== null && (
           <GuardianFormModal
             studentId={s?.id}
@@ -1404,12 +1625,41 @@ const StudentDashboard = ({ user, onLogout }) => {
             <SectionCard title="Medical Record" icon="🏥" action={<BtnEdit onClick={() => setModal('medical')} />}>
               {s.medical_histories?.length > 0 ? s.medical_histories.map(mh => (
                 <div key={mh.id} className="space-y-1">
-                  <Row label="Blood Type"            value={val(mh.bloodtype)} />
-                  <Row label="Existing Conditions"   value={val(mh.existing_conditions)} />
-                  <Row label="Emergency Contact"     value={val(mh.emergency_contact_name)} />
-                  <Row label="Emergency Contact No." value={val(mh.emergency_contact_number)} />
+                  <Row label="Blood Type"          value={val(mh.bloodtype)} />
+                  <Row label="Existing Conditions" value={val(mh.existing_conditions)} />
                 </div>
               )) : <EmptyState icon="🩺" title="No medical record yet." sub="Click the edit button to add one." />}
+            </SectionCard>
+
+            <SectionCard title="Emergency Contact" icon="🚨" action={<BtnEdit onClick={() => setModal('emergency')} />}>
+              {s.medical_histories?.length > 0 && s.medical_histories[0].emergency_contact_name ? (() => {
+                const ec = s.medical_histories[0];
+                return (
+                  <div className={`flex items-center gap-4 p-4 rounded-xl border ${dark ? 'bg-orange-500/5 border-orange-500/20' : 'bg-orange-50/60 border-orange-200/60'}`}>
+                    {/* Phone icon circle */}
+                    <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${dark ? 'bg-orange-500/15 border border-orange-500/30' : 'bg-orange-100 border border-orange-200'}`}>
+                      <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                      </svg>
+                    </div>
+                    {/* Details */}
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-bold leading-tight ${dark ? 'text-orange-50' : 'text-slate-800'}`}>{ec.emergency_contact_name}</p>
+                      <p className="text-sm font-semibold text-orange-400 mt-0.5">{ec.emergency_contact_number || '—'}</p>
+                      {ec.emergency_contact_relationship && (
+                        <span className={`inline-block mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${dark ? 'bg-orange-500/15 text-orange-300 border-orange-500/30' : 'bg-orange-100 text-orange-600 border-orange-200'}`}>
+                          {ec.emergency_contact_relationship}
+                        </span>
+                      )}
+                      {ec.emergency_contact_address && (
+                        <p className={`text-xs mt-1 truncate ${dark ? 'text-orange-200/50' : 'text-slate-400'}`}>📍 {ec.emergency_contact_address}</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })() : (
+                <EmptyState icon="🚨" title="No emergency contact yet." sub="Click the edit button to add one." />
+              )}
             </SectionCard>
           </div>
         )}
@@ -1543,6 +1793,10 @@ const StudentDashboard = ({ user, onLogout }) => {
                               {standingIcon(ah.academic_standing)} {ah.academic_standing}
                             </span>
                           </div>
+                          {/* School name */}
+                          {ah.school_name && (
+                            <p className={`text-[10px] font-semibold mb-2 truncate ${dark ? 'text-slate-500' : 'text-slate-400'}`}>🏫 {ah.school_name}</p>
+                          )}
 
                           {/* GPA */}
                           <div className="mb-3">
@@ -1583,22 +1837,7 @@ const StudentDashboard = ({ user, onLogout }) => {
           )}
         </SectionCard>
 
-        {/* Educational Background */}
-        {s && (
-          <SectionCard title="Educational Background" icon="🏫">
-            <div className="space-y-1">
-              <Row label="Last School Attended" value={val(s.last_school_attended)} />
-              <Row label="Last Year Attended"   value={val(s.last_year_attended)} />
-              <Row label="LRN"                  value={val(s.lrn)} />
-              {s.honors_received && (
-                <div className={`mt-3 p-3 rounded-xl border ${dark ? 'bg-amber-900/20 border-amber-800/40' : 'bg-amber-50 border-amber-200'}`}>
-                  <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${dark ? 'text-amber-400' : 'text-amber-600'}`}>🏆 Honors / Awards</p>
-                  <p className={`text-sm ${dark ? 'text-orange-100' : 'text-slate-700'}`}>{s.honors_received}</p>
-                </div>
-              )}
-            </div>
-          </SectionCard>
-        )}
+        {/* Educational Background removed — moved to My Profile */}
       </div>
     );
   };
@@ -1698,12 +1937,6 @@ const StudentDashboard = ({ user, onLogout }) => {
             <WrenchScrewdriverIcon className="w-14 h-14 text-slate-300" />
             <p className={`font-bold text-sm ${dark ? 'text-slate-400' : 'text-slate-600'}`}>No skills recorded yet</p>
             <p className={`text-xs ${dark ? 'text-slate-600' : 'text-slate-400'}`}>Click "Manage Skills" to add your academic and non-academic skills.</p>
-            <button onClick={() => setModal(true)}
-              className="mt-2 flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white transition-all hover:scale-105"
-              style={{ background: 'linear-gradient(135deg, #f26522, #e04f0f)', boxShadow: '0 4px 14px rgba(242,101,34,0.3)' }}>
-              <PlusIcon className="w-3.5 h-3.5" />
-              Add Skills
-            </button>
           </div>
         ) : (
           <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
@@ -1765,7 +1998,6 @@ const StudentDashboard = ({ user, onLogout }) => {
                 <p className={`text-xs mt-0.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>Organizations, clubs & extracurricular memberships</p>
               </div>
             </div>
-            {s && <AddBtn onClick={() => setModal('add')} label="Add Affiliation" />}
           </div>
 
           {/* Stats row */}
@@ -1795,15 +2027,14 @@ const StudentDashboard = ({ user, onLogout }) => {
                   <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search organization or role…"
                     className={`w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm ${dark ? 'bg-slate-800 border-slate-700 text-slate-200 placeholder-slate-500 focus:border-brand-500' : 'bg-white border-slate-200 text-slate-700 placeholder-slate-400 focus:border-brand-400'} outline-none transition-colors`} />
                 </div>
-                <div className="flex gap-2 flex-wrap">
-                  {['All', 'Active', 'Inactive', 'Alumni'].map(st => (
-                    <button key={st} onClick={() => setFilterStatus(st)}
-                      className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${filterStatus === st
-                        ? 'bg-brand-500 text-white border-brand-500 shadow-md'
-                        : dark ? 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>
-                      {st}
-                    </button>
-                  ))}
+                <div className="relative">
+                  <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+                    className={`appearance-none pl-3 pr-8 py-2.5 rounded-xl border text-sm font-semibold outline-none transition-colors ${dark ? 'bg-slate-800 border-slate-700 text-slate-200 focus:border-brand-500' : 'bg-white border-slate-200 text-slate-700 focus:border-brand-400'}`}>
+                    {['All', 'Active', 'Inactive', 'Alumni'].map(st => <option key={st}>{st}</option>)}
+                  </select>
+                  <div className={`pointer-events-none absolute inset-y-0 right-2.5 flex items-center ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/></svg>
+                  </div>
                 </div>
               </div>
             )}
@@ -1815,8 +2046,7 @@ const StudentDashboard = ({ user, onLogout }) => {
               <div className={`rounded-2xl border-2 border-dashed p-12 text-center ${dark ? 'border-slate-700' : 'border-slate-200'}`}>
                 <BuildingLibraryIcon className="w-14 h-14 mb-3 text-slate-300" />
                 <h3 className={`text-base font-bold mb-1 ${dark ? 'text-slate-300' : 'text-slate-600'}`}>No affiliations yet</h3>
-                <p className={`text-sm mb-4 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Add your organizations, clubs, and extracurricular memberships.</p>
-                {s && <AddBtn onClick={() => setModal('add')} label="Add Your First Affiliation" />}
+                <p className={`text-sm mb-4 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Your affiliations will appear here once added by the administration.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1835,14 +2065,6 @@ const StudentDashboard = ({ user, onLogout }) => {
                             <h4 className={`font-bold text-sm leading-tight truncate ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{aff.organization_name}</h4>
                             <p className={`text-xs mt-0.5 font-medium ${dark ? 'text-brand-400' : 'text-brand-600'}`}>{aff.position}</p>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <BtnEdit onClick={() => setModal(aff)} />
-                          <BtnDanger onClick={() => del(aff.id)} disabled={deleting === aff.id}>
-                            {deleting === aff.id
-                              ? <div className="w-3 h-3 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
-                              : <TrashIcon className="w-3.5 h-3.5" />}
-                          </BtnDanger>
                         </div>
                       </div>
 
@@ -2083,194 +2305,14 @@ const StudentDashboard = ({ user, onLogout }) => {
   };
 
   /* ════════════════════════════════
-     PANEL: GRADES
-  ════════════════════════════════ */
-  const GradesPanel = () => {
-    const [activeTerm, setActiveTerm] = useState('Midterm');
-    const terms = ['Prelim', 'Midterm', 'Final'];
-
-    // GPA helpers — lower is better (Philippine grading)
-    const numericGrades = GRADES.map(g => parseFloat(g[activeTerm.toLowerCase()])).filter(n => !isNaN(n));
-    const avg = numericGrades.length ? (numericGrades.reduce((a, b) => a + b, 0) / numericGrades.length).toFixed(2) : '—';
-    const totalUnits = GRADES.reduce((a, g) => a + g.units, 0);
-
-    const standing = (gpa) => {
-      const n = parseFloat(gpa);
-      if (isNaN(n)) return { label: 'N/A', color: dark ? 'text-slate-400' : 'text-slate-500' };
-      if (n <= 1.25) return { label: "Dean's List", color: 'text-amber-400' };
-      if (n <= 1.75) return { label: 'Good Standing', color: 'text-emerald-400' };
-      if (n <= 2.50) return { label: 'Satisfactory', color: 'text-blue-400' };
-      return { label: 'Needs Improvement', color: 'text-red-400' };
-    };
-
-    const gradeColor = (val) => {
-      const n = parseFloat(val);
-      if (isNaN(n) || val === '—') return dark ? 'text-slate-500' : 'text-slate-400';
-      if (n <= 1.25) return 'text-amber-400';
-      if (n <= 1.75) return 'text-emerald-400';
-      if (n <= 2.50) return dark ? 'text-blue-300' : 'text-blue-600';
-      if (n <= 3.00) return dark ? 'text-orange-300' : 'text-orange-500';
-      return 'text-red-400';
-    };
-
-    const st = standing(avg);
-
-    return (
-      <div className="space-y-5">
-
-        {/* ── Hero GPA banner ── */}
-        <div className={`relative overflow-hidden rounded-2xl border p-6 ${dark ? 'bg-gradient-to-br from-blue-600/20 via-purple-600/10 to-slate-900/0 border-blue-500/20' : 'bg-gradient-to-br from-blue-50 via-purple-50 to-white border-blue-100'}`}>
-          <div className="absolute right-0 top-0 w-56 h-56 bg-blue-500/10 rounded-full -translate-y-1/3 translate-x-1/3 blur-3xl pointer-events-none" />
-          <div className="absolute left-1/3 bottom-0 w-40 h-40 bg-purple-500/10 rounded-full translate-y-1/2 blur-2xl pointer-events-none" />
-          <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-            <div className="flex items-center gap-5">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center shadow-xl shrink-0">
-                <AcademicCapIcon className="w-8 h-8 text-white" />
-              </div>
-              <div>
-                <p className={`text-xs font-semibold uppercase tracking-widest mb-0.5 ${dark ? 'text-blue-400' : 'text-blue-600'}`}>AY 2025–2026 · 1st Semester</p>
-                <div className="flex items-end gap-3">
-                  <h2 className={`text-5xl font-black leading-none ${dark ? 'text-white' : 'text-slate-800'}`}>{avg}</h2>
-                  <div className="pb-1">
-                    <p className={`text-xs font-semibold ${dark ? 'text-slate-400' : 'text-slate-500'}`}>GPA ({activeTerm})</p>
-                    <p className={`text-sm font-bold ${st.color}`}>{st.label}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/* Stats pills */}
-            <div className="flex gap-3 flex-wrap">
-              {[
-                { label: 'Total Units', val: totalUnits,                                    Icon: BookOpenIcon,              iconCls: 'text-brand-500' },
-                { label: 'Subjects',    val: GRADES.length,                                 Icon: BookmarkIcon,              iconCls: 'text-blue-500'  },
-                { label: 'Passed',      val: numericGrades.filter(n => n <= 3.0).length,    Icon: CheckCircleIcon,           iconCls: 'text-emerald-500' },
-              ].map(p => (
-                <div key={p.label} className={`px-4 py-3 rounded-xl border text-center min-w-[72px] ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white/80 border-slate-200 shadow-sm'}`}>
-                  <p.Icon className={`w-5 h-5 mx-auto mb-0.5 ${p.iconCls}`} />
-                  <p className={`text-xl font-black leading-none ${dark ? 'text-white' : 'text-slate-800'}`}>{p.val}</p>
-                  <p className={`text-[10px] font-semibold uppercase tracking-wide mt-0.5 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{p.label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Grade legend ── */}
-        <div className={`flex flex-wrap items-center gap-3 px-4 py-3 rounded-xl border text-xs ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
-          <span className={`font-bold uppercase tracking-wider ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Grade Scale:</span>
-          {[
-            { range: '1.00–1.25', label: "Dean's List", c: 'text-amber-400' },
-            { range: '1.50–1.75', label: 'Good Standing', c: 'text-emerald-400' },
-            { range: '2.00–2.50', label: 'Satisfactory', c: dark ? 'text-blue-300' : 'text-blue-600' },
-            { range: '2.75–3.00', label: 'Passing', c: dark ? 'text-orange-300' : 'text-orange-500' },
-            { range: '5.00', label: 'Failed', c: 'text-red-400' },
-          ].map(l => (
-            <span key={l.range} className={`flex items-center gap-1 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-              <span className={`font-bold ${l.c}`}>{l.range}</span> — {l.label}
-            </span>
-          ))}
-        </div>
-
-        {/* ── Grade table ── */}
-        <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
-          {/* Table header */}
-          <div className={`flex items-center justify-between px-5 py-4 border-b ${dark ? 'border-slate-700/60 bg-slate-900' : 'border-slate-100 bg-slate-50'}`}>
-            <div>
-              <h3 className={`font-bold text-sm ${dark ? 'text-slate-200' : 'text-slate-700'}`}>Grade Report — AY 2025–2026, 1st Semester</h3>
-              <p className={`text-xs mt-0.5 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Bachelor of Science in Information Technology</p>
-            </div>
-            {/* Term switcher */}
-            <div className={`flex rounded-xl overflow-hidden border ${dark ? 'border-slate-700' : 'border-slate-200'}`}>
-              {terms.map(t => (
-                <button key={t} onClick={() => setActiveTerm(t)}
-                  className={`px-3 py-1.5 text-xs font-semibold transition-all ${activeTerm === t
-                    ? 'bg-brand-500 text-white'
-                    : dark ? 'bg-slate-800 text-slate-400 hover:bg-slate-700' : 'bg-white text-slate-500 hover:bg-slate-50'}`}>
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className={`text-xs uppercase tracking-wider border-b ${dark ? 'bg-slate-900 border-slate-700/60 text-slate-500' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
-                  <th className="px-5 py-3 text-left font-bold">Subject</th>
-                  <th className="px-5 py-3 text-left font-bold hidden md:table-cell">Title</th>
-                  <th className="px-5 py-3 text-center font-bold">Units</th>
-                  <th className="px-5 py-3 text-center font-bold">Prelim</th>
-                  <th className="px-5 py-3 text-center font-bold">Midterm</th>
-                  <th className="px-5 py-3 text-center font-bold">Final</th>
-                  <th className="px-5 py-3 text-center font-bold">Remarks</th>
-                </tr>
-              </thead>
-              <tbody className={`divide-y ${dark ? 'divide-slate-700/30' : 'divide-slate-100'}`}>
-                {GRADES.map(g => {
-                  const activeVal = g[activeTerm.toLowerCase()];
-                  const isPassed = parseFloat(activeVal) <= 3.0;
-                  const isFailed = parseFloat(activeVal) > 3.0;
-                  const isPending = activeVal === '—';
-                  return (
-                    <tr key={g.subject} className={`transition-colors group ${dark ? 'hover:bg-slate-700/20' : 'hover:bg-blue-50/50'}`}>
-                      <td className="px-5 py-4">
-                        <span className={`font-black text-sm ${dark ? 'text-brand-400' : 'text-brand-600'}`}>{g.subject}</span>
-                      </td>
-                      <td className={`px-5 py-4 hidden md:table-cell text-xs ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{g.title}</td>
-                      <td className="px-5 py-4 text-center">
-                        <span className={`font-bold text-xs px-2 py-0.5 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>{g.units}</span>
-                      </td>
-                      {['prelim', 'midterm', 'final'].map(term => (
-                        <td key={term} className="px-5 py-4 text-center">
-                          <span className={`font-bold text-sm ${gradeColor(g[term])}`}>
-                            {g[term] === '—' ? <span className={`text-xs italic ${dark ? 'text-slate-600' : 'text-slate-300'}`}>—</span> : g[term]}
-                          </span>
-                        </td>
-                      ))}
-                      <td className="px-5 py-4 text-center">
-                        {isPending
-                          ? <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${dark ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-400'}`}>Pending</span>
-                          : isPassed
-                            ? <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Passed</span>
-                            : <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">Failed</span>}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot>
-                <tr className={`border-t ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-slate-50 border-slate-200'}`}>
-                  <td className={`px-5 py-3.5 font-black text-xs uppercase tracking-wider ${dark ? 'text-slate-300' : 'text-slate-600'}`}>Total</td>
-                  <td className="hidden md:table-cell" />
-                  <td className="px-5 py-3.5 text-center">
-                    <span className={`font-black text-sm ${dark ? 'text-brand-400' : 'text-brand-600'}`}>{totalUnits} units</span>
-                  </td>
-                  <td colSpan={3} className={`px-5 py-3.5 text-center text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
-                    {activeTerm} GPA: <span className={`font-black text-base ml-1 ${gradeColor(avg)}`}>{avg}</span>
-                  </td>
-                  <td className="px-5 py-3.5 text-center">
-                    <span className={`text-xs font-bold ${st.color}`}>{st.label}</span>
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-
-        {/* ── Notice ── */}
-        <div className={`flex items-start gap-3 p-4 rounded-xl border text-xs ${dark ? 'bg-amber-900/20 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-700'}`}>
-          <InformationCircleIcon className={`w-4 h-4 shrink-0 mt-0.5 ${dark ? 'text-amber-400' : 'text-amber-500'}`} />
-          <span>Grades shown are for reference only. Official grades are released by the Registrar's Office. Contact your instructor for any grade concerns.</span>
-        </div>
-      </div>
-    );
-  };
-
   /* ════════════════════════════════
      PANEL: TASKS
   ════════════════════════════════ */
   const TasksPanel = () => {
-    const [filter, setFilter] = useState('All');
+    const [filter, setFilter]       = useState('All');
+    const [view, setView]           = useState('tasks');   // 'tasks' | 'archive'
+    const [confirmDelete, setConfirmDelete] = useState(null); // task id to confirm
+
     const pending = tasks.filter(t => !t.done);
     const done    = tasks.filter(t => t.done);
     const pct     = tasks.length ? Math.round((done.length / tasks.length) * 100) : 0;
@@ -2278,13 +2320,56 @@ const StudentDashboard = ({ user, onLogout }) => {
     const highCount   = pending.filter(t => t.priority === 'High').length;
     const mediumCount = pending.filter(t => t.priority === 'Medium').length;
 
-    const filtered = filter === 'All'       ? tasks
-      : filter === 'Pending'   ? pending
-      : filter === 'Completed' ? done
-      : tasks.filter(t => !t.done && t.priority === filter);
+    // When a task is checked → move to archive (mark done)
+    const handleCheck = (id) => {
+      setTasks(prev => prev.map(t => t.id === id ? { ...t, done: true } : t));
+    };
+
+    // Delete from archive with confirmation
+    const handleDelete = (id) => setConfirmDelete(id);
+    const confirmDel = () => {
+      if (confirmDelete === '__all__') setTasks(prev => prev.filter(t => !t.done));
+      else setTasks(prev => prev.filter(t => t.id !== confirmDelete));
+      setConfirmDelete(null);
+    };
+
+    const filtered = filter === 'All'     ? pending
+      : filter === 'High'   ? pending.filter(t => t.priority === 'High')
+      : filter === 'Medium' ? pending.filter(t => t.priority === 'Medium')
+      : pending.filter(t => t.priority === 'Low');
 
     return (
       <div className="space-y-5">
+
+        {/* Delete confirmation modal */}
+        {confirmDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className={`absolute inset-0 backdrop-blur-md ${dark ? 'bg-slate-950/40' : 'bg-slate-900/20'}`} onClick={() => setConfirmDelete(null)} />
+            <div className={`relative z-10 w-full max-w-sm rounded-2xl border p-6 shadow-2xl ${dark ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'}`}>
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 mx-auto ${dark ? 'bg-red-500/15' : 'bg-red-50'}`}>
+                <TrashIcon className="w-6 h-6 text-red-400" />
+              </div>
+              <h3 className={`text-base font-bold text-center mb-1 ${dark ? 'text-slate-100' : 'text-slate-800'}`}>
+                {confirmDelete === '__all__' ? 'Clear Archive?' : 'Delete Task?'}
+              </h3>
+              <p className={`text-xs text-center mb-5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                {confirmDelete === '__all__'
+                  ? `This will permanently delete all ${done.length} completed task${done.length !== 1 ? 's' : ''} from your archive. This cannot be undone.`
+                  : 'This will permanently remove the task from your archive. This cannot be undone.'}
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => setConfirmDelete(null)}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all ${dark ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'}`}>
+                  Cancel
+                </button>
+                <button onClick={confirmDel}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-red-500 hover:bg-red-600 text-white transition-all shadow-lg shadow-red-500/20">
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Hero banner ── */}
         <div className={`relative overflow-hidden rounded-2xl border p-5 ${dark ? 'bg-gradient-to-br from-brand-600/20 via-amber-600/10 to-slate-900/0 border-brand-500/20' : 'bg-gradient-to-br from-orange-50 via-amber-50 to-white border-orange-100'}`}>
@@ -2301,12 +2386,11 @@ const StudentDashboard = ({ user, onLogout }) => {
                 </p>
               </div>
             </div>
-            {/* Stat pills */}
             <div className="flex gap-2 flex-wrap">
               {[
-                { label: 'Total',     val: tasks.length,   c: dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600' },
-                { label: 'Pending',   val: pending.length, c: pending.length > 0 ? dark ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-red-100 text-red-600' : dark ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500' },
-                { label: 'Done',      val: done.length,    c: dark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600' },
+                { label: 'Total',   val: tasks.length,   c: dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600' },
+                { label: 'Pending', val: pending.length, c: pending.length > 0 ? dark ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-red-100 text-red-600' : dark ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500' },
+                { label: 'Done',    val: done.length,    c: dark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600' },
               ].map(p => (
                 <div key={p.label} className={`px-3 py-1.5 rounded-xl text-center ${p.c}`}>
                   <p className="text-lg font-black leading-none">{p.val}</p>
@@ -2315,116 +2399,168 @@ const StudentDashboard = ({ user, onLogout }) => {
               ))}
             </div>
           </div>
-
-          {/* Progress bar */}
           <div className="relative mt-4">
             <div className="flex justify-between items-center mb-1.5">
               <span className={`text-xs font-semibold ${dark ? 'text-slate-400' : 'text-slate-500'}`}>Overall Progress</span>
               <span className={`text-xs font-black ${dark ? 'text-brand-400' : 'text-brand-600'}`}>{pct}%</span>
             </div>
             <div className={`h-3 rounded-full overflow-hidden ${dark ? 'bg-slate-700/60' : 'bg-slate-200'}`}>
-              <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-amber-400 transition-all duration-700 relative"
-                style={{ width: `${pct}%` }}>
-                {pct > 10 && <div className="absolute inset-0 bg-white/20 rounded-full" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.1) 4px, rgba(255,255,255,0.1) 8px)' }} />}
-              </div>
+              <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-amber-400 transition-all duration-700"
+                style={{ width: `${pct}%` }} />
             </div>
             <p className={`text-[10px] mt-1 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{done.length} of {tasks.length} tasks completed</p>
           </div>
         </div>
 
-        {/* ── Priority breakdown ── */}
-        {pending.length > 0 && (
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: 'High Priority',   val: highCount,                                        c: dark ? 'border-red-500/30 bg-red-900/10' : 'border-red-200 bg-red-50',         tc: 'text-red-400',    Icon: ExclamationCircleIcon },
-              { label: 'Medium Priority', val: mediumCount,                                      c: dark ? 'border-amber-500/30 bg-amber-900/10' : 'border-amber-200 bg-amber-50', tc: 'text-amber-400',  Icon: ExclamationCircleIcon },
-              { label: 'Low Priority',    val: pending.filter(t => t.priority === 'Low').length, c: dark ? 'border-slate-600/40 bg-slate-800' : 'border-slate-200 bg-slate-50',   tc: dark ? 'text-slate-400' : 'text-slate-500', Icon: CheckCircleIcon },
-            ].map(p => (
-              <div key={p.label} className={`rounded-xl border p-3 text-center ${p.c}`}>
-                <p.Icon className={`w-6 h-6 mx-auto mb-1 ${p.tc}`} />
-                <p className={`text-2xl font-black ${p.tc}`}>{p.val}</p>
-                <p className={`text-[10px] font-semibold uppercase tracking-wide mt-0.5 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{p.label}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ── Filter tabs ── */}
-        <div className="flex gap-2 flex-wrap">
-          {['All', 'Pending', 'High', 'Medium', 'Low', 'Completed'].map(f => (
-            <button key={f} onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${filter === f
-                ? 'bg-brand-500 text-white border-brand-500 shadow-md'
-                : dark ? 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>
-              {f}
-              {f === 'Pending' && pending.length > 0 && (
-                <span className="ml-1.5 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{pending.length}</span>
-              )}
-            </button>
-          ))}
+        {/* ── View switcher: Tasks / Archive ── */}
+        <div className={`flex gap-1 p-1 rounded-xl ${dark ? 'bg-slate-800' : 'bg-slate-100'}`}>
+          <button onClick={() => setView('tasks')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${view === 'tasks' ? 'bg-brand-500 text-white shadow' : dark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
+            <ClipboardDocumentCheckIcon className="w-4 h-4" />
+            Pending Tasks
+            {pending.length > 0 && <span className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{pending.length}</span>}
+          </button>
+          <button onClick={() => setView('archive')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${view === 'archive' ? 'bg-brand-500 text-white shadow' : dark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
+            <ArchiveBoxIcon className="w-4 h-4" />
+            Archive
+            {done.length > 0 && <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${view === 'archive' ? 'bg-white/20 text-white' : dark ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-500'}`}>{done.length}</span>}
+          </button>
         </div>
 
-        {/* ── Task list ── */}
-        {filtered.length === 0 ? (
-          <div className={`rounded-2xl border-2 border-dashed p-10 text-center ${dark ? 'border-slate-700' : 'border-slate-200'}`}>
-            <CheckCircleIcon className="w-10 h-10 mb-2 text-emerald-400" />
-            <p className={`text-sm font-bold ${dark ? 'text-emerald-300' : 'text-emerald-600'}`}>
-              {filter === 'Completed' ? 'No completed tasks yet.' : 'All tasks done!'}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filtered.map(t => {
-              const isDone = t.done;
-              const pStyle = priorityStyle(t.priority, dark);
-              return (
-                <div key={t.id} className={`group flex items-start gap-4 p-4 rounded-2xl border transition-all duration-200 hover:-translate-y-1 hover:shadow-xl ${
-                  isDone
-                    ? dark ? 'bg-slate-800/30 border-slate-700/20 opacity-55' : 'bg-slate-50 border-slate-100 opacity-60'
-                    : t.priority === 'High'
-                      ? dark ? 'bg-red-900/10 border-red-500/20 hover:bg-red-900/25 hover:border-brand-500/60 hover:shadow-brand-500/20' : 'bg-red-50/60 border-red-200 hover:bg-red-100/80 hover:border-brand-400/60 hover:shadow-brand-500/20'
-                      : t.priority === 'Medium'
-                        ? dark ? 'bg-amber-900/10 border-amber-500/20 hover:bg-amber-900/25 hover:border-brand-500/60 hover:shadow-brand-500/20' : 'bg-amber-50/60 border-amber-200 hover:bg-amber-100/80 hover:border-brand-400/60 hover:shadow-brand-500/20'
-                        : dark ? 'bg-slate-900 border-slate-700/60 hover:bg-slate-800 hover:border-brand-500/60 hover:shadow-brand-500/20' : 'bg-white border-slate-200 hover:bg-brand-50/40 hover:border-brand-400/60 hover:shadow-brand-500/20 shadow-sm'
-                }`}>
-                  {/* Checkbox */}
-                  <button onClick={() => toggleTask(t.id)}
-                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${
-                      isDone
-                        ? 'bg-emerald-500 border-emerald-500'
-                        : dark ? 'border-slate-600 hover:border-brand-500 hover:bg-brand-500/10' : 'border-slate-300 hover:border-brand-500 hover:bg-brand-50'
-                    }`}>
-                    {isDone && <CheckIcon className="w-3.5 h-3.5 text-white" />}
-                  </button>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${dark ? 'bg-brand-500/10 text-brand-400 border-brand-500/20' : 'bg-brand-50 text-brand-600 border-brand-200'}`}>{t.subject}</span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${pStyle}`}>{t.priority}</span>
-                    </div>
-                    <p className={`text-sm font-semibold ${isDone ? 'line-through' : ''} ${dark ? isDone ? 'text-slate-500' : 'text-slate-100' : isDone ? 'text-slate-400' : 'text-slate-700'}`}>{t.title}</p>
-                    <div className={`flex items-center gap-1 mt-1 text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
-                      <CalendarIcon className="w-3 h-3 shrink-0" />
-                      Due: {t.due}
-                    </div>
+        {/* ── TASKS VIEW ── */}
+        {view === 'tasks' && (
+          <>
+            {pending.length > 0 && (
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: 'High',   val: highCount,                                        c: dark ? 'border-red-500/30 bg-red-900/10' : 'border-red-200 bg-red-50',         tc: 'text-red-400' },
+                  { label: 'Medium', val: mediumCount,                                      c: dark ? 'border-amber-500/30 bg-amber-900/10' : 'border-amber-200 bg-amber-50', tc: 'text-amber-400' },
+                  { label: 'Low',    val: pending.filter(t => t.priority === 'Low').length, c: dark ? 'border-slate-600/40 bg-slate-800' : 'border-slate-200 bg-slate-50',   tc: dark ? 'text-slate-400' : 'text-slate-500' },
+                ].map(p => (
+                  <div key={p.label} className={`rounded-xl border p-3 text-center ${p.c}`}>
+                    <p className={`text-2xl font-black ${p.tc}`}>{p.val}</p>
+                    <p className={`text-[10px] font-semibold uppercase tracking-wide mt-0.5 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{p.label} Priority</p>
                   </div>
+                ))}
+              </div>
+            )}
 
-                  {/* Status tag */}
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded-lg shrink-0 self-center ${
-                    isDone
-                      ? dark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600'
-                      : dark ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'
-                  }`}>{isDone ? 'Done' : 'Pending'}</span>
-                </div>
-              );
-            })}
-          </div>
+            <div className="flex gap-2 flex-wrap">
+              {['All', 'High', 'Medium', 'Low'].map(f => (
+                <button key={f} onClick={() => setFilter(f)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${filter === f
+                    ? 'bg-brand-500 text-white border-brand-500 shadow-md'
+                    : dark ? 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+                  {f}
+                </button>
+              ))}
+            </div>
+
+            {filtered.length === 0 ? (
+              <div className={`rounded-2xl border-2 border-dashed p-10 text-center ${dark ? 'border-slate-700' : 'border-slate-200'}`}>
+                <CheckCircleIcon className="w-10 h-10 mb-2 text-emerald-400 mx-auto" />
+                <p className={`text-sm font-bold ${dark ? 'text-emerald-300' : 'text-emerald-600'}`}>All tasks done! Check the Archive.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filtered.map(t => {
+                  const pStyle = priorityStyle(t.priority, dark);
+                  return (
+                    <div key={t.id} className={`group flex items-start gap-4 p-4 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
+                      t.priority === 'High'
+                        ? dark ? 'bg-red-900/10 border-red-500/20 hover:border-brand-500/40' : 'bg-red-50/60 border-red-200 hover:border-brand-400/40'
+                        : t.priority === 'Medium'
+                          ? dark ? 'bg-amber-900/10 border-amber-500/20 hover:border-brand-500/40' : 'bg-amber-50/60 border-amber-200 hover:border-brand-400/40'
+                          : dark ? 'bg-slate-900 border-slate-700/60 hover:border-brand-500/40' : 'bg-white border-slate-200 hover:border-brand-400/40 shadow-sm'
+                    }`}>
+                      {/* Checkbox — checking moves to archive */}
+                      <button onClick={() => handleCheck(t.id)}
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${dark ? 'border-slate-600 hover:border-emerald-500 hover:bg-emerald-500/10' : 'border-slate-300 hover:border-emerald-500 hover:bg-emerald-50'}`}>
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${dark ? 'bg-brand-500/10 text-brand-400 border-brand-500/20' : 'bg-brand-50 text-brand-600 border-brand-200'}`}>{t.subject}</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${pStyle}`}>{t.priority}</span>
+                        </div>
+                        <p className={`text-sm font-semibold ${dark ? 'text-slate-100' : 'text-slate-700'}`}>{t.title}</p>
+                        <div className={`flex items-center gap-1 mt-1 text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
+                          <CalendarIcon className="w-3 h-3 shrink-0" />
+                          Due: {t.due}
+                        </div>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded-lg shrink-0 self-center ${dark ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>Pending</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
 
-        {/* ── Notice ── */}
+        {/* ── ARCHIVE VIEW ── */}
+        {view === 'archive' && (
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <div className={`flex-1 flex items-center gap-3 px-4 py-3 rounded-xl border text-xs ${dark ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+                <ArchiveBoxIcon className="w-4 h-4 shrink-0" />
+                Completed tasks are stored here. You can permanently delete them.
+              </div>
+              {done.length > 0 && (
+                <button onClick={() => setConfirmDelete('__all__')}
+                  className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold border transition-all shrink-0 ${dark ? 'border-red-500/30 text-red-400 hover:bg-red-900/20 bg-red-900/10' : 'border-red-200 text-red-500 hover:bg-red-50 bg-white'}`}>
+                  <TrashIcon className="w-3.5 h-3.5" />
+                  Delete All
+                </button>
+              )}
+            </div>
+
+            {done.length === 0 ? (
+              <div className={`rounded-2xl border-2 border-dashed p-10 text-center ${dark ? 'border-slate-700' : 'border-slate-200'}`}>
+                <ArchiveBoxIcon className={`w-10 h-10 mb-2 mx-auto ${dark ? 'text-slate-600' : 'text-slate-300'}`} />
+                <p className={`text-sm font-bold ${dark ? 'text-slate-400' : 'text-slate-500'}`}>Archive is empty</p>
+                <p className={`text-xs mt-1 ${dark ? 'text-slate-600' : 'text-slate-400'}`}>Completed tasks will appear here.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {done.map(t => {
+                  const pStyle = priorityStyle(t.priority, dark);
+                  return (
+                    <div key={t.id} className={`flex items-start gap-4 p-4 rounded-2xl border transition-all ${dark ? 'bg-slate-800/30 border-slate-700/30' : 'bg-slate-50 border-slate-100'}`}>
+                      {/* Done indicator */}
+                      <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 mt-0.5">
+                        <CheckIcon className="w-3.5 h-3.5 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${dark ? 'bg-brand-500/10 text-brand-400 border-brand-500/20' : 'bg-brand-50 text-brand-600 border-brand-200'}`}>{t.subject}</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${pStyle}`}>{t.priority}</span>
+                        </div>
+                        <p className={`text-sm font-semibold line-through ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{t.title}</p>
+                        <div className={`flex items-center gap-1 mt-1 text-xs ${dark ? 'text-slate-600' : 'text-slate-400'}`}>
+                          <CalendarIcon className="w-3 h-3 shrink-0" />
+                          Due: {t.due}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 self-center">
+                        <span className={`text-[10px] font-bold px-2 py-1 rounded-lg ${dark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600'}`}>Done</span>
+                        <button onClick={() => handleDelete(t.id)}
+                          className={`p-1.5 rounded-lg border transition-all ${dark ? 'border-slate-700 text-slate-500 hover:bg-red-900/20 hover:border-red-500/40 hover:text-red-400' : 'border-slate-200 text-slate-400 hover:bg-red-50 hover:border-red-200 hover:text-red-500'}`}
+                          title="Delete from archive">
+                          <TrashIcon className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+
         <div className={`flex items-start gap-3 p-4 rounded-xl border text-xs ${dark ? 'bg-amber-900/20 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-700'}`}>
           <InformationCircleIcon className={`w-4 h-4 shrink-0 mt-0.5 ${dark ? 'text-amber-400' : 'text-amber-500'}`} />
-          <span>Tasks shown here are personal reminders. Click the circle to mark a task as done.</span>
+          <span>Check the circle to mark a task as done — it moves to the Archive automatically.</span>
         </div>
       </div>
     );
@@ -2434,7 +2570,7 @@ const StudentDashboard = ({ user, onLogout }) => {
   const panels = {
     dashboard: <DashboardPanel />, profile: <ProfilePanel />, academic: <AcademicPanel />,
     skills: <SkillsPanel />, affiliations: <AffiliationsPanel />, violations: <ViolationsPanel />,
-    grades: <GradesPanel />, tasks: <TasksPanel />,
+    tasks: <TasksPanel />,
   };
   const activeNav = NAV.find(n => n.id === active);
 

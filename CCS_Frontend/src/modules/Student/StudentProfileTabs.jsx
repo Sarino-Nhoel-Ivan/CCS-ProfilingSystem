@@ -275,7 +275,7 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
           </div>
 
           {/* Medical Records + Emergency Contacts */}
-          <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t ${divider}`}>
+          <div className={`grid grid-cols-2 gap-6 pt-4 border-t ${divider}`}>
             <div>
               <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Medical Records</h3>
               {student.medical_histories && student.medical_histories.length > 0 ? (
@@ -299,19 +299,27 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
             </div>
             <div>
               <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Emergency Contacts</h3>
-              {student.medical_histories && student.medical_histories.length > 0 ? (
+              {student.medical_histories && student.medical_histories.length > 0 && student.medical_histories[0].emergency_contact_name ? (
                 <div className="space-y-3">
-                  {student.medical_histories.map(mh => (
-                    <div key={mh.id} className={`flex items-center space-x-4 p-4 rounded-lg ${emergBox}`}>
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${emergIcon}`}>
+                  {student.medical_histories.map(mh => mh.emergency_contact_name ? (
+                    <div key={mh.id} className={`flex items-center gap-4 p-4 rounded-xl ${emergBox}`}>
+                      <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${emergIcon}`}>
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <p className={`font-bold text-sm ${boldText}`}>{mh.emergency_contact_name}</p>
                         <p className="text-sm text-brand-500 font-medium">{mh.emergency_contact_number}</p>
+                        {mh.emergency_contact_relationship && (
+                          <span className={`inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${dark ? 'bg-brand-500/20 text-brand-300 border-brand-500/30' : 'bg-brand-50 text-brand-600 border-brand-200'}`}>
+                            {mh.emergency_contact_relationship}
+                          </span>
+                        )}
+                        {mh.emergency_contact_address && (
+                          <p className={`text-xs mt-1 truncate ${subText}`}>📍 {mh.emergency_contact_address}</p>
+                        )}
                       </div>
                     </div>
-                  ))}
+                  ) : null)}
                 </div>
               ) : (
                 <p className={`text-sm italic ${subText}`}>No emergency contacts recorded.</p>
@@ -332,7 +340,10 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
                     <div>
                       <h4 className={`font-bold text-sm ${boldText}`}>{aff.organization_name}</h4>
                       <p className={`text-xs mb-1 ${subText}`}>{aff.position} • {aff.status}</p>
-                      <p className={`text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Joined: {aff.date_joined} {aff.date_ended ? `- Ended: ${aff.date_ended}` : ''}</p>
+                      <p className={`text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
+                        Joined: {aff.date_joined ? new Date(aff.date_joined).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}
+                        {aff.date_ended ? ` — Ended: ${new Date(aff.date_ended).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}` : ' — Present'}
+                      </p>
                     </div>
                   </div>
                 ))}

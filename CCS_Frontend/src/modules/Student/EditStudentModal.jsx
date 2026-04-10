@@ -129,8 +129,15 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
 
       setAffiliations(
         student.affiliations?.length > 0
-          ? student.affiliations.map(a => ({ id: a.id, organization: a.organization_name || '', role: a.position || '', year: a.date_joined ? a.date_joined.split('-')[0] : '' }))
-          : [emptyAffil()]
+          ? student.affiliations.map(a => ({
+              id: a.id,
+              organization_name: a.organization_name || '',
+              position: a.position || '',
+              status: a.status || 'Active',
+              date_joined: a.date_joined ? a.date_joined.split('T')[0] : '',
+              adviser_name: a.adviser_name || '',
+            }))
+          : [{ organization_name: '', position: '', status: 'Active', date_joined: '', adviser_name: '' }]
       );
 
       setActivities(
@@ -258,8 +265,15 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
       for (const orig of origAffils) {
         if (!affiliations.find(a => a.id && a.id === orig.id)) await api.students.deleteAffiliation(student.id, orig.id).catch(() => {});
       }
-      for (const a of affiliations.filter(a => a.organization)) {
-        const ap = { organization_name: a.organization, position: a.role || 'Member', date_joined: a.year ? `${a.year}-01-01` : new Date().toISOString().split('T')[0], status: 'Active' };
+      for (const a of affiliations.filter(a => a.organization_name)) {
+        const ap = {
+          organization_name: a.organization_name,
+          position: a.position || 'Member',
+          status: a.status || 'Active',
+          date_joined: a.date_joined || new Date().toISOString().split('T')[0],
+          adviser_name: a.adviser_name || null,
+          date_ended: null,
+        };
         a.id ? await api.students.updateAffiliation(student.id, a.id, ap).catch(() => api.students.addAffiliation(student.id, ap)) : await api.students.addAffiliation(student.id, ap);
       }
 
@@ -290,7 +304,7 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-md" onClick={onClose} />
       <div className="flex min-h-full items-center justify-center p-4 sm:p-0">
         <div className={`relative transform overflow-hidden rounded-2xl text-left shadow-xl sm:my-8 sm:w-full sm:max-w-4xl border ${modalBg}`}>
 
@@ -383,23 +397,33 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
 
                 {/* Affiliations */}
                 <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/50 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
-                  <h4 className={sectionHead}>Affiliations</h4>
+                  <h4 className={sectionHead}>Affiliations & Organizations</h4>
                   {affiliations.map((a, i) => (
-                    <div key={i} className="grid grid-cols-3 gap-3 mb-3 items-end">
-                      <div><label className={labelCls}>Organization</label>
-                        <input value={a.organization} onChange={e => updRow(setAffiliations, i, 'organization', e.target.value)} className={inputCls} /></div>
-                      <div><label className={labelCls}>Role</label>
-                        <input value={a.role} onChange={e => updRow(setAffiliations, i, 'role', e.target.value)} className={inputCls} /></div>
+                    <div key={i} className="grid grid-cols-4 gap-3 mb-3 items-end">
+                      <div className="col-span-2">
+                        <label className={labelCls}>Organization</label>
+                        <input value={a.organization_name || ''} onChange={e => updRow(setAffiliations, i, 'organization_name', e.target.value)} className={inputCls} placeholder="e.g. JCCS, GDSC" />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Role</label>
+                        <input value={a.position || ''} onChange={e => updRow(setAffiliations, i, 'position', e.target.value)} className={inputCls} placeholder="e.g. President" />
+                      </div>
                       <div className="flex gap-2 items-end">
-                        <div className="flex-1"><label className={labelCls}>Year</label>
-                          <input value={a.year} onChange={e => updRow(setAffiliations, i, 'year', e.target.value)} placeholder="e.g. 2024" className={inputCls} /></div>
-                        {affiliations.length > 1 && <button type="button" onClick={() => delRow(setAffiliations, i)} className={delBtn}>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </button>}
+                        <div className="flex-1">
+                          <label className={labelCls}>Status</label>
+                          <select value={a.status || 'Active'} onChange={e => updRow(setAffiliations, i, 'status', e.target.value)} className={inputCls}>
+                            <option>Active</option><option>Inactive</option><option>Alumni</option>
+                          </select>
+                        </div>
+                        {affiliations.length > 1 && (
+                          <button type="button" onClick={() => delRow(setAffiliations, i)} className={delBtn}>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
-                  <button type="button" onClick={() => addRow(setAffiliations, emptyAffil)} className={addRowBtn}>+ Add Row</button>
+                  <button type="button" onClick={() => addRow(setAffiliations, () => ({ organization_name: '', position: '', status: 'Active', date_joined: '', adviser_name: '' }))} className={addRowBtn}>+ Add Row</button>
                 </div>
 
                 {/* Non-Academic Activities */}
