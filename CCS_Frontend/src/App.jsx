@@ -7,7 +7,6 @@ import FacultyModule from './modules/Faculty';
 import InstructionModule from './modules/Instruction';
 import SchedulingModule from './modules/Scheduling';
 import EventsModule from './modules/Events';
-import SearchModule from './modules/Search';
 import AdminDashboard from './modules/Dashboard';
 import StudentLogin from './pages/StudentLogin';
 import FacultyLogin from './pages/FacultyLogin';
@@ -34,7 +33,6 @@ const PATH_TO_MODULE = {
   '/admin/instruction': 'instruction',
   '/admin/scheduling':  'scheduling',
   '/admin/events':      'events',
-  '/admin/search':      'search',
 };
 
 /* ── Admin layout ── */
@@ -57,7 +55,6 @@ function AdminLayout({ user, onLogout }) {
       instruction: '/admin/instruction',
       scheduling:  '/admin/scheduling',
       events:      '/admin/events',
-      search:      '/admin/search',
     };
     navigate(pathMap[id] ?? '/admin/dashboard');
   };
@@ -95,7 +92,6 @@ function AdminLayout({ user, onLogout }) {
                 <Route path="instruction" element={<InstructionModule />} />
                 <Route path="scheduling"  element={<SchedulingModule />} />
                 <Route path="events"      element={<EventsModule />} />
-                <Route path="search"      element={<SearchModule />} />
                 <Route path="*"           element={<Navigate to="dashboard" replace />} />
               </Routes>
             </div>

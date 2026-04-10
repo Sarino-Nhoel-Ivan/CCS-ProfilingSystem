@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   UserIcon, UsersIcon, BookOpenIcon, CalendarIcon,
-  StarIcon, MagnifyingGlassIcon, Bars3Icon,
+  StarIcon, Bars3Icon,
   ArrowRightOnRectangleIcon, HomeIcon,
 } from '@heroicons/react/24/outline';
 import { useDarkMode } from '../context/DarkModeContext';
@@ -18,7 +18,6 @@ const Sidebar = ({ currentModule, setCurrentModule, isOpen, setIsOpen, user, onL
     { id: 'instruction', label: 'Instruction',          Icon: BookOpenIcon },
     { id: 'scheduling',  label: 'Scheduling',           Icon: CalendarIcon },
     { id: 'events',      label: 'Events',               Icon: StarIcon },
-    { id: 'search',      label: 'Comprehensive Search', Icon: MagnifyingGlassIcon },
   ];
 
   return (
