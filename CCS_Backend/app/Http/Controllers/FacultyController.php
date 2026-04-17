@@ -47,19 +47,41 @@ class FacultyController extends Controller
     public function update(Request $request, Faculty $faculty)
     {
         $validated = $request->validate([
+            // Basic Information
+            'employee_id'            => 'nullable|string|max:100',
             'first_name'             => 'sometimes|required|string|max:255',
             'middle_name'            => 'nullable|string|max:255',
             'last_name'              => 'sometimes|required|string|max:255',
             'suffix'                 => 'nullable|string|max:50',
-            'position'               => 'nullable|string|max:255',
-            'employment_status'      => 'nullable|string|max:255',
-            'hire_date'              => 'nullable|date',
-            'contact_number'         => 'nullable|string|max:255',
+            'gender'                 => 'nullable|string|max:50',
+            'date_of_birth'          => 'nullable|date',
+            'civil_status'           => 'nullable|string|max:50',
+            'nationality'            => 'nullable|string|max:100',
+            // Contact Information
+            'email'                  => 'sometimes|required|email|max:255|unique:faculties,email,'.$faculty->id,
+            'personal_email'         => 'nullable|email|max:255',
+            'contact_number'         => 'nullable|string|max:50',
+            'telephone_number'       => 'nullable|string|max:50',
+            'home_address'           => 'nullable|string',
+            'office_address'         => 'nullable|string',
             'office_location'        => 'nullable|string|max:255',
             'office_hours'           => 'nullable|string|max:255',
+            // Professional Information
+            'position'               => 'nullable|string|max:255',
+            'academic_rank'          => 'nullable|string|max:255',
+            'area_of_specialization' => 'nullable|string|max:255',
+            'employment_status'      => 'nullable|string|max:255',
+            'hire_date'              => 'nullable|date',
+            'years_of_service'       => 'nullable|integer|min:0',
+            'courses_handled'        => 'nullable|array',
             'department_id'          => 'nullable|exists:departments,id',
-            // Professional background
+            // Educational Background
             'educational_attainment' => 'nullable|array',
+            'bachelors_degree'       => 'nullable|array',
+            'masters_degree'         => 'nullable|array',
+            'doctorate_degree'       => 'nullable|array',
+            'certifications'         => 'nullable|array',
+            // Professional background
             'expertise_areas'        => 'nullable|array',
             'work_experience'        => 'nullable|array',
             'research_interests'     => 'nullable|string',

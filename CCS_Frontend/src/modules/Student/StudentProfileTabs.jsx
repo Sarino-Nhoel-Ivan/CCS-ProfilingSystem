@@ -282,9 +282,9 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
             </div>
             <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
               <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Emergency Contacts</p>
-              {student.medical_histories&&student.medical_histories.length>0?(
+              {student.medical_histories&&student.medical_histories.length>0&&student.medical_histories.some(mh=>mh.emergency_contact_name)?(
                 <div className="space-y-3">
-                  {student.medical_histories.map(mh=>(
+                  {student.medical_histories.filter(mh=>mh.emergency_contact_name).map(mh=>(
                     <div key={mh.id} className={`flex items-center gap-3 p-3 rounded-xl border ${dark?'bg-slate-800 border-slate-700':'bg-white border-slate-100'}`}>
                       <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${emergIcon}`}>
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
@@ -294,7 +294,7 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
                         <p className={`text-xs font-semibold ${dark?'text-orange-400':'text-orange-600'}`}>{mh.emergency_contact_number||'N/A'}</p>
                       </div>
                     </div>
-                  ) : null)}
+                  ))}
                 </div>
               ):(
                 <div className={`flex flex-col items-center justify-center py-8 rounded-xl border ${dark?'border-slate-700 bg-slate-800/40':'border-slate-100 bg-white'}`}>

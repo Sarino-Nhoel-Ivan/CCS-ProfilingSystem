@@ -12,12 +12,18 @@ class Faculty extends Model
 
     protected $casts = [
         'hire_date'              => 'date',
+        'date_of_birth'          => 'date',
         'educational_attainment' => 'array',
         'expertise_areas'        => 'array',
         'work_experience'        => 'array',
         'achievements'           => 'array',
         'publications'           => 'array',
         'social_links'           => 'array',
+        'courses_handled'        => 'array',
+        'bachelors_degree'       => 'array',
+        'masters_degree'         => 'array',
+        'doctorate_degree'       => 'array',
+        'certifications'         => 'array',
     ];
 
     public function department()
