@@ -40,8 +40,9 @@ const StudentCard = ({ student: s, onSelect, dark }) => {
         ${dark
           ? 'bg-slate-800 border-slate-700 hover:border-orange-500/50 hover:shadow-orange-500/10'
           : 'bg-white border-slate-200 hover:border-orange-400/60 hover:shadow-orange-500/10'}`}>
-      <div className={`h-1 w-full ${s.enrollment_status === 'Enrolled' ? 'bg-gradient-to-r from-orange-400 to-orange-500' : 'bg-gradient-to-r from-slate-300 to-slate-400'}`} />
-      <div className="p-5">
+      {/* Left accent bar */}
+      <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl ${s.enrollment_status === 'Enrolled' ? 'bg-gradient-to-b from-orange-400 to-orange-500' : 'bg-gradient-to-b from-slate-300 to-slate-400'}`} />
+      <div className="pl-4 pr-5 pt-5 pb-5">
         <div className="flex items-start gap-3 mb-4">
           <div className="relative shrink-0">
             <Avatar student={s} size="lg" />
@@ -311,8 +312,14 @@ const StudentModule = () => {
               {/* List header */}
               <div className={`flex items-center justify-between px-5 py-4 border-b ${dark ? 'border-slate-700/60' : 'border-slate-100'}`}>
                 <div className="flex items-center gap-3">
+                  <div className={`w-1 h-5 rounded-full ${dark ? 'bg-orange-400' : 'bg-orange-500'}`} />
                   <h3 className={`text-base font-bold ${boldText}`}>Student List</h3>
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg border ${
+                    dark
+                      ? 'bg-orange-900/20 border-orange-800/40 text-orange-300'
+                      : 'bg-orange-50 border-orange-100 text-orange-600'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${dark ? 'bg-orange-400' : 'bg-orange-500'}`} />
                     {students.length} total
                   </span>
                 </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../../utils/api';
 import { useDarkMode } from '../../context/DarkModeContext';
+import { STORAGE_URL } from '../../utils/config';
 
 const YEAR_PREFIX = { '1st Year': '1', '2nd Year': '2', '3rd Year': '3', '4th Year': '4' };
 const PROGRAM_CODE = { 'Information Technology': 'IT', 'Computer Science': 'CS' };
@@ -37,7 +38,10 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
   const selectCls     = `w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${dark ? 'bg-slate-800 border-slate-600 text-slate-100 focus:border-brand-400' : 'bg-white border-slate-300 text-slate-900 focus:border-brand-500'}`;
   const labelCls      = `block text-xs font-bold uppercase tracking-wider mb-1.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`;
   const boldText      = dark ? 'text-slate-100' : 'text-slate-900';
-  const sectionHead   = `text-sm font-bold uppercase tracking-wider mb-4 border-b pb-2 ${dark ? 'text-brand-400 border-slate-700' : 'text-brand-500 border-brand-100'}`;
+  const sectionHead = `text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`;
+  const SectionTitle = ({ label }) => (
+    <p className={sectionHead}><span className="w-4 h-px bg-orange-400" />{label}</p>
+  );
   const cardBg        = dark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200';
   const skillCardBase = dark ? 'border-slate-700 bg-slate-800/60' : 'border-slate-200 bg-white';
   const skillCardSel  = dark ? 'border-brand-500 bg-brand-900/20' : 'border-brand-400 bg-brand-50/30';
@@ -308,21 +312,39 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
       <div className="flex min-h-full items-center justify-center p-4 sm:p-0">
         <div className={`relative transform overflow-hidden rounded-2xl text-left shadow-xl sm:my-8 sm:w-full sm:max-w-4xl border ${modalBg}`}>
 
-          {/* Header */}
-          <div className={`px-6 pt-5 pb-4 border-b flex justify-between items-center ${headerBg}`}>
-            <h3 className={`text-xl font-bold ${boldText}`}>Edit Student Profile</h3>
-            <button onClick={onClose} className={`${dark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-400 hover:text-slate-500'}`}>
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
+          {/* Hero Header */}
+          <div className={`px-6 pt-6 pb-5 border-b ${dark ? 'bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700/60' : 'bg-gradient-to-br from-orange-50/60 to-white border-slate-100'}`}>
+            <div className="flex items-center gap-4">
+              {/* Avatar — shows photo if available, otherwise initials */}
+              {(() => {
+                const photo = student?.profile_photo;
+                const src = photo ? (photo.startsWith('http') ? photo : `${STORAGE_URL}/${photo}`) : null;
+                if (src) return (
+                  <img src={src} alt="profile"
+                    className="w-14 h-14 rounded-2xl object-cover shrink-0 shadow-lg ring-2 ring-orange-400/40"
+                    onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }} />
+                );
+                return (
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-white flex items-center justify-center font-extrabold text-lg shadow-lg shadow-orange-500/30 shrink-0">
+                    {formData.first_name?.[0] || ''}{formData.last_name?.[0] || ''}
+                  </div>
+                );
+              })()}
+              <div>
+                <p className={`text-[10px] font-bold uppercase tracking-widest mb-0.5 ${dark ? 'text-orange-400' : 'text-orange-500'}`}>Editing Student</p>
+                <h3 className={`text-lg font-extrabold leading-tight ${boldText}`}>{formData.first_name || 'Student'} {formData.last_name}</h3>
+                <p className={`text-xs mt-0.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{formData.program || 'No program'} · {formData.year_level}</p>
+              </div>
+            </div>
           </div>
 
           {/* Tabs */}
           <div className={`flex border-b px-6 ${tabsBg}`}>
             {SECTIONS_TABS.map(tab => (
               <button key={tab.id} type="button" onClick={() => setActiveSection(tab.id)}
-                className={`px-5 py-3 text-sm font-medium transition-all relative ${activeSection === tab.id ? 'text-brand-600' : `${subText} hover:text-slate-700`}`}>
+                className={`px-5 py-3 text-sm font-medium transition-all relative ${activeSection === tab.id ? 'text-orange-500' : `${subText} hover:text-slate-700`}`}>
                 {tab.label}
-                {activeSection === tab.id && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-brand-600" />}
+                {activeSection === tab.id && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-orange-500 shadow-[0_-2px_8px_rgba(249,115,22,0.4)]" />}
               </button>
             ))}
           </div>
@@ -335,7 +357,7 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
               <div className="space-y-5">
                 {/* Personal Information */}
                 <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/50 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
-                  <h4 className={sectionHead}>Personal Information</h4>
+                  <SectionTitle label="Personal Information" />
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div><label className={labelCls}>Student ID</label>
                       <input type="text" name="student_number" value={formData.student_number || ''} onChange={handleChange} ref={el => fieldRefs.current.student_number = el} className={inpErr('student_number')} />
@@ -343,6 +365,8 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
                     <div><label className={labelCls}>First Name *</label>
                       <input type="text" name="first_name" value={formData.first_name} onChange={handleChange} ref={el => fieldRefs.current.first_name = el} className={inpErr('first_name')} />
                       <ErrMsg field="first_name" /></div>
+                    <div><label className={labelCls}>Middle Name</label>
+                      <input type="text" name="middle_name" value={formData.middle_name} onChange={handleChange} className={inputCls} /></div>
                     <div><label className={labelCls}>Last Name *</label>
                       <input type="text" name="last_name" value={formData.last_name} onChange={handleChange} ref={el => fieldRefs.current.last_name = el} className={inpErr('last_name')} />
                       <ErrMsg field="last_name" /></div>
@@ -365,7 +389,7 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
 
                 {/* Academic Information */}
                 <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/50 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
-                  <h4 className={sectionHead}>Academic Information</h4>
+                  <SectionTitle label="Academic Information" />
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div><label className={labelCls}>Course *</label>
                       <select name="program" value={formData.program} onChange={handleChange} ref={el => fieldRefs.current.program = el} className={selErr('program')}>
@@ -397,7 +421,7 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
 
                 {/* Affiliations */}
                 <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/50 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
-                  <h4 className={sectionHead}>Affiliations & Organizations</h4>
+                  <SectionTitle label="Affiliations" />
                   {affiliations.map((a, i) => (
                     <div key={i} className="grid grid-cols-4 gap-3 mb-3 items-end">
                       <div className="col-span-2">
@@ -428,7 +452,7 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
 
                 {/* Non-Academic Activities */}
                 <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/50 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
-                  <h4 className={sectionHead}>Non-Academic Activities</h4>
+                  <SectionTitle label="Non-Academic Activities" />
                   {activities.map((a, i) => (
                     <div key={i} className="grid grid-cols-3 gap-3 mb-3 items-end">
                       <div><label className={labelCls}>Activity</label>
@@ -449,7 +473,7 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
 
                 {/* Academic History */}
                 <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/50 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
-                  <h4 className={sectionHead}>Academic History</h4>
+                  <SectionTitle label="Academic History" />
                   {acadHistories.map((h, i) => (
                     <div key={i} className="grid grid-cols-3 gap-3 mb-3 items-end">
                       <div><label className={labelCls}>School</label>
@@ -510,7 +534,7 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
             {/* ── Skills ── */}
             {activeSection === 'skills' && (
               <div>
-                <h4 className={sectionHead}>Skills & Certifications</h4>
+                <SectionTitle label="Skills & Certifications" />
                 {allSkills.length === 0 ? (
                   <p className={`text-sm italic ${subText}`}>No skills available in the system.</p>
                 ) : (
@@ -585,10 +609,13 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
 
           {/* Footer */}
           <div className={`px-6 py-3 flex justify-end gap-3 border-t ${footerBg}`}>
-            <button type="button" onClick={onClose} className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${cancelBtn}`}>Cancel</button>
-            <button type="button" onClick={handleSubmit} disabled={isSubmitting} className="px-5 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-500 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
-              {isSubmitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
-              Save All Changes
+            <button type="button" onClick={onClose}
+              className={`px-4 py-2 text-sm font-semibold rounded-xl transition-colors ${dark ? 'bg-slate-700 hover:bg-slate-600 text-slate-200' : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-sm'}`}>
+              Cancel
+            </button>
+            <button type="button" onClick={handleSubmit} disabled={isSubmitting}
+              className="px-5 py-2 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-colors shadow-lg shadow-orange-500/30 disabled:opacity-50 flex items-center gap-2 min-w-[130px] justify-center">
+              {isSubmitting ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Saving...</> : 'Save All Changes'}
             </button>
           </div>
         </div>

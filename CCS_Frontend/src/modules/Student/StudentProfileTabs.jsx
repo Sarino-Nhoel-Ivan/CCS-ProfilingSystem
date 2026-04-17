@@ -162,194 +162,172 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
 
       {/* Tab Content */}
       {activeTab === 'personal_details' && (
-        <div className="space-y-10">
+        <div className="space-y-5">
 
-          {/* Basic Info + Address */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Basic Information</h3>
-              <div className="space-y-3">
-                {[
-                  ['Gender', student.gender],
-                  ['Place of Birth', student.place_of_birth],
-                  ['Nationality', student.nationality],
-                  ['Civil Status', student.civil_status],
-                  ['Religion', student.religion],
-                ].map(([label, val]) => (
-                  <div key={label} className="flex justify-between">
-                    <span className={`text-sm ${labelRow}`}>{label}</span>
-                    <span className={`font-medium text-sm ${valueRow}`}>{val || 'N/A'}</span>
+          {/* Row 1: Basic Info + Enrollment */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Basic Information</p>
+              <div className="space-y-0">
+                {[['Gender',student.gender],['Place of Birth',student.place_of_birth],['Nationality',student.nationality],['Civil Status',student.civil_status],['Religion',student.religion]].map(([label,val])=>(
+                  <div key={label} className={`flex items-center justify-between py-2.5 border-b ${dark?'border-slate-700/60':'border-slate-100'}`}>
+                    <span className={`text-xs font-semibold ${dark?'text-slate-500':'text-slate-400'}`}>{label}</span>
+                    <span className={`text-sm font-semibold ${valueRow}`}>{val||'N/A'}</span>
                   </div>
                 ))}
-                <div className="flex justify-between items-baseline">
-                  <span className={`text-sm ${labelRow}`}>Birth Date</span>
+                <div className={`flex items-center justify-between py-2.5`}>
+                  <span className={`text-xs font-semibold ${dark?'text-slate-500':'text-slate-400'}`}>Birth Date</span>
                   <div className="text-right">
-                    <span className={`font-medium text-sm ${valueRow}`}>
-                      {student.birth_date ? new Date(student.birth_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}
-                    </span>
-                    {getAge(student.birth_date) !== null && (
-                      <span className={`ml-2 text-xs ${subText}`}>({getAge(student.birth_date)} yrs old)</span>
-                    )}
+                    <span className={`text-sm font-semibold ${valueRow}`}>{student.birth_date?new Date(student.birth_date).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):'N/A'}</span>
+                    {getAge(student.birth_date)!==null&&<span className={`ml-2 text-xs ${subText}`}>({getAge(student.birth_date)} yrs old)</span>}
                   </div>
                 </div>
               </div>
-
-              <h3 className={`text-lg font-bold mt-8 mb-4 border-b pb-2 ${boldText} ${divider}`}>Enrollment Details</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className={`text-sm ${labelRow}`}>Date Enrolled</span>
-                  <span className={`font-medium text-sm ${valueRow}`}>
-                    {student.date_enrolled ? new Date(student.date_enrolled).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}
+            </div>
+            <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Enrollment Details</p>
+              <div className="space-y-0">
+                {[['Date Enrolled',student.date_enrolled?new Date(student.date_enrolled).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):'N/A'],['Section',student.section],['Student Type',student.student_type]].map(([label,val])=>(
+                  <div key={label} className={`flex items-center justify-between py-2.5 border-b ${dark?'border-slate-700/60':'border-slate-100'}`}>
+                    <span className={`text-xs font-semibold ${dark?'text-slate-500':'text-slate-400'}`}>{label}</span>
+                    <span className={`text-sm font-semibold ${valueRow}`}>{val||'N/A'}</span>
+                  </div>
+                ))}
+                <div className={`flex items-center justify-between py-2.5 border-b ${dark?'border-slate-700/60':'border-slate-100'}`}>
+                  <span className={`text-xs font-semibold ${dark?'text-slate-500':'text-slate-400'}`}>Enrollment Status</span>
+                  <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${student.enrollment_status==='Enrolled'?(dark?'bg-green-900/40 text-green-300 border border-green-700':'bg-green-100 text-green-700 border border-green-200'):(dark?'bg-slate-700 text-slate-300 border border-slate-600':'bg-slate-100 text-slate-600 border border-slate-200')}`}>
+                    {student.enrollment_status==='Enrolled'&&<span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"/>}{student.enrollment_status||'N/A'}
                   </span>
                 </div>
-                {student.section && (
-                  <div className="flex justify-between">
-                    <span className={`text-sm ${labelRow}`}>Section</span>
-                    <span className={`font-medium text-sm ${valueRow}`}>{student.section}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className={`text-sm ${labelRow}`}>Student Type</span>
-                  <span className={`font-medium text-sm ${valueRow}`}>{student.student_type}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className={`text-sm ${labelRow}`}>Enrollment Status</span>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
-                    student.enrollment_status === 'Enrolled'
-                      ? (dark ? 'bg-green-900/40 text-green-300 border border-green-700' : 'bg-green-100 text-green-800 border border-green-200')
-                      : (dark ? 'bg-slate-700 text-slate-300 border border-slate-600' : 'bg-slate-100 text-slate-600 border border-slate-200')
-                  }`}>{student.enrollment_status || 'N/A'}</span>
-                </div>
               </div>
-
-              <h3 className={`text-lg font-bold mt-8 mb-4 border-b pb-2 ${boldText} ${divider}`}>Contact Details</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className={`text-sm ${labelRow}`}>Email Address</span>
-                  <span className="font-medium text-sm text-brand-500">{student.email}</span>
+              <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mt-5 mb-3 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Contact Details</p>
+              <div className="space-y-0">
+                <div className={`flex items-center justify-between py-2.5 border-b ${dark?'border-slate-700/60':'border-slate-100'}`}>
+                  <span className={`text-xs font-semibold ${dark?'text-slate-500':'text-slate-400'}`}>Email</span>
+                  <span className={`text-sm font-semibold ${dark?'text-orange-400':'text-orange-600'}`}>{student.email||'N/A'}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className={`text-sm ${labelRow}`}>Contact Number</span>
-                  <span className={`font-medium text-sm ${valueRow}`}>{student.contact_number}</span>
+                <div className={`flex items-center justify-between py-2.5 ${student.alternate_contact_number?`border-b ${dark?'border-slate-700/60':'border-slate-100'}`:''}`}>
+                  <span className={`text-xs font-semibold ${dark?'text-slate-500':'text-slate-400'}`}>Contact Number</span>
+                  <span className={`text-sm font-semibold ${valueRow}`}>{student.contact_number||'N/A'}</span>
                 </div>
-                {student.alternate_contact_number && (
-                  <div className="flex justify-between">
-                    <span className={`text-sm ${labelRow}`}>Alt. Number</span>
-                    <span className={`font-medium text-sm ${valueRow}`}>{student.alternate_contact_number}</span>
+                {student.alternate_contact_number&&(
+                  <div className="flex items-center justify-between py-2.5">
+                    <span className={`text-xs font-semibold ${dark?'text-slate-500':'text-slate-400'}`}>Alt. Number</span>
+                    <span className={`text-sm font-semibold ${valueRow}`}>{student.alternate_contact_number}</span>
                   </div>
                 )}
               </div>
             </div>
+          </div>
 
-            <div>
-              <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Address</h3>
-              <div className={`space-y-3 p-4 rounded-lg ${addrBox}`}>
-                {[['Street', student.street], ['Barangay', student.barangay]].map(([label, val]) => (
-                  <p key={label} className="text-sm">
-                    <span className={`block text-xs uppercase mb-1 ${addrLabel}`}>{label}</span>
-                    {val || 'N/A'}
-                  </p>
+          {/* Row 2: Address + Guardians */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Address</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[{label:'Street',value:student.street,full:true},{label:'Barangay',value:student.barangay,full:true},{label:'City',value:student.city},{label:'Province',value:student.province},{label:'Zip Code',value:student.zip_code}].map(({label,value,full})=>(
+                  <div key={label} className={`${full?'col-span-2':''} ${dark?'bg-slate-800 border-slate-700':'bg-white border-slate-100'} border rounded-xl p-3`}>
+                    <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${dark?'text-slate-500':'text-slate-400'}`}>{label}</p>
+                    <p className={`text-sm font-semibold ${valueRow}`}>{value||'N/A'}</p>
+                  </div>
                 ))}
-                <div className="grid grid-cols-2 gap-4">
-                  <p className="text-sm"><span className={`block text-xs uppercase mb-1 ${addrLabel}`}>City</span>{student.city}</p>
-                  <p className="text-sm"><span className={`block text-xs uppercase mb-1 ${addrLabel}`}>Province</span>{student.province || 'N/A'}</p>
-                </div>
-                <p className="text-sm"><span className={`block text-xs uppercase mb-1 ${addrLabel}`}>Zip Code</span>{student.zip_code || 'N/A'}</p>
               </div>
-
-              <h3 className={`text-lg font-bold mt-8 mb-4 border-b pb-2 ${boldText} ${divider}`}>Guardians</h3>
-              {student.guardians && student.guardians.length > 0 ? (
-                <div className="space-y-4">
-                  {student.guardians.map(g => (
-                    <div key={g.id} className={`border text-sm p-3 rounded-lg shadow-sm ${cardBdr}`}>
-                      <p className={`font-bold ${boldText}`}>{g.full_name} <span className={`font-normal text-xs ${subText}`}>({g.relationship})</span></p>
-                      <p className={`text-xs mt-1 ${subText}`}>{g.contact_number}</p>
-                      <p className={`text-xs ${subText}`}>{g.email}</p>
+            </div>
+            <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Guardians</p>
+              {student.guardians&&student.guardians.length>0?(
+                <div className="space-y-3">
+                  {student.guardians.map(g=>(
+                    <div key={g.id} className={`flex items-start gap-3 p-3 rounded-xl border ${dark?'bg-slate-800 border-slate-700':'bg-white border-slate-100'}`}>
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${dark?'bg-orange-900/40 text-orange-400':'bg-orange-50 text-orange-600'}`}>{g.full_name?.[0]||'?'}</div>
+                      <div><p className={`text-sm font-bold ${boldText}`}>{g.full_name}<span className={`ml-1.5 text-xs font-normal ${subText}`}>({g.relationship})</span></p>
+                        <p className={`text-xs mt-0.5 ${subText}`}>{g.contact_number}</p>
+                        <p className={`text-xs ${subText}`}>{g.email}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
-              ) : (
-                <p className={`text-sm italic ${subText}`}>No guardians recorded.</p>
+              ):(
+                <div className={`flex flex-col items-center justify-center py-8 rounded-xl border ${dark?'border-slate-700 bg-slate-800/40':'border-slate-100 bg-white'}`}>
+                  <svg className={`w-8 h-8 mb-2 ${dark?'text-slate-600':'text-slate-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                  <p className={`text-xs ${subText}`}>No guardians recorded</p>
+                </div>
               )}
             </div>
           </div>
 
-          {/* Medical Records + Emergency Contacts */}
-          <div className={`grid grid-cols-2 gap-6 pt-4 border-t ${divider}`}>
-            <div>
-              <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Medical Records</h3>
-              {student.medical_histories && student.medical_histories.length > 0 ? (
-                <div className="space-y-4">
-                  {student.medical_histories.map(mh => (
-                    <div key={mh.id} className={`border p-4 rounded-xl ${medCard}`}>
-                      <div className={`flex justify-between items-center mb-3 pb-3 border-b ${medHead}`}>
-                        <span className={`font-semibold text-sm ${dark ? 'text-slate-300' : 'text-slate-700'}`}>Blood Type</span>
-                        <span className={`font-bold px-3 py-1 rounded text-sm ${medBlood}`}>{mh.bloodtype || 'Unknown'}</span>
+          {/* Row 3: Medical + Emergency */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Medical Records</p>
+              {student.medical_histories&&student.medical_histories.length>0?(
+                <div className="space-y-3">
+                  {student.medical_histories.map(mh=>(
+                    <div key={mh.id} className={`rounded-xl border p-4 ${medCard}`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className={`text-xs font-bold uppercase tracking-wider ${dark?'text-slate-400':'text-slate-500'}`}>Blood Type</span>
+                        <span className={`font-bold text-sm px-3 py-1 rounded-lg ${medBlood}`}>{mh.bloodtype||'Unknown'}</span>
                       </div>
-                      <div>
-                        <span className={`text-xs font-semibold uppercase block mb-1 ${condLabel}`}>Existing Conditions / Allergies</span>
-                        <p className={`text-sm ${condText}`}>{mh.existing_conditions || 'None reported'}</p>
-                      </div>
+                      <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${condLabel}`}>Conditions / Allergies</p>
+                      <p className={`text-sm ${condText}`}>{mh.existing_conditions||'None reported'}</p>
                     </div>
                   ))}
                 </div>
-              ) : (
-                <p className={`text-sm italic ${subText}`}>No medical history recorded.</p>
+              ):(
+                <div className={`flex flex-col items-center justify-center py-8 rounded-xl border ${dark?'border-slate-700 bg-slate-800/40':'border-slate-100 bg-white'}`}>
+                  <svg className={`w-8 h-8 mb-2 ${dark?'text-slate-600':'text-slate-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                  <p className={`text-xs ${subText}`}>No medical history recorded</p>
+                </div>
               )}
             </div>
-            <div>
-              <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Emergency Contacts</h3>
-              {student.medical_histories && student.medical_histories.length > 0 && student.medical_histories[0].emergency_contact_name ? (
+            <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Emergency Contacts</p>
+              {student.medical_histories&&student.medical_histories.length>0?(
                 <div className="space-y-3">
-                  {student.medical_histories.map(mh => mh.emergency_contact_name ? (
-                    <div key={mh.id} className={`flex items-center gap-4 p-4 rounded-xl ${emergBox}`}>
-                      <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${emergIcon}`}>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                  {student.medical_histories.map(mh=>(
+                    <div key={mh.id} className={`flex items-center gap-3 p-3 rounded-xl border ${dark?'bg-slate-800 border-slate-700':'bg-white border-slate-100'}`}>
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${emergIcon}`}>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
                       </div>
-                      <div className="min-w-0">
-                        <p className={`font-bold text-sm ${boldText}`}>{mh.emergency_contact_name}</p>
-                        <p className="text-sm text-brand-500 font-medium">{mh.emergency_contact_number}</p>
-                        {mh.emergency_contact_relationship && (
-                          <span className={`inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${dark ? 'bg-brand-500/20 text-brand-300 border-brand-500/30' : 'bg-brand-50 text-brand-600 border-brand-200'}`}>
-                            {mh.emergency_contact_relationship}
-                          </span>
-                        )}
-                        {mh.emergency_contact_address && (
-                          <p className={`text-xs mt-1 truncate ${subText}`}>📍 {mh.emergency_contact_address}</p>
-                        )}
+                      <div>
+                        <p className={`text-sm font-bold ${boldText}`}>{mh.emergency_contact_name||'N/A'}</p>
+                        <p className={`text-xs font-semibold ${dark?'text-orange-400':'text-orange-600'}`}>{mh.emergency_contact_number||'N/A'}</p>
                       </div>
                     </div>
                   ) : null)}
                 </div>
-              ) : (
-                <p className={`text-sm italic ${subText}`}>No emergency contacts recorded.</p>
+              ):(
+                <div className={`flex flex-col items-center justify-center py-8 rounded-xl border ${dark?'border-slate-700 bg-slate-800/40':'border-slate-100 bg-white'}`}>
+                  <svg className={`w-8 h-8 mb-2 ${dark?'text-slate-600':'text-slate-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                  <p className={`text-xs ${subText}`}>No emergency contacts recorded</p>
+                </div>
               )}
             </div>
           </div>
 
-          {/* Affiliations */}
-          <div className={`pt-4 border-t ${divider}`}>
-            <h3 className={`text-lg font-bold mb-4 border-b pb-2 ${boldText} ${divider}`}>Affiliations & Organizations</h3>
-            {student.affiliations && student.affiliations.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {student.affiliations.map(aff => (
-                  <div key={aff.id} className={`border p-4 rounded-xl flex items-start space-x-4 ${affCard}`}>
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${affIcon}`}>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+          {/* Row 4: Affiliations */}
+          <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+            <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Affiliations & Organizations</p>
+            {student.affiliations&&student.affiliations.length>0?(
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {student.affiliations.map(aff=>(
+                  <div key={aff.id} className={`flex items-start gap-3 p-3 rounded-xl border ${affCard}`}>
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${affIcon}`}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                     </div>
                     <div>
-                      <h4 className={`font-bold text-sm ${boldText}`}>{aff.organization_name}</h4>
-                      <p className={`text-xs mb-1 ${subText}`}>{aff.position} • {aff.status}</p>
-                      <p className={`text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
-                        Joined: {aff.date_joined ? new Date(aff.date_joined).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}
-                        {aff.date_ended ? ` — Ended: ${new Date(aff.date_ended).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}` : ' — Present'}
-                      </p>
+                      <p className={`text-sm font-bold ${boldText}`}>{aff.organization_name}</p>
+                      <p className={`text-xs ${subText}`}>{aff.position} · {aff.status}</p>
+                      <p className={`text-xs mt-0.5 ${dark?'text-slate-500':'text-slate-400'}`}>Joined: {aff.date_joined}{aff.date_ended?` — Ended: ${aff.date_ended}`:''}</p>
                     </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className={`text-sm italic ${subText}`}>No affiliations recorded.</p>
+            ):(
+              <div className={`flex flex-col items-center justify-center py-8 rounded-xl border ${dark?'border-slate-700 bg-slate-800/40':'border-slate-100 bg-white'}`}>
+                <svg className={`w-8 h-8 mb-2 ${dark?'text-slate-600':'text-slate-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <p className={`text-xs ${subText}`}>No affiliations recorded</p>
+              </div>
             )}
           </div>
 
@@ -367,10 +345,9 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
                 const isAcademic  = skill.skill_category?.toLowerCase() === 'academic';
                 return (
                   <div key={skill.id} className={`relative rounded-2xl border overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-xl group ${dark ? `skillCard hover:shadow-brand-500/20 hover:border-brand-500/40` : `skillCard hover:shadow-orange-200/80 hover:border-orange-300/60`} ${skillCard}`}>
-                    {/* Top accent */}
-                    <div className={`h-1 w-full ${isAcademic ? 'bg-gradient-to-r from-brand-400 to-brand-600' : 'bg-gradient-to-r from-orange-400 to-orange-500'}`} />
-
-                    <div className="p-5">
+                    {/* Left accent bar */}
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl ${isAcademic ? 'bg-gradient-to-b from-brand-400 to-brand-600' : 'bg-gradient-to-b from-orange-400 to-orange-500'}`} />
+                    <div className="pl-4 pr-5 pt-5 pb-5">
                       {/* Category badge */}
                       <div className="flex items-center justify-between mb-3">
                         <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${isAcademic ? (dark ? 'bg-brand-900/40 text-brand-300' : 'bg-brand-50 text-brand-600') : (dark ? 'bg-orange-900/40 text-orange-300' : 'bg-orange-50 text-orange-600')}`}>
@@ -468,10 +445,9 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
 
                 return (
                   <div key={ah.id} className={`relative rounded-2xl border overflow-hidden transition-all duration-200 hover:shadow-lg ${dark ? 'bg-slate-800/60 border-slate-700 hover:border-slate-600' : 'bg-white border-slate-200 hover:border-slate-300'}`}>
-                    {/* Top accent */}
-                    <div className={`h-1 w-full ${isGoodStanding ? 'bg-gradient-to-r from-green-400 to-emerald-500' : 'bg-gradient-to-r from-yellow-400 to-amber-500'}`} />
-
-                    <div className="p-5">
+                    {/* Left accent bar */}
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl ${isGoodStanding ? 'bg-gradient-to-b from-green-400 to-emerald-500' : 'bg-gradient-to-b from-yellow-400 to-amber-500'}`} />
+                    <div className="pl-4 pr-5 pt-5 pb-5">
                       <div className="flex items-start gap-4">
 
                         {/* GPA Ring */}

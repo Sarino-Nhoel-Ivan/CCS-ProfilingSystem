@@ -25,7 +25,7 @@ class FacultyController extends Controller
             'position'          => 'required|string|max:255',
             'employment_status' => 'required|string|max:255',
             'hire_date'         => 'required|date',
-            'email'             => ['required','email','unique:faculties,email','max:255','regex:/^[a-zA-Z0-9._%+\-]+@pnc\.edu\.com$/'],
+            'email'             => ['required','email','unique:faculties,email','max:255'],
             'contact_number'    => 'nullable|string|max:255',
             'office_location'   => 'nullable|string|max:255',
             'office_hours'      => 'nullable|string|max:255',
