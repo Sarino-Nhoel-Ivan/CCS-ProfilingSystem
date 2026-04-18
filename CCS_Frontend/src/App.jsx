@@ -166,9 +166,9 @@ function App() {
       <Route path="/login" element={<Navigate to="/student/login" replace />} />
       <Route
         path="/student/login"
-        element={!user
-          ? <StudentLogin onLogin={handleLogin} />
-          : <Navigate to={dashboardPath(user)} replace />}
+        element={user?.role === 'student'
+          ? <Navigate to={dashboardPath(user)} replace />
+          : <StudentLogin onLogin={handleLogin} />}
       />
       {/* student/signup removed — accounts created by admin only */}
       <Route path="/student/signup" element={<Navigate to="/student/login" replace />} />
@@ -176,9 +176,9 @@ function App() {
       {/* Faculty routes */}
       <Route
         path="/faculty/login"
-        element={!user
-          ? <FacultyLogin onLogin={handleLogin} />
-          : <Navigate to={dashboardPath(user)} replace />}
+        element={user?.role === 'faculty'
+          ? <Navigate to={dashboardPath(user)} replace />
+          : <FacultyLogin onLogin={handleLogin} />}
       />
       <Route
         path="/faculty/signup"
