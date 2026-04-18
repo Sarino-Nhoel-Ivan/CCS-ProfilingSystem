@@ -93,7 +93,7 @@ class FacultyController extends Controller
         ]);
 
         $faculty->update($validated);
-        return response()->json($faculty->load('department'));
+        return response()->json($faculty->fresh()->load('department'));
     }
 
     public function destroy(Faculty $faculty)

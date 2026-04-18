@@ -86,14 +86,21 @@ const StudentCard = ({ student: s, onSelect, dark }) => {
   );
 };
 
-const StudentModule = () => {
+const StudentModule = ({ students: propStudents = [], skills: propSkills = [], courses: propCourses = [], loading: propLoading = false, onReload }) => {
   const dark = useDarkMode();
   const navigate = useNavigate();
   const { id: routeId } = useParams();
   const [activeTab, setActiveTab] = useState('overview');
-  const [students, setStudents] = useState([]);
-  const [stats, setStats] = useState({ total: 0, enrolled: 0, notEnrolled: 0 });
-  const [isLoading, setIsLoading] = useState(true);
+  // Use props directly — no local fetching, no local loading state
+  const students        = propStudents;
+  const availableSkills = propSkills;
+  const availableCourses = propCourses;
+  const isLoading       = propLoading;
+  const stats = {
+    total:      students.length,
+    enrolled:   students.filter(s => s.enrollment_status === 'Enrolled').length,
+    notEnrolled: students.filter(s => s.enrollment_status === 'Not Enrolled').length,
+  };
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -108,8 +115,6 @@ const StudentModule = () => {
   const [filterCourse, setFilterCourse] = useState('');
   const [filterAffil, setFilterAffil] = useState('');
   const [filterYear, setFilterYear] = useState('');
-  const [availableSkills, setAvailableSkills] = useState([]);
-  const [availableCourses, setAvailableCourses] = useState([]);
 
   const card      = dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-100';
   const tabBar    = dark ? 'bg-slate-800/50 border-slate-700/60' : 'bg-slate-50/50 border-slate-100';
@@ -124,32 +129,6 @@ const StudentModule = () => {
   const selectCls = dark
     ? 'bg-slate-800 border-slate-600 text-slate-200 focus:border-orange-400'
     : 'bg-white border-slate-200 text-slate-700 focus:border-orange-400';
-
-  useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        setIsLoading(true);
-        const [data, skills, courses] = await Promise.all([
-          api.students.getAll(),
-          api.skills.getAll().catch(() => []),
-          api.courses.getAll().catch(() => []),
-        ]);
-        setStudents(data);
-        setAvailableSkills(skills);
-        setAvailableCourses(courses);
-        setStats({
-          total: data.length,
-          enrolled: data.filter(s => s.enrollment_status === 'Enrolled').length,
-          notEnrolled: data.filter(s => s.enrollment_status === 'Not Enrolled').length,
-        });
-      } catch (error) {
-        console.error('Failed to load students:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchStudents();
-  }, []);
 
   const handleStudentClick = async (id) => {
     try {
@@ -167,23 +146,7 @@ const StudentModule = () => {
 
   useEffect(() => { if (routeId) handleStudentClick(routeId); }, []); // eslint-disable-line
 
-  const reloadStudents = async () => {
-    try {
-      setIsLoading(true);
-      const data = await api.students.getAll();
-      setStudents(data);
-      setStats({
-        total: data.length,
-        enrolled: data.filter(s => s.enrollment_status === 'Enrolled').length,
-        notEnrolled: data.filter(s => s.enrollment_status === 'Not Enrolled').length,
-      });
-      return data;
-    } catch (error) {
-      console.error('Failed to reload students:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const reloadStudents = async () => { if (onReload) await onReload(); };
 
   const handleEditStudent = () => setIsEditModalOpen(true);
   const handleDeleteStudent = (id) => { setStudentToDelete(id); setIsDeleteModalOpen(true); };

@@ -67,7 +67,7 @@ const FacultyCard = ({ faculty: f, onSelect, onEdit, onDelete, dark }) => {
 };
 
 // ── Main Module ────────────────────────────────────────────────────────────
-const FacultyModule = () => {
+const FacultyModule = ({ faculties: propFaculties = [], loading: propLoading = false, onReload }) => {
   const dark = useDarkMode();
   const navigate = useNavigate();
   const { id: routeId } = useParams();
@@ -82,9 +82,13 @@ const FacultyModule = () => {
     ? 'bg-slate-800 border-slate-600 text-slate-100 placeholder-slate-500 focus:border-orange-400'
     : 'bg-white border-slate-200 text-slate-700 placeholder-slate-400 focus:border-orange-400';
 
-  const [faculties, setFaculties]   = useState([]);
-  const [stats, setStats]           = useState({ total: 0, fullTime: 0, partTime: 0 });
-  const [isLoading, setIsLoading]   = useState(true);
+  const faculties  = propFaculties;
+  const isLoading  = propLoading;
+  const stats = {
+    total:    faculties.length,
+    fullTime: faculties.filter(f => f.employment_status === 'Full-Time').length,
+    partTime: faculties.filter(f => f.employment_status !== 'Full-Time').length,
+  };
   const [activeTab, setActiveTab]   = useState('overview');
   const [viewMode, setViewMode]     = useState('list');
   const [listSearch, setListSearch] = useState('');
@@ -96,25 +100,8 @@ const FacultyModule = () => {
   const [facultyToDelete, setFacultyToDelete]     = useState(null);
   const [selectedFaculty, setSelectedFaculty]     = useState(null);
 
-  const reloadFaculties = async () => {
-    try {
-      setIsLoading(true);
-      const data = await api.faculties.getAll();
-      setFaculties(data);
-      setStats({
-        total:    data.length,
-        fullTime: data.filter(f => f.employment_status === 'Full-Time').length,
-        partTime: data.filter(f => f.employment_status !== 'Full-Time').length,
-      });
-      return data;
-    } catch (err) {
-      console.error('Failed to load faculties:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const reloadFaculties = async () => { if (onReload) await onReload(); };
 
-  useEffect(() => { reloadFaculties(); }, []);
   useEffect(() => {
     if (routeId) {
       api.faculties.get(routeId)

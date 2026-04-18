@@ -1,5 +1,26 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://ccs-profilingsystem-production.up.railway.app/api';
 
+// ── In-memory cache ────────────────────────────────────────────────────────
+// Stores fetched list data so switching tabs never re-fetches or shows blank.
+// Mutations (create/update/delete) call cache.bust(key) to force a fresh load.
+export const cache = {
+  _store: {},
+  get(key)       { return this._store[key]; },
+  set(key, data) { this._store[key] = data; },
+  bust(key)      { delete this._store[key]; },
+  bustAll()      { this._store = {}; },
+};
+
+// Wraps a getAll fetch with cache-aside logic.
+// Returns cached data immediately if available, otherwise fetches and caches.
+const cachedGet = async (key, fetcher) => {
+  const hit = cache.get(key);
+  if (hit !== undefined) return hit;
+  const data = await fetcher();
+  cache.set(key, data);
+  return data;
+};
+
 export const fetchApi = async (endpoint, options = {}) => {
   const token = localStorage.getItem('auth_token');
   const defaultHeaders = {
@@ -28,11 +49,11 @@ export const fetchApi = async (endpoint, options = {}) => {
 
 export const api = {
   students: {
-    getAll: () => fetchApi('/students'),
+    getAll: () => cachedGet('students', () => fetchApi('/students')),
     get: (id) => fetchApi(`/students/${id}`),
-    create: (data) => fetchApi('/students', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => fetchApi(`/students/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id) => fetchApi(`/students/${id}`, { method: 'DELETE' }),
+    create: (data) => { cache.bust('students'); return fetchApi('/students', { method: 'POST', body: JSON.stringify(data) }); },
+    update: (id, data) => { cache.bust('students'); return fetchApi(`/students/${id}`, { method: 'PUT', body: JSON.stringify(data) }); },
+    delete: (id) => { cache.bust('students'); return fetchApi(`/students/${id}`, { method: 'DELETE' }); },
     advancedSearch: (filters) => fetchApi('/students/advanced-search', { method: 'POST', body: JSON.stringify(filters) }),
 
     // Medical Histories
@@ -89,11 +110,11 @@ export const api = {
     getAll: () => fetchApi('/courses'),
   },
   faculties: {
-    getAll: () => fetchApi('/faculties'),
+    getAll: () => cachedGet('faculties', () => fetchApi('/faculties')),
     get: (id) => fetchApi(`/faculties/${id}`),
-    create: (data) => fetchApi('/faculties', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => fetchApi(`/faculties/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id) => fetchApi(`/faculties/${id}`, { method: 'DELETE' }),
+    create: (data) => { cache.bust('faculties'); return fetchApi('/faculties', { method: 'POST', body: JSON.stringify(data) }); },
+    update: (id, data) => { cache.bust('faculties'); return fetchApi(`/faculties/${id}`, { method: 'PUT', body: JSON.stringify(data) }); },
+    delete: (id) => { cache.bust('faculties'); return fetchApi(`/faculties/${id}`, { method: 'DELETE' }); },
     uploadPhoto: (id, file) => {
       const form = new FormData();
       form.append('photo', file);
@@ -110,28 +131,28 @@ export const api = {
     },
   },
   subjects: {
-    getAll: () => fetchApi('/subjects'),
+    getAll: () => cachedGet('subjects', () => fetchApi('/subjects')),
     get: (id) => fetchApi(`/subjects/${id}`),
-    create: (data) => fetchApi('/subjects', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => fetchApi(`/subjects/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id) => fetchApi(`/subjects/${id}`, { method: 'DELETE' }),
+    create: (data) => { cache.bust('subjects'); return fetchApi('/subjects', { method: 'POST', body: JSON.stringify(data) }); },
+    update: (id, data) => { cache.bust('subjects'); return fetchApi(`/subjects/${id}`, { method: 'PUT', body: JSON.stringify(data) }); },
+    delete: (id) => { cache.bust('subjects'); return fetchApi(`/subjects/${id}`, { method: 'DELETE' }); },
   },
   sections: {
-    getAll: () => fetchApi('/sections'),
+    getAll: () => cachedGet('sections', () => fetchApi('/sections')),
   },
   schedules: {
-    getAll: () => fetchApi('/schedules'),
+    getAll: () => cachedGet('schedules', () => fetchApi('/schedules')),
     get: (id) => fetchApi(`/schedules/${id}`),
-    create: (data) => fetchApi('/schedules', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => fetchApi(`/schedules/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id) => fetchApi(`/schedules/${id}`, { method: 'DELETE' }),
+    create: (data) => { cache.bust('schedules'); return fetchApi('/schedules', { method: 'POST', body: JSON.stringify(data) }); },
+    update: (id, data) => { cache.bust('schedules'); return fetchApi(`/schedules/${id}`, { method: 'PUT', body: JSON.stringify(data) }); },
+    delete: (id) => { cache.bust('schedules'); return fetchApi(`/schedules/${id}`, { method: 'DELETE' }); },
   },
   events: {
-    getAll: () => fetchApi('/events'),
+    getAll: () => cachedGet('events', () => fetchApi('/events')),
     get: (id) => fetchApi(`/events/${id}`),
-    create: (data) => fetchApi('/events', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => fetchApi(`/events/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id) => fetchApi(`/events/${id}`, { method: 'DELETE' }),
+    create: (data) => { cache.bust('events'); return fetchApi('/events', { method: 'POST', body: JSON.stringify(data) }); },
+    update: (id, data) => { cache.bust('events'); return fetchApi(`/events/${id}`, { method: 'PUT', body: JSON.stringify(data) }); },
+    delete: (id) => { cache.bust('events'); return fetchApi(`/events/${id}`, { method: 'DELETE' }); },
   },
   skills: {
     getAll: () => fetchApi('/skills'),

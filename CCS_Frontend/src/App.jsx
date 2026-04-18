@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Topnav from './components/Topnav';
@@ -17,6 +17,7 @@ import StudentDashboard from './pages/dashboards/StudentDashboard';
 import FacultyDashboard from './pages/dashboards/FacultyDashboard';
 import { DarkModeContext } from './context/DarkModeContext';
 import { UserContext } from './context/UserContext';
+import { api, cache } from './utils/api';
 
 const getStoredUser = () => {
   try {
@@ -44,6 +45,26 @@ function AdminLayout({ user, onLogout }) {
   const [darkMode, setDarkMode] = useState(
     () => localStorage.getItem('adminDarkMode') === 'true'
   );
+
+  // ── Shared data fetched ONCE here, passed down as props ──────────────────
+  const [students,  setStudents]  = useState([]);
+  const [faculties, setFaculties] = useState([]);
+  const [events,    setEvents]    = useState([]);
+  const [skills,    setSkills]    = useState([]);
+  const [courses,   setCourses]   = useState([]);
+  const [dataLoading, setDataLoading] = useState({ students: true, faculties: true, events: true });
+
+  useEffect(() => {
+    api.students.getAll().then(setStudents).catch(() => {}).finally(() => setDataLoading(p => ({ ...p, students: false })));
+    api.faculties.getAll().then(setFaculties).catch(() => {}).finally(() => setDataLoading(p => ({ ...p, faculties: false })));
+    api.events.getAll().then(setEvents).catch(() => {}).finally(() => setDataLoading(p => ({ ...p, events: false })));
+    api.skills.getAll().then(setSkills).catch(() => {});
+    api.courses.getAll().then(setCourses).catch(() => {});
+  }, []);
+
+  const reloadStudents  = async () => { cache.bust('students');  const d = await api.students.getAll().catch(() => []); setStudents(d); };
+  const reloadFaculties = async () => { cache.bust('faculties'); const d = await api.faculties.getAll().catch(() => []); setFaculties(d); };
+  const reloadEvents    = async () => { cache.bust('events');    const d = await api.events.getAll().catch(() => []); setEvents(d); };
 
   // Derive currentModule from URL so sidebar stays in sync
   const currentModule = PATH_TO_MODULE[location.pathname] ?? 'dashboard';
@@ -86,14 +107,14 @@ function AdminLayout({ user, onLogout }) {
           <main className={`flex-1 overflow-x-hidden overflow-y-auto p-8 transition-colors duration-300 ${darkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
             <div className="max-w-7xl mx-auto space-y-6 h-full">
               <Routes>
-                <Route path="dashboard"   element={<AdminDashboard />} />
-                <Route path="users"       element={<StudentModule />} />
-                <Route path="users/:id"   element={<StudentModule />} />
-                <Route path="reports"     element={<FacultyModule />} />
-                <Route path="reports/:id" element={<FacultyModule />} />
+                <Route path="dashboard"   element={<AdminDashboard students={students} faculties={faculties} events={events} loading={dataLoading} />} />
+                <Route path="users"       element={<StudentModule students={students} skills={skills} courses={courses} loading={dataLoading.students} onReload={reloadStudents} />} />
+                <Route path="users/:id"   element={<StudentModule students={students} skills={skills} courses={courses} loading={dataLoading.students} onReload={reloadStudents} />} />
+                <Route path="reports"     element={<FacultyModule faculties={faculties} loading={dataLoading.faculties} onReload={reloadFaculties} />} />
+                <Route path="reports/:id" element={<FacultyModule faculties={faculties} loading={dataLoading.faculties} onReload={reloadFaculties} />} />
                 <Route path="instruction" element={<InstructionModule />} />
                 <Route path="scheduling"  element={<SchedulingModule />} />
-                <Route path="events"      element={<EventsModule />} />
+                <Route path="events"      element={<EventsModule events={events} loading={dataLoading.events} onReload={reloadEvents} />} />
                 <Route path="*"           element={<Navigate to="dashboard" replace />} />
               </Routes>
             </div>

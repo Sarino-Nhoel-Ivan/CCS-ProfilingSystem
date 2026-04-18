@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
-import { api } from '../../utils/api';
-import { STORAGE_URL } from '../../utils/config';
+import { useState } from 'react';
 import { useDarkMode } from '../../context/DarkModeContext';
+import { STORAGE_URL } from '../../utils/config';
 import {
   UserGroupIcon, UsersIcon, AcademicCapIcon, CalendarDaysIcon,
   StarIcon, ExclamationTriangleIcon, CheckCircleIcon, ClockIcon,
@@ -29,27 +28,15 @@ const StatCard = ({ icon: Icon, label, value, sub, gradient, iconBg, glowColor, 
   </div>
 );
 
-const AdminDashboard = () => {
+const AdminDashboard = ({ students = [], faculties = [], events = [], loading: loadingProp = {} }) => {
   const dark = useDarkMode();
-  const [students, setStudents]   = useState([]);
-  const [faculties, setFaculties] = useState([]);
-  const [events, setEvents]       = useState([]);
-  const [loading, setLoading]     = useState(true);
+  const loading = loadingProp.students || loadingProp.faculties || loadingProp.events;
 
   const card     = dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-100';
   const boldText = dark ? 'text-slate-100' : 'text-slate-800';
   const subText  = dark ? 'text-slate-400' : 'text-slate-500';
   const divider  = dark ? 'divide-slate-700/60' : 'divide-slate-100';
   const rowHover = dark ? 'hover:bg-slate-800/60' : 'hover:bg-slate-50';
-
-  useEffect(() => {
-    Promise.all([
-      api.students.getAll().catch(() => []),
-      api.faculties.getAll().catch(() => []),
-      api.events.getAll().catch(() => []),
-    ]).then(([s, f, e]) => { setStudents(s); setFaculties(f); setEvents(e); })
-      .finally(() => setLoading(false));
-  }, []);
 
   const enrolled       = students.filter(s => s.enrollment_status === 'Enrolled').length;
   const notEnrolled    = students.filter(s => s.enrollment_status !== 'Enrolled').length;

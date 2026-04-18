@@ -68,4 +68,9 @@ class Student extends Model
             ->withPivot('role')
             ->withTimestamps();
     }
+
+    public function enrollments()
+    {
+        return $this->hasMany(StudentEnrollment::class);
+    }
 }

@@ -132,3 +132,22 @@ Route::apiResource('sections',    \App\Http\Controllers\SectionController::class
 Route::apiResource('schedules',   \App\Http\Controllers\ScheduleController::class);
 Route::apiResource('events',      \App\Http\Controllers\EventController::class);
 Route::apiResource('skills',      \App\Http\Controllers\SkillController::class);
+
+// ══════════════════════════════════════════════════════════════
+// ENROLLMENT & CURRICULUM ROUTES
+// ══════════════════════════════════════════════════════════════
+use App\Http\Controllers\EnrollmentController;
+
+// Curriculum management (admin defines which subjects belong to each year/semester)
+Route::get('/curriculum-subjects',        [EnrollmentController::class, 'curriculumIndex']);
+Route::post('/curriculum-subjects',       [EnrollmentController::class, 'curriculumStore']);
+Route::delete('/curriculum-subjects/{id}',[EnrollmentController::class, 'curriculumDestroy']);
+
+// Enroll a student (auto-assigns subjects based on their year_level)
+Route::post('/students/{student}/enroll',       [EnrollmentController::class, 'enroll']);
+Route::get('/students/{student}/enrollments',   [EnrollmentController::class, 'studentEnrollments']);
+
+// Admin manages individual enrollment records
+Route::get('/enrollments',                              [EnrollmentController::class, 'allEnrollments']);
+Route::put('/enrollments/{enrollment}/assign-faculty',  [EnrollmentController::class, 'assignFaculty']);
+Route::put('/enrollments/{enrollment}',                 [EnrollmentController::class, 'updateEnrollment']);
