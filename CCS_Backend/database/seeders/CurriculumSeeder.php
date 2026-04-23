@@ -9,9 +9,10 @@ class CurriculumSeeder extends Seeder
 {
     public function run(): void
     {
-        // Only seed if subjects table is empty
-        if (DB::table('subjects')->count() > 0) {
-            $this->command->info('Subjects already exist — skipping curriculum seed.');
+        // Only seed if the curriculum hasn't been seeded yet
+        // Check for a known curriculum subject code rather than just count > 0
+        if (DB::table('subjects')->where('subject_code', 'CCS101')->exists()) {
+            $this->command->info('Curriculum already seeded — skipping.');
             return;
         }
 
