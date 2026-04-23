@@ -495,16 +495,10 @@ const ProfilePanel = ({faculty,loading,err,onReload}) => {
   const [photoUploading,setPhotoUploading]=useState(false);
   const [photoErr,setPhotoErr]=useState(null);
   const [localPhotoUrl,setLocalPhotoUrl]=useState(null);
-  const [depts,setDepts]=useState([]);
 
-  useEffect(()=>{api.departments.getAll().then(setDepts).catch(()=>{});},[]);
-  // Clear local blob preview once the reloaded faculty data arrives
   useEffect(()=>{ setLocalPhotoUrl(null); },[faculty?.profile_photo]);
 
-  const refresh=async()=>{
-    setModal(null);
-    await onReload();
-  };
+  const refresh=async()=>{ setModal(null); await onReload(); };
 
   const handlePhoto=async(e)=>{
     const file=e.target.files?.[0]; if(!file) return;
@@ -526,121 +520,116 @@ const ProfilePanel = ({faculty,loading,err,onReload}) => {
   const f=faculty;
   const fullName=[f.first_name,f.middle_name?f.middle_name[0]+'.':null,f.last_name].filter(Boolean).join(' ');
   const initials=`${f.first_name?.[0]??''}${f.last_name?.[0]??''}`.toUpperCase();
-  const photoUrl = f.profile_photo
-    ? (f.profile_photo.startsWith('http')
-        ? f.profile_photo
-        : `${import.meta.env.VITE_STORAGE_URL || 'http://localhost:8000/storage'}/${f.profile_photo}?v=${f.updated_at ?? Date.now()}`)
-    : null;
+  const photoUrl=f.profile_photo
+    ?(f.profile_photo.startsWith('http')?f.profile_photo:`${import.meta.env.VITE_STORAGE_URL||'http://localhost:8000/storage'}/${f.profile_photo}?v=${f.updated_at??Date.now()}`)
+    :null;
 
-  // StudentProfileTabs-style tokens
-  const wrap     = dark?'bg-slate-900 border-slate-700/60':'bg-white border-slate-100';
-  const boldText = dark?'text-slate-100':'text-slate-800';
-  const subText  = dark?'text-slate-400':'text-slate-500';
-  const divider  = dark?'border-slate-700/60':'border-slate-100';
-  const valueRow = dark?'text-slate-200':'text-slate-800';
-  const editBtn  = dark?'text-slate-300 bg-slate-700 hover:bg-slate-600 hover:text-slate-100':'text-slate-600 bg-slate-100 hover:bg-slate-200 hover:text-slate-900';
-  const cardBg   = dark?'bg-slate-800/40 border-slate-700/60':'bg-slate-50/60 border-slate-100';
+  const boldText=dark?'text-slate-100':'text-slate-800';
+  const subText =dark?'text-slate-400':'text-slate-500';
+  const divider =dark?'border-slate-700/60':'border-slate-100';
+  const editBtn =dark?'text-slate-300 bg-slate-700 hover:bg-slate-600':'text-slate-600 bg-slate-100 hover:bg-slate-200';
 
-  const SecHead=({label})=>(
-    <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark?'text-orange-400':'text-orange-500'}`}>
-      <span className="w-4 h-px bg-orange-400"/>{label}
-    </p>
+  /* SectionCard — matches admin/student POV */
+  const SC=({title,children})=>(
+    <div className={`rounded-2xl border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:border-orange-400/60 hover:shadow-orange-500/20 ${dark?'bg-slate-900 border-slate-700/60 hover:bg-slate-800':'bg-white border-slate-200 shadow-sm hover:bg-orange-50/40'}`}>
+      <div className={`flex items-center justify-between px-5 py-3.5 border-b ${dark?'border-slate-700/60 bg-slate-900':'border-slate-100 bg-slate-50'}`}>
+        <h4 className={`text-xs font-bold uppercase tracking-widest ${dark?'text-orange-400':'text-orange-500'}`}>{title}</h4>
+      </div>
+      <div className="p-5">{children}</div>
+    </div>
   );
-  const DataRow=({label,value,highlight})=>(
-    <div className={`flex items-center justify-between py-2.5 border-b last:border-0 ${dark?'border-slate-700/60':'border-slate-100'}`}>
-      <span className={`text-xs font-semibold ${dark?'text-slate-500':'text-slate-400'}`}>{label}</span>
-      <span className={`text-sm font-semibold ${highlight?dark?'text-orange-400':'text-orange-600':valueRow}`}>{value||'N/A'}</span>
+
+  /* Row — label left, value right */
+  const R=({label,value,highlight})=>(
+    <div className="flex justify-between items-start gap-4 py-1">
+      <span className={`text-xs shrink-0 w-44 ${dark?'text-slate-500':'text-slate-400'}`}>{label}</span>
+      <span className={`text-xs font-medium text-right break-words ${highlight?dark?'text-orange-400':'text-orange-600':dark?'text-slate-200':'text-slate-700'}`}>{value||'—'}</span>
     </div>
   );
 
   return (
-    <div className={`p-6 rounded-2xl shadow-sm border min-h-[500px] transition-colors duration-300 ${wrap}`}>
+    <div className="space-y-5">
       {modal==='basic'&&<BasicInfoModal faculty={f} onClose={()=>setModal(null)} onSaved={refresh}/>}
 
-      {/* Header — StudentProfileTabs style */}
-      <div className={`flex items-center space-x-6 mb-8 pb-6 border-b ${divider}`}>
-        {/* Circular photo */}
-        <div className="relative group w-20 h-20 rounded-full shrink-0 overflow-hidden bg-gradient-to-tr from-blue-500 to-purple-500">
-          {/* Photo layer */}
-          {(localPhotoUrl||photoUrl)&&<img src={localPhotoUrl||photoUrl} alt="Profile" className="absolute inset-0 w-full h-full object-cover object-top z-10"/>}
-          {/* Initials fallback layer */}
-          <div className="absolute inset-0 flex items-center justify-center font-bold text-2xl text-white">
-            {initials}
+      {/* Header card — matches admin/student style */}
+      <div className={`rounded-2xl border p-6 ${dark?'bg-slate-900 border-slate-700/60':'bg-white border-slate-200 shadow-sm'}`}>
+        <div className={`flex items-center gap-6 pb-6 border-b ${divider}`}>
+          {/* Profile photo */}
+          <div className="relative group w-20 h-20 rounded-full shrink-0 overflow-hidden">
+            {(localPhotoUrl||photoUrl)
+              ?<img src={localPhotoUrl||photoUrl} alt="Profile" className="w-full h-full object-cover object-top"/>
+              :<div className={`w-full h-full flex items-center justify-center font-bold text-2xl ${dark?'bg-orange-900/40 text-orange-300':'bg-orange-100 text-orange-600'}`}>{initials}</div>
+            }
+            {!photoUploading&&(
+              <><label htmlFor="faculty-photo" className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              </label>
+              <input id="faculty-photo" type="file" accept="image/*" className="hidden" onChange={handlePhoto}/></>
+            )}
+            {photoUploading&&<div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center"><div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"/></div>}
           </div>
-          {/* Upload overlay */}
-          {!photoUploading&&(
-            <><label htmlFor="faculty-photo" className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-20"><svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg></label><input id="faculty-photo" type="file" accept="image/*" className="hidden" onChange={handlePhoto}/></>
-          )}
-          {photoUploading&&<div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center z-20"><div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"/></div>}
-        </div>
 
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex justify-between items-start">
-            <h2 className={`text-2xl font-bold ${boldText}`}>{fullName||'—'}</h2>
-            {/* Edit only — no delete */}
-            <button onClick={()=>setModal('basic')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center shrink-0 ${editBtn}`}>
-              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-              Edit
-            </button>
-          </div>
-          {photoErr&&<p className="text-xs text-red-400 mt-1">{photoErr}</p>}
-          <div className={`flex flex-wrap items-center gap-4 mt-2 text-sm ${subText}`}>
-            {f.employee_id&&(
-              <span className="flex items-center gap-1">
-                <svg className={`w-4 h-4 ${dark?'text-slate-500':'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"/></svg>
-                Faculty ID: {f.employee_id}
-              </span>
-            )}
-            {(f.department?.department_name||f.position)&&(
-              <span className="flex items-center gap-1">
-                <svg className={`w-4 h-4 ${dark?'text-slate-500':'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-                {[f.department?.department_name,f.position].filter(Boolean).join(' · ')}
-              </span>
-            )}
-            {f.employment_status&&(
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                f.employment_status==='Full-Time'
-                  ? dark?'bg-green-900/40 text-green-300 border border-green-700':'bg-green-100 text-green-800 border border-green-200'
-                  : dark?'bg-amber-900/40 text-amber-300 border border-amber-700':'bg-amber-100 text-amber-800 border border-amber-200'
-              }`}>{f.employment_status}</span>
-            )}
+          {/* Name + meta */}
+          <div className="flex-1 min-w-0">
+            <div className="flex justify-between items-start">
+              <h2 className={`text-2xl font-bold ${boldText}`}>{fullName||'—'}</h2>
+              <button onClick={()=>setModal('basic')} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center shrink-0 ${editBtn}`}>
+                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                Edit
+              </button>
+            </div>
+            {photoErr&&<p className="text-xs text-red-400 mt-1">{photoErr}</p>}
+            <div className={`flex flex-wrap items-center gap-3 mt-2 text-sm ${subText}`}>
+              {(f.department?.department_name||f.position)&&(
+                <span className="flex items-center gap-1">
+                  <svg className={`w-4 h-4 ${dark?'text-slate-500':'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                  {[f.department?.department_name,f.position].filter(Boolean).join(' · ')}
+                </span>
+              )}
+              {f.employment_status&&(
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                  f.employment_status==='Full-Time'
+                    ?dark?'bg-green-900/40 text-green-300 border border-green-700':'bg-green-100 text-green-800 border border-green-200'
+                    :dark?'bg-amber-900/40 text-amber-300 border border-amber-700':'bg-amber-100 text-amber-800 border border-amber-200'
+                }`}>{f.employment_status}</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Section cards — reorganized layout */}
-      <div className="space-y-5">
-        {/* Row 1: Personal Info + Contact & Location side by side */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Personal Information */}
-          <div className={`rounded-2xl border p-5 ${cardBg}`}>
-            <SecHead label="Personal Information"/>
-            <DataRow label="First Name"  value={f.first_name}/>
-            <DataRow label="Middle Name" value={f.middle_name}/>
-            <DataRow label="Last Name"   value={f.last_name}/>
+      {/* Row 1: Personal Info + Contact & Location */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <SC title="Personal Information">
+          <div className="space-y-1">
+            <R label="First Name"  value={f.first_name}/>
+            <R label="Middle Name" value={f.middle_name}/>
+            <R label="Last Name"   value={f.last_name}/>
           </div>
+        </SC>
+        <SC title="Contact & Location">
+          <div className="space-y-1">
+            <R label="Email Address"   value={f.email} highlight/>
+            <R label="Contact Number"  value={f.contact_number}/>
+            <R label="Office Location" value={f.office_location}/>
+          </div>
+        </SC>
+      </div>
 
-          {/* Contact & Location */}
-          <div className={`rounded-2xl border p-5 ${cardBg}`}>
-            <SecHead label="Contact & Location"/>
-            <DataRow label="Email Address"   value={f.email} highlight/>
-            <DataRow label="Contact Number"  value={f.contact_number}/>
-            <DataRow label="Office Location" value={f.office_location}/>
+      {/* Row 2: Employment Details */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <SC title="Employment Details">
+          <div className="space-y-1">
+            <R label="Position"          value={f.position}/>
+            <R label="Employment Status" value={f.employment_status}/>
           </div>
-        </div>
-
-        {/* Row 2: Employment Details — full width */}
-        <div className={`rounded-2xl border p-5 ${cardBg}`}>
-          <SecHead label="Employment Details"/>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
-            <DataRow label="Position"          value={f.position}/>
-            <DataRow label="Department"        value={f.department?.department_name}/>
-            <DataRow label="Employment Status" value={f.employment_status}/>
-            <DataRow label="Hire Date"         value={f.hire_date?new Date(f.hire_date).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):null}/>
+        </SC>
+        <SC title="Department & Hire">
+          <div className="space-y-1">
+            <R label="Department" value={f.department?.department_name}/>
+            <R label="Hire Date"  value={f.hire_date?new Date(f.hire_date).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):null}/>
           </div>
-        </div>
+        </SC>
       </div>
     </div>
   );
