@@ -779,9 +779,17 @@ const SubjectDetailModal = ({subject,students,schedules,onClose}) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {enrolledStudents.map(s=>{
                 const initials=`${s.first_name?.[0]??''}${s.last_name?.[0]??''}`.toUpperCase();
+                const photoSrc=s.profile_photo
+                  ? (s.profile_photo.startsWith('http') ? s.profile_photo : `${import.meta.env.VITE_STORAGE_URL||'http://localhost:8000/storage'}/${s.profile_photo}`)
+                  : null;
                 return (
                   <div key={s.id} className={`flex items-center gap-3 p-3 rounded-xl border ${dark?'bg-slate-900 border-slate-700/60':'bg-slate-50 border-slate-200'}`}>
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${dark?'bg-brand-900/50 text-brand-300':'bg-brand-100 text-brand-600'}`}>{initials}</div>
+                    <div className={`w-8 h-8 rounded-lg overflow-hidden shrink-0 ${dark?'bg-brand-900/50':'bg-brand-100'}`}>
+                      {photoSrc
+                        ? <img src={photoSrc} alt={initials} className="w-full h-full object-cover" onError={e=>{e.currentTarget.style.display='none';e.currentTarget.nextSibling.style.display='flex';}}/>
+                        : null}
+                      <div className={`w-full h-full flex items-center justify-center text-xs font-bold ${photoSrc?'hidden':'flex'} ${dark?'text-brand-300':'text-brand-600'}`}>{initials}</div>
+                    </div>
                     <div className="min-w-0">
                       <p className={`text-xs font-semibold truncate ${dark?'text-slate-100':'text-slate-800'}`}>{s.first_name} {s.last_name}</p>
                       <p className={`text-[10px] ${dark?'text-slate-500':'text-slate-400'}`}>{s.student_number} · {s.section}</p>
@@ -1144,6 +1152,9 @@ const StudentDetailModal = ({student:initialStudent,facultyName,onClose}) => {
   const s=student;
   const fullName=[s.first_name,s.middle_name,s.last_name,s.suffix].filter(Boolean).join(' ');
   const initials=`${s.first_name?.[0]??''}${s.last_name?.[0]??''}`.toUpperCase();
+  const photoSrc=s.profile_photo
+    ? (s.profile_photo.startsWith('http') ? s.profile_photo : `${import.meta.env.VITE_STORAGE_URL||'http://localhost:8000/storage'}/${s.profile_photo}`)
+    : null;
 
   const TABS=[{id:'info',label:'Info'},{id:'violations',label:`Violations (${s.violations?.length??0})`},{id:'academic',label:'Academic'},{id:'medical',label:'Medical'}];
 
@@ -1164,7 +1175,13 @@ const StudentDetailModal = ({student:initialStudent,facultyName,onClose}) => {
       <div className="space-y-5">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-bold shrink-0 ${dark?'bg-brand-900/50 text-brand-300':'bg-brand-100 text-brand-600'}`}>{initials}</div>
+          <div className={`w-14 h-14 rounded-2xl overflow-hidden shrink-0 ${dark?'bg-brand-900/50':'bg-brand-100'}`}>
+            {photoSrc
+              ? <img src={photoSrc} alt={initials} className="w-full h-full object-cover"
+                  onError={e=>{e.currentTarget.style.display='none';e.currentTarget.nextSibling.style.display='flex';}}/>
+              : null}
+            <div className={`w-full h-full flex items-center justify-center text-lg font-bold ${photoSrc?'hidden':'flex'} ${dark?'text-brand-300':'text-brand-600'}`}>{initials}</div>
+          </div>
           <div>
             <h2 className={`text-lg font-bold ${dark?'text-slate-100':'text-slate-800'}`}>{fullName}</h2>
             {s.student_number&&<p className={`text-xs ${dark?'text-slate-400':'text-slate-500'}`}>Student No. {s.student_number}</p>}
@@ -1503,55 +1520,166 @@ const lsTasks = {
 
 const AssignTaskModal = ({students, facultyId, facultyName, task, onClose, onSaved}) => {
   const dark=useTheme();
+
+  // mode: 'individual' | 'section'  (only available when creating, not editing)
+  const [mode, setMode] = useState('individual');
+
   const empty={student_id:'',subject:'',title:'',description:'',due_date:'',priority:'Medium'};
   const [form,setForm]=useState(task
     ?{student_id:task.student_id,subject:task.subject,title:task.title,description:task.description??'',due_date:task.due_date?task.due_date.split('T')[0]:'',priority:task.priority}
     :empty);
-  const [saving,setSaving]=useState(false);const [err,setErr]=useState(null);
+  const [selectedSection, setSelectedSection] = useState('');
+  const [saving,setSaving]=useState(false);
+  const [err,setErr]=useState(null);
+  const [successMsg, setSuccessMsg] = useState(null);
   const set=(k)=>(e)=>setForm(f=>({...f,[k]:e.target.value}));
   const inp=mkInp(dark); const lbl=mkLbl(dark);
 
+  // Derive unique sections from the faculty's students
+  const sections = [...new Set(students.map(s => s.section).filter(Boolean))].sort();
+  // Students in the selected section (for preview)
+  const sectionStudents = selectedSection ? students.filter(s => s.section === selectedSection) : [];
+
   const save=async()=>{
-    if(!form.student_id||!form.title||!form.subject){setErr('Student, subject and title are required.');return;}
-    setSaving(true);setErr(null);
-    try{
-      const payload={...form,faculty_id:facultyId};
-      if(task){
-        // Try API first, fall back to localStorage
-        try{ await api.tasks.update(form.student_id,task.id,payload); }
-        catch{ lsTasks.update(task.id,payload); }
-      } else {
-        try{ await api.tasks.create(form.student_id,payload); }
-        catch{
-          // Store locally with a temp id
-          const student=students.find(s=>String(s.id)===String(form.student_id));
-          lsTasks.add({
-            ...payload,
-            id: Date.now(),
-            done: false,
-            student_id: Number(form.student_id),
-            student: student ? {id:student.id,first_name:student.first_name,last_name:student.last_name,student_number:student.student_number,section:student.section,profile_photo:student.profile_photo} : null,
-            created_at: new Date().toISOString(),
-          });
+    setErr(null); setSuccessMsg(null);
+
+    if (mode === 'section') {
+      // ── Section-wide assignment ──────────────────────────────
+      if (!selectedSection) { setErr('Please select a section.'); return; }
+      if (!form.title || !form.subject) { setErr('Subject and title are required.'); return; }
+      setSaving(true);
+      try {
+        const payload = { ...form, section: selectedSection, faculty_id: facultyId };
+        let count = 0;
+        try {
+          // Try the bulk API endpoint first
+          const res = await api.tasks.bulkCreate(payload);
+          count = res.count ?? sectionStudents.length;
+        } catch {
+          // Fallback: create individually for each student in the section
+          for (const student of sectionStudents) {
+            try {
+              await api.tasks.create(student.id, { ...form, faculty_id: facultyId });
+            } catch {
+              lsTasks.add({
+                ...form, faculty_id: facultyId,
+                id: Date.now() + student.id,
+                done: false,
+                student_id: student.id,
+                student: { id: student.id, first_name: student.first_name, last_name: student.last_name, student_number: student.student_number, section: student.section, profile_photo: student.profile_photo },
+                created_at: new Date().toISOString(),
+              });
+            }
+          }
+          count = sectionStudents.length;
         }
-      }
-      onSaved();
-    }catch(ex){setErr(ex.message||'Failed to save.');}
-    finally{setSaving(false);}
+        onSaved();
+      } catch(ex) { setErr(ex.message || 'Failed to assign tasks.'); }
+      finally { setSaving(false); }
+
+    } else {
+      // ── Individual assignment ────────────────────────────────
+      if(!form.student_id||!form.title||!form.subject){setErr('Student, subject and title are required.');return;}
+      setSaving(true);
+      try{
+        const payload={...form,faculty_id:facultyId};
+        if(task){
+          try{ await api.tasks.update(form.student_id,task.id,payload); }
+          catch{ lsTasks.update(task.id,payload); }
+        } else {
+          try{ await api.tasks.create(form.student_id,payload); }
+          catch{
+            const student=students.find(s=>String(s.id)===String(form.student_id));
+            lsTasks.add({
+              ...payload,
+              id: Date.now(),
+              done: false,
+              student_id: Number(form.student_id),
+              student: student ? {id:student.id,first_name:student.first_name,last_name:student.last_name,student_number:student.student_number,section:student.section,profile_photo:student.profile_photo} : null,
+              created_at: new Date().toISOString(),
+            });
+          }
+        }
+        onSaved();
+      }catch(ex){setErr(ex.message||'Failed to save.');}
+      finally{setSaving(false);}
+    }
   };
 
   return (
-    <FModal title={task?'Edit Task':'Assign New Task'} onClose={onClose}
-      footer={<><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>Save Task</BtnPrimary></>}>
+    <FModal title={task ? 'Edit Task' : 'Assign New Task'} onClose={onClose}
+      footer={<><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>
+        {mode === 'section' ? `Assign to Section` : 'Save Task'}
+      </BtnPrimary></>}>
       <ErrMsg msg={err}/>
-      <div className="space-y-3">
-        <div>
-          <label className={lbl}>Student *</label>
-          <select className={`${inp} appearance-none`} value={form.student_id} onChange={set('student_id')} disabled={!!task}>
-            <option value="">Select student...</option>
-            {students.map(s=><option key={s.id} value={s.id}>{s.first_name} {s.last_name} — {s.section||'No section'}</option>)}
-          </select>
+
+      {/* Mode toggle — only shown when creating a new task */}
+      {!task && (
+        <div className={`flex rounded-xl border overflow-hidden mb-4 ${dark ? 'border-slate-700' : 'border-slate-200'}`}>
+          {[
+            { id: 'individual', label: '👤 Individual Student' },
+            { id: 'section',    label: '👥 Entire Section' },
+          ].map(m => (
+            <button key={m.id} onClick={() => { setMode(m.id); setErr(null); }}
+              className={`flex-1 py-2.5 text-xs font-bold transition-colors ${
+                mode === m.id
+                  ? dark ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-50 text-orange-600'
+                  : dark ? 'text-slate-500 hover:text-slate-300 hover:bg-slate-800' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+              }`}>
+              {m.label}
+            </button>
+          ))}
         </div>
+      )}
+
+      <div className="space-y-3">
+        {/* Student picker (individual) or Section picker */}
+        {mode === 'individual' ? (
+          <div>
+            <label className={lbl}>Student *</label>
+            <select className={`${inp} appearance-none`} value={form.student_id} onChange={set('student_id')} disabled={!!task}>
+              <option value="">Select student...</option>
+              {students.map(s=><option key={s.id} value={s.id}>{s.first_name} {s.last_name} — {s.section||'No section'}</option>)}
+            </select>
+          </div>
+        ) : (
+          <div>
+            <label className={lbl}>Section *</label>
+            <select className={`${inp} appearance-none`} value={selectedSection} onChange={e => setSelectedSection(e.target.value)}>
+              <option value="">Select section...</option>
+              {sections.map(sec => <option key={sec} value={sec}>{sec}</option>)}
+            </select>
+            {/* Section student preview */}
+            {selectedSection && (
+              <div className={`mt-2 p-3 rounded-xl border ${dark ? 'bg-slate-800/60 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  {sectionStudents.length} student{sectionStudents.length !== 1 ? 's' : ''} in {selectedSection}
+                </p>
+                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                  {sectionStudents.length === 0 ? (
+                    <p className={`text-xs italic ${dark ? 'text-slate-500' : 'text-slate-400'}`}>No students found in this section.</p>
+                  ) : sectionStudents.map(s => {
+                    const photoSrc = s.profile_photo
+                      ? (s.profile_photo.startsWith('http') ? s.profile_photo : `${import.meta.env.VITE_STORAGE_URL||'http://localhost:8000/storage'}/${s.profile_photo}`)
+                      : null;
+                    const initials = `${s.first_name?.[0]??''}${s.last_name?.[0]??''}`.toUpperCase();
+                    return (
+                      <div key={s.id} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-semibold ${dark ? 'bg-slate-700 text-slate-300' : 'bg-white border border-slate-200 text-slate-600'}`}>
+                        <div className="w-4 h-4 rounded-full overflow-hidden shrink-0">
+                          {photoSrc
+                            ? <img src={photoSrc} alt={initials} className="w-full h-full object-cover"/>
+                            : <div className={`w-full h-full flex items-center justify-center text-[8px] font-bold ${dark ? 'bg-orange-900/40 text-orange-300' : 'bg-orange-100 text-orange-600'}`}>{initials}</div>}
+                        </div>
+                        {s.first_name} {s.last_name}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <div><label className={lbl}>Subject *</label><input className={inp} value={form.subject} onChange={set('subject')} placeholder="e.g. IT 121"/></div>
           <div>
@@ -1564,6 +1692,14 @@ const AssignTaskModal = ({students, facultyId, facultyName, task, onClose, onSav
         <div><label className={lbl}>Task Title *</label><input className={inp} value={form.title} onChange={set('title')} placeholder="e.g. Programming Lab Exercise 3"/></div>
         <div><label className={lbl}>Description</label><textarea className={`${inp} resize-none`} rows={3} value={form.description} onChange={set('description')} placeholder="Optional details..."/></div>
         <div><label className={lbl}>Due Date</label><input type="date" className={inp} value={form.due_date} onChange={set('due_date')}/></div>
+
+        {/* Section info banner */}
+        {mode === 'section' && selectedSection && sectionStudents.length > 0 && (
+          <div className={`flex items-start gap-2.5 p-3 rounded-xl border text-xs ${dark ? 'bg-blue-900/20 border-blue-500/30 text-blue-300' : 'bg-blue-50 border-blue-200 text-blue-700'}`}>
+            <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            This task will be assigned to all <strong>{sectionStudents.length} student{sectionStudents.length !== 1 ? 's' : ''}</strong> in section <strong>{selectedSection}</strong>.
+          </div>
+        )}
       </div>
     </FModal>
   );

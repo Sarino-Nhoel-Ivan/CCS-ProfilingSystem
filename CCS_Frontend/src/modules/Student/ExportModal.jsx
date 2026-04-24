@@ -23,30 +23,43 @@ const exportSinglePDF = async (student) => {
   const slate  = [30, 41, 59];
   const W = doc.internal.pageSize.getWidth();
 
-  // Header bar
+  // Header bar with logo
   doc.setFillColor(...orange);
-  doc.rect(0, 0, W, 28, 'F');
+  doc.rect(0, 0, W, 32, 'F');
+  
+  // Add CCS logo (centered at top)
+  try {
+    const logoImg = await fetch('/ccs_logo.jpg').then(r => r.blob()).then(b => new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(b);
+    }));
+    doc.addImage(logoImg, 'JPEG', (W - 15) / 2, 3, 15, 15);
+  } catch (e) {
+    console.warn('Logo not loaded:', e);
+  }
+
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(14); doc.setFont('helvetica', 'bold');
-  doc.text('CCS Profiling System', 14, 11);
+  doc.text('CCS Profiling System', W / 2, 21, { align: 'center' });
   doc.setFontSize(9); doc.setFont('helvetica', 'normal');
-  doc.text('Pamantasan ng Cabuyao — College of Computing Studies', 14, 18);
+  doc.text('Pamantasan ng Cabuyao — College of Computing Studies', W / 2, 26, { align: 'center' });
   doc.setFontSize(10); doc.setFont('helvetica', 'bold');
-  doc.text('STUDENT PROFILE REPORT', W - 14, 11, { align: 'right' });
-  doc.setFontSize(8); doc.setFont('helvetica', 'normal');
-  doc.text(`Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, W - 14, 18, { align: 'right' });
+  doc.text('STUDENT PROFILE REPORT', W / 2, 30, { align: 'center' });
+  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+  doc.text(`Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, W - 14, 6, { align: 'right' });
 
   // Student name banner
   doc.setFillColor(248, 250, 252);
-  doc.rect(0, 28, W, 20, 'F');
+  doc.rect(0, 32, W, 20, 'F');
   doc.setTextColor(...slate);
   doc.setFontSize(15); doc.setFont('helvetica', 'bold');
-  doc.text(`${student.first_name} ${student.middle_name ? student.middle_name + ' ' : ''}${student.last_name}${student.suffix ? ' ' + student.suffix : ''}`, 14, 40);
+  doc.text(`${student.first_name} ${student.middle_name ? student.middle_name + ' ' : ''}${student.last_name}${student.suffix ? ' ' + student.suffix : ''}`, 14, 44);
   doc.setFontSize(9); doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
-  doc.text(`Student No: ${fmt(student.student_number)}  ·  ${fmt(student.program)}  ·  ${fmt(student.year_level)}  ·  ${fmt(student.student_type)}`, 14, 46);
+  doc.text(`Student No: ${fmt(student.student_number)}  ·  ${fmt(student.program)}  ·  ${fmt(student.year_level)}  ·  ${fmt(student.student_type)}`, 14, 50);
 
-  let y = 54;
+  let y = 58;
 
   const section = (title) => {
     doc.setFillColor(...orange);
@@ -140,6 +153,19 @@ const exportSinglePDF = async (student) => {
     y = doc.lastAutoTable.finalY + 5;
   }
 
+  // Skills
+  if (student.skills?.length) {
+    section('Skills & Competencies');
+    autoTable(doc, {
+      startY: y, margin: { left: 14, right: 14 },
+      head: [['Skill Name', 'Proficiency Level']],
+      body: student.skills.map(s => [fmt(s.skill_name), fmt(s.pivot?.proficiency_level || 'N/A')]),
+      theme: 'striped', styles: { fontSize: 8, cellPadding: 2.5 },
+      headStyles: { fillColor: orange, textColor: 255 },
+    });
+    y = doc.lastAutoTable.finalY + 5;
+  }
+
   // Footer on each page
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
@@ -161,17 +187,30 @@ const exportAllPDF = async (students) => {
   const W = doc.internal.pageSize.getWidth();
 
   doc.setFillColor(...orange);
-  doc.rect(0, 0, W, 22, 'F');
+  doc.rect(0, 0, W, 26, 'F');
+  
+  // Add CCS logo (centered)
+  try {
+    const logoImg = await fetch('/ccs_logo.jpg').then(r => r.blob()).then(b => new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(b);
+    }));
+    doc.addImage(logoImg, 'JPEG', (W - 12) / 2, 3, 12, 12);
+  } catch (e) {
+    console.warn('Logo not loaded:', e);
+  }
+
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(13); doc.setFont('helvetica', 'bold');
-  doc.text('CCS Profiling System — All Students Report', 14, 10);
+  doc.text('CCS Profiling System — All Students Report', W / 2, 18, { align: 'center' });
   doc.setFontSize(8); doc.setFont('helvetica', 'normal');
-  doc.text(`Pamantasan ng Cabuyao  ·  Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}  ·  Total: ${students.length} students`, 14, 17);
+  doc.text(`Pamantasan ng Cabuyao  ·  Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}  ·  Total: ${students.length} students`, W / 2, 23, { align: 'center' });
 
   autoTable(doc, {
-    startY: 26,
+    startY: 30,
     margin: { left: 10, right: 10 },
-    head: [['#', 'Student No.', 'Full Name', 'Program', 'Year', 'Section', 'Type', 'Status', 'Email', 'Contact']],
+    head: [['#', 'Student No.', 'Full Name', 'Program', 'Year', 'Section', 'Type', 'Status', 'Email', 'Contact', 'Skills']],
     body: students.map((s, i) => [
       i + 1,
       fmt(s.student_number),
@@ -183,11 +222,25 @@ const exportAllPDF = async (students) => {
       fmt(s.enrollment_status),
       fmt(s.email),
       fmt(s.contact_number),
+      s.skills?.length ? s.skills.map(sk => sk.skill_name).join(', ') : 'N/A',
     ]),
     theme: 'striped',
-    styles: { fontSize: 7, cellPadding: 2 },
+    styles: { fontSize: 6.5, cellPadding: 2 },
     headStyles: { fillColor: orange, textColor: 255, fontStyle: 'bold' },
     alternateRowStyles: { fillColor: [248, 250, 252] },
+    columnStyles: {
+      0:  { cellWidth: 7 },
+      1:  { cellWidth: 20 },
+      2:  { cellWidth: 32 },
+      3:  { cellWidth: 28 },
+      4:  { cellWidth: 16 },
+      5:  { cellWidth: 14 },
+      6:  { cellWidth: 16 },
+      7:  { cellWidth: 18 },
+      8:  { cellWidth: 42 },
+      9:  { cellWidth: 22 },
+      10: { cellWidth: 'auto' },
+    },
   });
 
   const pageCount = doc.internal.getNumberOfPages();
@@ -339,20 +392,31 @@ const exportAllXLSX = async (students) => {
   const JSZip = (await import('jszip')).default;
   const zip = await JSZip.loadAsync(wbout);
 
-  // ── Build chart XML for Year Level (bar chart) ────────────────────────────
+  // ── Build chart XML for bar charts (embedded data, no sheet references) ──
+  const escXml = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
   const buildBarChartXml = (chartId, title, categories, values, color) => {
     const catXml = categories.map((c, i) =>
       `<c:pt idx="${i}"><c:v>${escXml(c)}</c:v></c:pt>`).join('');
     const valXml = values.map((v, i) =>
       `<c:pt idx="${i}"><c:v>${v}</c:v></c:pt>`).join('');
     const ptCount = categories.length;
+    const axCat = chartId * 1000 + 1;
+    const axVal = chartId * 1000 + 2;
 
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
   xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
   <c:chart>
-    <c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>${escXml(title)}</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title>
+    <c:title>
+      <c:tx><c:rich><a:bodyPr/><a:lstStyle/>
+        <a:p><a:pPr><a:defRPr b="1" sz="1200"/></a:pPr>
+          <a:r><a:rPr lang="en-US" b="1"/><a:t>${escXml(title)}</a:t></a:r>
+        </a:p>
+      </c:rich></c:tx>
+      <c:overlay val="0"/>
+    </c:title>
     <c:autoTitleDeleted val="0"/>
     <c:plotArea>
       <c:layout/>
@@ -361,29 +425,83 @@ const exportAllXLSX = async (students) => {
         <c:grouping val="clustered"/>
         <c:varyColors val="0"/>
         <c:ser>
-          <c:idx val="0"/><c:order val="0"/>
-          <c:spPr><a:solidFill><a:srgbClr val="${color}"/></a:solidFill></c:spPr>
-          <c:cat><c:strRef><c:f>Analytics!$A$1</c:f><c:strCache><c:ptCount val="${ptCount}"/>${catXml}</c:strCache></c:strRef></c:cat>
-          <c:val><c:numRef><c:f>Analytics!$B$1</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="${ptCount}"/>${valXml}</c:numCache></c:numRef></c:val>
+          <c:idx val="0"/>
+          <c:order val="0"/>
+          <c:spPr>
+            <a:solidFill><a:srgbClr val="${color}"/></a:solidFill>
+            <a:ln><a:noFill/></a:ln>
+          </c:spPr>
+          <c:dLbls>
+            <c:numFmt formatCode="General" sourceLinked="0"/>
+            <c:spPr><a:noFill/><a:ln><a:noFill/></a:ln></c:spPr>
+            <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr b="1" sz="900"/></a:pPr></a:p></c:txPr>
+            <c:showLegendKey val="0"/>
+            <c:showVal val="1"/>
+            <c:showCatName val="0"/>
+            <c:showSerName val="0"/>
+            <c:showPercent val="0"/>
+            <c:showBubbleSize val="0"/>
+          </c:dLbls>
+          <c:cat>
+            <c:strRef>
+              <c:f>Sheet1!$A$1</c:f>
+              <c:strCache>
+                <c:ptCount val="${ptCount}"/>
+                ${catXml}
+              </c:strCache>
+            </c:strRef>
+          </c:cat>
+          <c:val>
+            <c:numRef>
+              <c:f>Sheet1!$B$1</c:f>
+              <c:numCache>
+                <c:formatCode>General</c:formatCode>
+                <c:ptCount val="${ptCount}"/>
+                ${valXml}
+              </c:numCache>
+            </c:numRef>
+          </c:val>
         </c:ser>
-        <c:axId val="${chartId * 100 + 1}"/><c:axId val="${chartId * 100 + 2}"/>
+        <c:axId val="${axCat}"/>
+        <c:axId val="${axVal}"/>
       </c:barChart>
       <c:catAx>
-        <c:axId val="${chartId * 100 + 1}"/><c:scaling><c:orientation val="minMax"/></c:scaling>
-        <c:delete val="0"/><c:axPos val="b"/><c:crossAx val="${chartId * 100 + 2}"/>
+        <c:axId val="${axCat}"/>
+        <c:scaling><c:orientation val="minMax"/></c:scaling>
+        <c:delete val="0"/>
+        <c:axPos val="b"/>
+        <c:numFmt formatCode="General" sourceLinked="0"/>
+        <c:tickLblPos val="nextTo"/>
+        <c:spPr><a:ln><a:solidFill><a:srgbClr val="D1D5DB"/></a:solidFill></a:ln></c:spPr>
+        <c:txPr><a:bodyPr rot="-2700000"/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900"/></a:pPr></a:p></c:txPr>
+        <c:crossAx val="${axVal}"/>
+        <c:auto val="1"/>
+        <c:lblAlgn val="ctr"/>
+        <c:lblOffset val="100"/>
+        <c:noMultiLvlLbl val="0"/>
       </c:catAx>
       <c:valAx>
-        <c:axId val="${chartId * 100 + 2}"/><c:scaling><c:orientation val="minMax"/></c:scaling>
-        <c:delete val="0"/><c:axPos val="l"/><c:crossAx val="${chartId * 100 + 1}"/>
+        <c:axId val="${axVal}"/>
+        <c:scaling><c:orientation val="minMax"/></c:scaling>
+        <c:delete val="0"/>
+        <c:axPos val="l"/>
+        <c:numFmt formatCode="General" sourceLinked="0"/>
+        <c:tickLblPos val="nextTo"/>
+        <c:spPr><a:ln><a:solidFill><a:srgbClr val="D1D5DB"/></a:solidFill></a:ln></c:spPr>
+        <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900"/></a:pPr></a:p></c:txPr>
+        <c:crossAx val="${axCat}"/>
+        <c:crossBetween val="between"/>
       </c:valAx>
     </c:plotArea>
-    <c:legend><c:legendPos val="b"/></c:legend>
     <c:plotVisOnly val="1"/>
+    <c:dispBlanksAs val="gap"/>
   </c:chart>
+  <c:spPr>
+    <a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill>
+    <a:ln><a:solidFill><a:srgbClr val="E2E8F0"/></a:solidFill></a:ln>
+  </c:spPr>
 </c:chartSpace>`;
   };
-
-  const escXml = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
   // Year level chart
   const chart1Xml = buildBarChartXml(1, 'Students by Year Level', yearLabels, yearCounts, 'F26522');

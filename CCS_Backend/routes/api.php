@@ -168,6 +168,7 @@ Route::put('/enrollments/{enrollment}',                 [EnrollmentController::c
 use App\Http\Controllers\TaskController;
 
 Route::get('/tasks',                                          [TaskController::class, 'facultyTasks']);
+Route::post('/tasks/bulk',                                    [TaskController::class, 'bulkStore']);
 Route::get('/students/{student}/tasks',                       [TaskController::class, 'index']);
 Route::post('/students/{student}/tasks',                      [TaskController::class, 'store']);
 Route::put('/students/{student}/tasks/{task}',                [TaskController::class, 'update']);

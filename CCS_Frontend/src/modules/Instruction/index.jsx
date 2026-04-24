@@ -5,15 +5,131 @@ import EditSubjectModal from './EditSubjectModal';
 import SubjectDetailModal from './SubjectDetailModal';
 import { useDarkMode } from '../../context/DarkModeContext';
 
+// ── Curriculum Grid: subjects grouped by year level then semester ──────────
+const YEAR_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
+const SEMESTERS   = ['1st Semester', '2nd Semester'];
+
+const CurriculumGrid = ({ subjects, dark, boldText, subText, onEdit, onDelete, onDetail }) => {
+  // Collect all year levels present in the filtered subjects
+  const presentYears = YEAR_LEVELS.filter(y => subjects.some(s => s.year_level === y));
+  // If no year_level set, show an "Unassigned" bucket
+  const hasUnassigned = subjects.some(s => !s.year_level);
+
+  const thBg   = dark ? 'bg-slate-800 text-slate-300' : 'bg-slate-700 text-white';
+  const rowDiv = dark ? 'divide-slate-700/60' : 'divide-slate-100';
+  const rowHov = dark ? 'hover:bg-slate-800/60' : 'hover:bg-slate-50';
+  const codeCls = dark ? 'bg-brand-900/40 text-brand-300' : 'bg-orange-50 text-orange-600';
+  const preCls  = dark ? 'text-slate-400 bg-slate-800' : 'text-slate-500 bg-slate-100';
+
+  const SubjectTable = ({ subs, yearLabel, semLabel }) => {
+    const totalUnits = subs.reduce((s, sub) => s + (sub.total_units || 0), 0);
+    const yearColor =
+      yearLabel === '1st Year'   ? (dark ? 'bg-slate-700' : 'bg-slate-600') :
+      yearLabel === '2nd Year'   ? (dark ? 'bg-slate-700' : 'bg-slate-600') :
+      yearLabel === '3rd Year'   ? (dark ? 'bg-slate-700' : 'bg-slate-600') :
+      yearLabel === '4th Year'   ? (dark ? 'bg-slate-700' : 'bg-slate-600') :
+                                   (dark ? 'bg-slate-700' : 'bg-slate-600');
+    return (
+      <div className={`border-b ${dark ? 'border-slate-700' : 'border-slate-200'}`}>
+        {/* Year + Semester header — full width dark bar like the reference */}
+        <div className={`flex items-center justify-between px-5 py-3 ${dark ? 'bg-slate-700/80' : 'bg-slate-600'}`}>
+          <span className="text-sm font-extrabold text-white tracking-wide">{yearLabel}</span>
+          <span className="text-sm font-bold text-white/80">{semLabel}</span>
+        </div>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className={`text-xs font-bold ${dark ? 'bg-slate-800/60 text-slate-400 border-b border-slate-700' : 'bg-slate-50 text-slate-500 border-b border-slate-200'}`}>
+              <th className="px-5 py-2.5 text-left">Course Code</th>
+              <th className="px-5 py-2.5 text-left">Course Description</th>
+              <th className="px-5 py-2.5 text-center">Units</th>
+              <th className="px-5 py-2.5 text-left">Pre-requisite(s)</th>
+              <th className="px-5 py-2.5 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className={`divide-y ${rowDiv}`}>
+            {subs.map(sub => (
+              <tr key={sub.id} onClick={() => onDetail(sub)} className={`cursor-pointer transition-colors ${rowHov}`}>
+                <td className="px-5 py-3">
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${codeCls}`}>
+                    {sub.subject_code || '—'}
+                  </span>
+                </td>
+                <td className={`px-5 py-3 font-semibold ${boldText}`}>{sub.descriptive_title || '—'}</td>
+                <td className={`px-5 py-3 text-center font-bold ${boldText}`}>{sub.total_units ?? '—'}</td>
+                <td className="px-5 py-3">
+                  {sub.pre_requisites
+                    ? <span className={`text-xs font-medium px-2 py-1 rounded-md ${preCls}`}>{sub.pre_requisites}</span>
+                    : <span className={`text-xs italic ${subText}`}>—</span>}
+                </td>
+                <td className="px-5 py-3 text-right" onClick={e => e.stopPropagation()}>
+                  <div className="flex justify-end gap-1">
+                    <button onClick={() => onEdit(sub)}
+                      className={`p-1.5 rounded-lg transition-colors ${dark ? 'text-slate-400 hover:text-brand-400 hover:bg-brand-500/10' : 'text-slate-400 hover:text-brand-600 hover:bg-brand-50'}`}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    </button>
+                    <button onClick={() => onDelete(sub.id)}
+                      className={`p-1.5 rounded-lg transition-colors ${dark ? 'text-slate-400 hover:text-red-400 hover:bg-red-500/10' : 'text-slate-400 hover:text-red-600 hover:bg-red-50'}`}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className={`text-xs font-bold ${dark ? 'bg-slate-800/40 text-slate-400' : 'bg-slate-50 text-slate-500'}`}>
+              <td colSpan={2} className="px-5 py-2.5 text-right">Total No. of Units</td>
+              <td className={`px-5 py-2.5 text-center font-extrabold ${boldText}`}>{totalUnits}</td>
+              <td colSpan={2} />
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-0">
+      {presentYears.map(year => {
+        const yearSubs = subjects.filter(s => s.year_level === year);
+        return (
+          <div key={year}>
+            {SEMESTERS.map(sem => {
+              const semSubs = yearSubs.filter(s => s.semester === sem);
+              if (semSubs.length === 0) return null;
+              return (
+                <SubjectTable key={sem} subs={semSubs} yearLabel={year} semLabel={sem} />
+              );
+            })}
+            {/* Subjects with no semester assigned */}
+            {yearSubs.filter(s => !s.semester).length > 0 && (
+              <SubjectTable subs={yearSubs.filter(s => !s.semester)} yearLabel={year} semLabel="No Semester Assigned" />
+            )}
+          </div>
+        );
+      })}
+      {/* Unassigned year level */}
+      {hasUnassigned && (
+        <div>
+          {SEMESTERS.map(sem => {
+            const semSubs = subjects.filter(s => !s.year_level && s.semester === sem);
+            if (semSubs.length === 0) return null;
+            return <SubjectTable key={sem} subs={semSubs} yearLabel="Unassigned" semLabel={sem} />;
+          })}
+          {subjects.filter(s => !s.year_level && !s.semester).length > 0 && (
+            <SubjectTable subs={subjects.filter(s => !s.year_level && !s.semester)} yearLabel="Unassigned" semLabel="No Semester Assigned" />
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const InstructionModule = ({ students = [] }) => {
   const dark = useDarkMode();
   const card    = dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-100';
   const boldText = dark ? 'text-slate-100' : 'text-slate-800';
   const subText  = dark ? 'text-slate-400' : 'text-slate-500';
-  const thead    = dark ? 'bg-slate-800 border-slate-700/60' : 'bg-slate-50 border-slate-200';
-  const thText   = dark ? 'text-slate-400 border-slate-700/60' : 'text-slate-500 border-slate-200';
-  const tbDivide = dark ? 'divide-slate-700/60' : 'divide-slate-100';
-  const trHover  = dark ? 'hover:bg-slate-800 cursor-pointer' : 'hover:bg-slate-50 cursor-pointer';
   const tableBar = dark ? 'bg-slate-800/60 border-slate-700/60' : 'bg-slate-50/50 border-slate-100';
   const loadBg   = dark ? 'bg-slate-900/80' : 'bg-white/80';
   const [subjects, setSubjects] = useState([]);
@@ -200,65 +316,12 @@ const InstructionModule = ({ students = [] }) => {
           </div>
         )}
 
-        <div className="flex-1 overflow-x-auto relative">
+        <div className="flex-1 overflow-y-auto relative">
           {isLoading ? (
             <div className={`absolute inset-0 flex items-center justify-center z-10 ${loadBg}`}>
               <div className="w-10 h-10 border-4 border-slate-200 border-t-brand-500 rounded-full animate-spin"></div>
             </div>
-          ) : subjects.length > 0 ? (
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className={`sticky top-0 z-10 shadow-sm ${thead}`}>
-                  <th className={`p-4 text-xs font-bold uppercase tracking-wider border-b ${thText}`}>Subject Code</th>
-                  <th className={`p-4 text-xs font-bold uppercase tracking-wider border-b ${thText}`}>Descriptive Title</th>
-                  <th className={`p-4 text-xs font-bold uppercase tracking-wider border-b ${thText}`}>Program</th>
-                  <th className={`p-4 text-xs font-bold uppercase tracking-wider border-b ${thText}`}>Year · Semester</th>
-                  <th className={`p-4 text-xs font-bold uppercase tracking-wider border-b text-center ${thText}`}>Units</th>
-                  <th className={`p-4 text-xs font-bold uppercase tracking-wider border-b ${thText}`}>Pre-requisite</th>
-                  <th className={`p-4 text-xs font-bold uppercase tracking-wider border-b text-right ${thText}`}>Actions</th>
-                </tr>
-              </thead>
-              <tbody className={`divide-y ${tbDivide}`}>
-                {filteredSubjects.map((subject) => (
-                  <tr key={subject.id} onClick={() => openDetailModal(subject)} className={`transition-colors ${trHover}`}>
-                    <td className="p-4">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-brand-500/15 text-brand-400">{subject.subject_code}</span>
-                    </td>
-                    <td className="p-4">
-                      <p className={`font-semibold ${boldText}`}>{subject.descriptive_title}</p>
-                    </td>
-                    <td className="p-4">
-                      {subject.program ? (
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${subject.program === 'BSIT' ? (dark ? 'bg-blue-900/40 text-blue-300' : 'bg-blue-100 text-blue-700') : (dark ? 'bg-violet-900/40 text-violet-300' : 'bg-violet-100 text-violet-700')}`}>{subject.program}</span>
-                      ) : <span className={`text-xs italic ${subText}`}>—</span>}
-                    </td>
-                    <td className={`p-4 text-xs ${subText}`}>
-                      {subject.year_level ? `${subject.year_level}` : '—'}
-                      {subject.semester ? ` · ${subject.semester}` : ''}
-                    </td>
-                    <td className={`p-4 text-center font-bold ${boldText}`}>{subject.total_units}</td>
-                    <td className="p-4">
-                      {subject.pre_requisites ? (
-                        <span className={`text-sm font-medium px-2 py-1 rounded-md ${dark ? 'text-slate-300 bg-slate-800' : 'text-slate-600 bg-slate-100'}`}>{subject.pre_requisites}</span>
-                      ) : (
-                        <span className={`text-sm italic ${subText}`}>None</span>
-                      )}
-                    </td>
-                    <td className="p-4 text-right">
-                      <div className="flex justify-end space-x-1" onClick={e => e.stopPropagation()}>
-                        <button onClick={() => openEditModal(subject)} className={`p-2 transition-colors rounded-lg hover:bg-brand-500/10 ${dark ? 'text-slate-400 hover:text-brand-400' : 'text-slate-400 hover:text-brand-600'}`} title="Edit Subject">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                        </button>
-                        <button onClick={() => handleDeleteSubject(subject.id)} className={`p-2 transition-colors rounded-lg hover:bg-red-500/10 ${dark ? 'text-slate-400 hover:text-red-400' : 'text-slate-400 hover:text-red-600'}`} title="Delete Subject">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
+          ) : filteredSubjects.length === 0 ? (
             <div className={`flex flex-col items-center justify-center h-full py-12 ${subText}`}>
               <svg className={`w-16 h-16 mb-4 ${dark ? 'text-slate-700' : 'text-slate-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
               {subjects.length === 0 ? (
@@ -267,6 +330,16 @@ const InstructionModule = ({ students = [] }) => {
                 <><p className="text-lg font-medium">No subjects match your filters</p><p className="text-sm">Try adjusting the program, year, or semester filters.</p></>
               )}
             </div>
+          ) : (
+            <CurriculumGrid
+              subjects={filteredSubjects}
+              dark={dark}
+              boldText={boldText}
+              subText={subText}
+              onEdit={openEditModal}
+              onDelete={handleDeleteSubject}
+              onDetail={openDetailModal}
+            />
           )}
         </div>
       </div>
