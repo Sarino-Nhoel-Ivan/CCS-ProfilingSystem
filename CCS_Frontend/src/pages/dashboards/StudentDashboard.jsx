@@ -3152,6 +3152,16 @@ const StudentDashboard = ({ user, onLogout }) => {
                       {faculty?.email && <p className={`text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{faculty.email}</p>}
                     </div>
                   </div>
+                  {/* Consultation Hours */}
+                  {faculty?.office_hours && (
+                    <div className={`mt-3 flex items-start gap-2.5 p-3 rounded-xl border ${dark ? 'bg-amber-900/20 border-amber-700/40' : 'bg-amber-50 border-amber-200'}`}>
+                      <svg className={`w-4 h-4 shrink-0 mt-0.5 ${dark ? 'text-amber-400' : 'text-amber-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                      <div>
+                        <p className={`text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-amber-400' : 'text-amber-600'}`}>Consultation Hours</p>
+                        <p className={`text-xs font-semibold mt-0.5 ${dark ? 'text-amber-200' : 'text-amber-900'}`}>{faculty.office_hours}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 {/* Footer */}
                 <div className={`px-6 py-4 border-t flex justify-end ${dark ? 'border-slate-700/60 bg-slate-900' : 'border-slate-100 bg-slate-50'}`}>

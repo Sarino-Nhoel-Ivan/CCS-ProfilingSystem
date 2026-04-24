@@ -71,4 +71,34 @@ class TaskController extends Controller
         $task->delete();
         return response()->json(['message' => 'Deleted']);
     }
+
+    // POST /tasks/bulk  — assign the same task to every student in a section
+    public function bulkStore(Request $request)
+    {
+        $data = $request->validate([
+            'section'     => 'required|string|max:100',
+            'subject'     => 'required|string|max:100',
+            'title'       => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'due_date'    => 'nullable|date',
+            'priority'    => 'in:Low,Medium,High',
+            'faculty_id'  => 'nullable|exists:faculties,id',
+        ]);
+
+        $students = Student::where('section', $data['section'])->get();
+
+        if ($students->isEmpty()) {
+            return response()->json(['message' => 'No students found in this section.'], 422);
+        }
+
+        $taskData = collect($data)->except('section')->toArray();
+        foreach ($students as $student) {
+            $student->tasks()->create($taskData);
+        }
+
+        return response()->json([
+            'message' => "Task assigned to {$students->count()} student(s) in section {$data['section']}.",
+            'count'   => $students->count(),
+        ], 201);
+    }
 }

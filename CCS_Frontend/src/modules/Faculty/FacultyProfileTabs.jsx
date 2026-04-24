@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useDarkMode } from '../../context/DarkModeContext';
+import { STORAGE_URL } from '../../utils/config';
 
 const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const DAY_COLORS = {
@@ -14,6 +16,29 @@ const fmtTime = (t) => {
   const [h, m] = t.split(':');
   const hr = parseInt(h, 10);
   return `${hr % 12 || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
+};
+
+// ── Faculty Avatar (large, for profile header) ────────────────────────────
+const FacultyAvatarLarge = ({ faculty: f, dark }) => {
+  const [imgError, setImgError] = useState(false);
+  const initials = `${f.first_name?.[0] ?? ''}${f.last_name?.[0] ?? ''}`;
+  const photoSrc = f.profile_photo
+    ? (f.profile_photo.startsWith('http') ? f.profile_photo : `${STORAGE_URL}/${f.profile_photo}`)
+    : null;
+  if (photoSrc && !imgError)
+    return (
+      <img
+        src={photoSrc}
+        alt={initials}
+        className="w-20 h-20 rounded-2xl object-cover shadow-lg"
+        onError={() => setImgError(true)}
+      />
+    );
+  return (
+    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-white flex items-center justify-center font-extrabold text-2xl shadow-lg shadow-orange-500/30">
+      {initials}
+    </div>
+  );
 };
 
 const FacultyProfileTabs = ({ activeTab, faculty, schedules = [], onEditClick, onDeleteClick }) => {
@@ -60,9 +85,7 @@ const FacultyProfileTabs = ({ activeTab, faculty, schedules = [], onEditClick, o
       {/* ── Header ── */}
       <div className={`flex items-center gap-5 mb-8 pb-6 border-b ${divider}`}>
         <div className="relative shrink-0">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-white flex items-center justify-center font-extrabold text-2xl shadow-lg shadow-orange-500/30">
-            {faculty.first_name?.[0]}{faculty.last_name?.[0]}
-          </div>
+          <FacultyAvatarLarge faculty={faculty} dark={dark} />
           <span className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 ${dark ? 'border-slate-900' : 'border-white'} ${faculty.employment_status === 'Full-Time' ? 'bg-green-500' : 'bg-yellow-400'}`} />
         </div>
         <div className="flex-1 min-w-0">

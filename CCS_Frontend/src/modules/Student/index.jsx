@@ -122,6 +122,10 @@ const StudentModule = ({ students: propStudents = [], skills: propSkills = [], c
   const [filterCourse, setFilterCourse] = useState('');
   const [filterAffil, setFilterAffil] = useState('');
   const [filterYear, setFilterYear] = useState('');
+  const [visibleCount, setVisibleCount] = useState(50);
+
+  // Reset pagination whenever filters or search change
+  useEffect(() => { setVisibleCount(50); }, [listSearch, listFilter, filterSkill, filterCourse, filterAffil, filterYear, viewMode]);
 
   const card      = dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-100';
   const tabBar    = dark ? 'bg-slate-800/50 border-slate-700/60' : 'bg-slate-50/50 border-slate-100';
@@ -400,83 +404,107 @@ const StudentModule = ({ students: propStudents = [], skills: propSkills = [], c
                     </div>
                   );
 
+                  const page    = filtered.slice(0, visibleCount);
+                  const hasMore = filtered.length > visibleCount;
+
+                  const LoadMore = () => hasMore ? (
+                    <div className="pt-4 flex flex-col items-center gap-1">
+                      <button onClick={() => setVisibleCount(v => v + 50)}
+                        className={`px-5 py-2 rounded-xl text-sm font-semibold border transition-colors ${dark ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm'}`}>
+                        Load more ({filtered.length - visibleCount} remaining)
+                      </button>
+                      <p className={`text-xs ${labelText}`}>Showing {visibleCount} of {filtered.length}</p>
+                    </div>
+                  ) : filtered.length > 50 ? (
+                    <p className={`pt-3 text-center text-xs ${labelText}`}>All {filtered.length} students shown</p>
+                  ) : null;
+
                   // Cards view
                   if (viewMode === 'cards') return (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {filtered.map(s => <StudentCard key={s.id} student={s} onSelect={handleStudentClick} dark={dark} />)}
+                    <div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {page.map(s => <StudentCard key={s.id} student={s} onSelect={handleStudentClick} dark={dark} />)}
+                      </div>
+                      <LoadMore />
                     </div>
                   );
 
                   // Table view
                   if (viewMode === 'table') return (
-                    <div className={`overflow-x-auto rounded-xl border ${dark ? 'border-slate-700' : 'border-slate-100'}`}>
-                      <table className="w-full text-sm">
-                        <thead className={`text-xs uppercase tracking-wider ${dark ? 'bg-slate-800 text-slate-500' : 'bg-slate-50 text-slate-400'}`}>
-                          <tr>
-                            <th className="px-4 py-3 text-left font-bold">Student</th>
-                            <th className="px-4 py-3 text-left font-bold hidden sm:table-cell">Number</th>
-                            <th className="px-4 py-3 text-left font-bold hidden md:table-cell">Program</th>
-                            <th className="px-4 py-3 text-left font-bold hidden md:table-cell">Year</th>
-                            <th className="px-4 py-3 text-left font-bold hidden lg:table-cell">Type</th>
-                            <th className="px-4 py-3 text-center font-bold">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className={`divide-y ${divider}`}>
-                          {filtered.map(s => (
-                            <tr key={s.id} onClick={() => handleStudentClick(s.id)}
-                              className={`cursor-pointer transition-colors ${rowHover}`}>
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-2.5">
-                                  <Avatar student={s} size="sm" />
-                                  <span className={`font-semibold ${boldText}`}>{s.first_name} {s.last_name}</span>
-                                </div>
-                              </td>
-                              <td className={`px-4 py-3 hidden sm:table-cell font-mono text-xs ${labelText}`}>{s.student_number || `#${s.id}`}</td>
-                              <td className={`px-4 py-3 hidden md:table-cell text-xs ${labelText}`}>{s.program || '—'}</td>
-                              <td className={`px-4 py-3 hidden md:table-cell text-xs ${labelText}`}>{s.year_level || '—'}</td>
-                              <td className={`px-4 py-3 hidden lg:table-cell text-xs ${labelText}`}>{s.student_type || '—'}</td>
-                              <td className="px-4 py-3 text-center">
-                                {s.enrollment_status === 'Enrolled'
-                                  ? <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-green-500/15 text-green-400">Enrolled</span>
-                                  : <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-200 text-slate-600'}`}>{s.enrollment_status}</span>}
-                              </td>
+                    <div>
+                      <div className={`overflow-x-auto rounded-xl border ${dark ? 'border-slate-700' : 'border-slate-100'}`}>
+                        <table className="w-full text-sm">
+                          <thead className={`text-xs uppercase tracking-wider ${dark ? 'bg-slate-800 text-slate-500' : 'bg-slate-50 text-slate-400'}`}>
+                            <tr>
+                              <th className="px-4 py-3 text-left font-bold">Student</th>
+                              <th className="px-4 py-3 text-left font-bold hidden sm:table-cell">Number</th>
+                              <th className="px-4 py-3 text-left font-bold hidden md:table-cell">Program</th>
+                              <th className="px-4 py-3 text-left font-bold hidden md:table-cell">Year</th>
+                              <th className="px-4 py-3 text-left font-bold hidden lg:table-cell">Type</th>
+                              <th className="px-4 py-3 text-center font-bold">Status</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody className={`divide-y ${divider}`}>
+                            {page.map(s => (
+                              <tr key={s.id} onClick={() => handleStudentClick(s.id)}
+                                className={`cursor-pointer transition-colors ${rowHover}`}>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2.5">
+                                    <Avatar student={s} size="sm" />
+                                    <span className={`font-semibold ${boldText}`}>{s.first_name} {s.last_name}</span>
+                                  </div>
+                                </td>
+                                <td className={`px-4 py-3 hidden sm:table-cell font-mono text-xs ${labelText}`}>{s.student_number || `#${s.id}`}</td>
+                                <td className={`px-4 py-3 hidden md:table-cell text-xs ${labelText}`}>{s.program || '—'}</td>
+                                <td className={`px-4 py-3 hidden md:table-cell text-xs ${labelText}`}>{s.year_level || '—'}</td>
+                                <td className={`px-4 py-3 hidden lg:table-cell text-xs ${labelText}`}>{s.student_type || '—'}</td>
+                                <td className="px-4 py-3 text-center">
+                                  {s.enrollment_status === 'Enrolled'
+                                    ? <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-green-500/15 text-green-400">Enrolled</span>
+                                    : <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-200 text-slate-600'}`}>{s.enrollment_status}</span>}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <LoadMore />
                     </div>
                   );
 
                   // List view (default)
                   return (
-                    <div className={`divide-y ${divider}`}>
-                      {filtered.map(s => (
-                        <div key={s.id} onClick={() => handleStudentClick(s.id)}
-                          className={`py-3.5 flex items-center justify-between group cursor-pointer -mx-2 px-2 rounded-xl transition-colors ${rowHover}`}>
-                          <div className="flex items-center gap-3">
-                            <Avatar student={s} />
-                            <div>
-                              <p className={`text-sm font-semibold group-hover:text-orange-500 transition-colors ${boldText}`}>
-                                {s.first_name} {s.middle_name ? s.middle_name[0] + '. ' : ''}{s.last_name}
-                              </p>
-                              <div className={`flex items-center gap-3 mt-0.5 text-xs ${labelText}`}>
-                                <span className="flex items-center gap-1"><AcademicCapIcon className="w-3 h-3" />{s.program || 'N/A'}</span>
-                                <span className="flex items-center gap-1"><CalendarDaysIcon className="w-3 h-3" />{s.year_level || 'N/A'}</span>
-                                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>{s.student_type || 'N/A'}</span>
-                                <span className="flex items-center gap-1 font-mono"><IdentificationIcon className="w-3 h-3" />{s.student_number || s.id}</span>
+                    <div>
+                      <div className={`divide-y ${divider}`}>
+                        {page.map(s => (
+                          <div key={s.id} onClick={() => handleStudentClick(s.id)}
+                            className={`py-3.5 flex items-center justify-between group cursor-pointer -mx-2 px-2 rounded-xl transition-colors ${rowHover}`}>
+                            <div className="flex items-center gap-3">
+                              <Avatar student={s} />
+                              <div>
+                                <p className={`text-sm font-semibold group-hover:text-orange-500 transition-colors ${boldText}`}>
+                                  {s.first_name} {s.middle_name ? s.middle_name[0] + '. ' : ''}{s.last_name}
+                                </p>
+                                <div className={`flex items-center gap-3 mt-0.5 text-xs ${labelText}`}>
+                                  <span className="flex items-center gap-1"><AcademicCapIcon className="w-3 h-3" />{s.program || 'N/A'}</span>
+                                  <span className="flex items-center gap-1"><CalendarDaysIcon className="w-3 h-3" />{s.year_level || 'N/A'}</span>
+                                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>{s.student_type || 'N/A'}</span>
+                                  <span className="flex items-center gap-1 font-mono"><IdentificationIcon className="w-3 h-3" />{s.student_number || s.id}</span>
+                                </div>
                               </div>
                             </div>
+                            <div className="flex items-center gap-2">
+                              {s.enrollment_status === 'Enrolled'
+                                ? <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-500/15 text-green-500">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />Enrolled
+                                  </span>
+                                : <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-800'}`}>{s.enrollment_status}</span>}
+                              <ChevronRightIcon className={`w-4 h-4 transition-transform group-hover:translate-x-0.5 ${dark ? 'text-slate-600' : 'text-slate-300'}`} />
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {s.enrollment_status === 'Enrolled'
-                              ? <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-500/15 text-green-500">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />Enrolled
-                                </span>
-                              : <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-800'}`}>{s.enrollment_status}</span>}
-                            <ChevronRightIcon className={`w-4 h-4 transition-transform group-hover:translate-x-0.5 ${dark ? 'text-slate-600' : 'text-slate-300'}`} />
-                          </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                      <LoadMore />
                     </div>
                   );
                 })()}

@@ -175,6 +175,7 @@ export const api = {
     getByFaculty: (facultyId) => fetchApi(`/tasks?faculty_id=${facultyId}`),
     getByStudent: (studentId) => fetchApi(`/students/${studentId}/tasks`),
     create: (studentId, data) => fetchApi(`/students/${studentId}/tasks`, { method: 'POST', body: JSON.stringify(data) }),
+    bulkCreate: (data) => fetchApi('/tasks/bulk', { method: 'POST', body: JSON.stringify(data) }),
     update: (studentId, taskId, data) => fetchApi(`/students/${studentId}/tasks/${taskId}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (studentId, taskId) => fetchApi(`/students/${studentId}/tasks/${taskId}`, { method: 'DELETE' }),
   },
