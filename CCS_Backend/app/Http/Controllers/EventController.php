@@ -30,6 +30,12 @@ class EventController extends Controller
         ]);
 
         $event = \App\Models\Event::create($validated);
+        NotificationController::push(
+            'event_created',
+            'New Event Scheduled',
+            "Event \"{$validated['eventName']}\" ({$validated['eventType']}) has been scheduled for {$validated['location']}.",
+            ['event_id' => $event->id]
+        );
         return response()->json($event, 201);
     }
 
@@ -46,7 +52,18 @@ class EventController extends Controller
             'status' => 'required|in:Upcoming,Ongoing,Completed,Cancelled'
         ]);
 
+        $oldStatus = $event->status;
         $event->update($validated);
+
+        // Only notify on status change
+        if ($oldStatus !== $validated['status']) {
+            NotificationController::push(
+                'event_status_changed',
+                'Event Status Changed',
+                "Event \"{$validated['eventName']}\" status changed from {$oldStatus} to {$validated['status']}.",
+                ['event_id' => $event->id, 'old_status' => $oldStatus, 'new_status' => $validated['status']]
+            );
+        }
         return response()->json($event);
     }
 

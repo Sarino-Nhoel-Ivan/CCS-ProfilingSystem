@@ -36,6 +36,17 @@ const PATH_TO_MODULE = {
   '/admin/events':      'events',
 };
 
+// Derive module from pathname, handling sub-paths like /admin/users/42
+const getModuleFromPath = (pathname) => {
+  if (pathname.startsWith('/admin/users'))     return 'student';
+  if (pathname.startsWith('/admin/reports'))   return 'faculty';
+  if (pathname.startsWith('/admin/instruction')) return 'instruction';
+  if (pathname.startsWith('/admin/scheduling'))  return 'scheduling';
+  if (pathname.startsWith('/admin/events'))      return 'events';
+  if (pathname.startsWith('/admin/dashboard'))   return 'dashboard';
+  return 'dashboard';
+};
+
 /* ── Admin layout ── */
 function AdminLayout({ user, onLogout }) {
   const location  = useLocation();
@@ -64,10 +75,16 @@ function AdminLayout({ user, onLogout }) {
 
   const reloadStudents  = async () => { cache.bust('students');  const d = await api.students.getAll().catch(() => []); setStudents(d); };
   const reloadFaculties = async () => { cache.bust('faculties'); const d = await api.faculties.getAll().catch(() => []); setFaculties(d); };
-  const reloadEvents    = async () => { cache.bust('events');    const d = await api.events.getAll().catch(() => []); setEvents(d); };
+  const reloadEvents    = async () => {
+    setDataLoading(p => ({ ...p, events: true }));
+    cache.bust('events');
+    const d = await api.events.getAll().catch(() => []);
+    setEvents(d);
+    setDataLoading(p => ({ ...p, events: false }));
+  };
 
   // Derive currentModule from URL so sidebar stays in sync
-  const currentModule = PATH_TO_MODULE[location.pathname] ?? 'dashboard';
+  const currentModule = getModuleFromPath(location.pathname);
 
   const setCurrentModule = (id) => {
     const pathMap = {
@@ -112,8 +129,8 @@ function AdminLayout({ user, onLogout }) {
                 <Route path="users/:id"   element={<StudentModule students={students} skills={skills} courses={courses} loading={dataLoading.students} onReload={reloadStudents} />} />
                 <Route path="reports"     element={<FacultyModule faculties={faculties} loading={dataLoading.faculties} onReload={reloadFaculties} />} />
                 <Route path="reports/:id" element={<FacultyModule faculties={faculties} loading={dataLoading.faculties} onReload={reloadFaculties} />} />
-                <Route path="instruction" element={<InstructionModule />} />
-                <Route path="scheduling"  element={<SchedulingModule />} />
+                <Route path="instruction" element={<InstructionModule students={students} />} />
+                <Route path="scheduling"  element={<SchedulingModule students={students} faculties={faculties} />} />
                 <Route path="events"      element={<EventsModule events={events} loading={dataLoading.events} onReload={reloadEvents} />} />
                 <Route path="*"           element={<Navigate to="dashboard" replace />} />
               </Routes>
@@ -166,9 +183,9 @@ function App() {
       <Route path="/login" element={<Navigate to="/student/login" replace />} />
       <Route
         path="/student/login"
-        element={!user
-          ? <StudentLogin onLogin={handleLogin} />
-          : <Navigate to={dashboardPath(user)} replace />}
+        element={user?.role === 'student'
+          ? <Navigate to={dashboardPath(user)} replace />
+          : <StudentLogin onLogin={handleLogin} />}
       />
       {/* student/signup removed — accounts created by admin only */}
       <Route path="/student/signup" element={<Navigate to="/student/login" replace />} />
@@ -176,9 +193,9 @@ function App() {
       {/* Faculty routes */}
       <Route
         path="/faculty/login"
-        element={!user
-          ? <FacultyLogin onLogin={handleLogin} />
-          : <Navigate to={dashboardPath(user)} replace />}
+        element={user?.role === 'faculty'
+          ? <Navigate to={dashboardPath(user)} replace />
+          : <FacultyLogin onLogin={handleLogin} />}
       />
       <Route
         path="/faculty/signup"

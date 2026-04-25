@@ -325,12 +325,13 @@ class AuthController extends Controller
 
         return response()->json([
             'user'  => [
-                'id'         => $user->id,
-                'name'       => $user->role !== 'student' ? $user->name : null,
-                'email'      => $user->email,
-                'role'       => $user->role,
-                'student_id' => $user->student_id,
-                'faculty_id' => $user->faculty_id,
+                'id'                  => $user->id,
+                'name'                => $user->role !== 'student' ? $user->name : null,
+                'email'               => $user->email,
+                'role'                => $user->role,
+                'student_id'          => $user->student_id,
+                'faculty_id'          => $user->faculty_id,
+                'must_change_password'=> (bool) $user->must_change_password,
             ],
             'token' => $token,
         ]);

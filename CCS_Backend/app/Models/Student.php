@@ -73,4 +73,9 @@ class Student extends Model
     {
         return $this->hasMany(StudentEnrollment::class);
     }
+
+    public function tasks()
+    {
+        return $this->hasMany(Task::class);
+    }
 }

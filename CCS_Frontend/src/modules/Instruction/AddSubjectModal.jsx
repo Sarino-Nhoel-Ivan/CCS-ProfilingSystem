@@ -9,7 +9,10 @@ const AddSubjectModal = ({ isOpen, onClose, onSuccess }) => {
     descriptive_title: '',
     lec_units: 3,
     lab_units: 0,
-    pre_requisites: ''
+    pre_requisites: '',
+    program: 'BSIT',
+    year_level: '1st Year',
+    semester: '1st Semester',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -77,8 +80,38 @@ const AddSubjectModal = ({ isOpen, onClose, onSuccess }) => {
           )}
 
           <div className="space-y-4">
+            {/* Program / Year / Semester row */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className={`block text-sm font-semibold mb-1 ${labelClr}`}>Program <span className="text-red-500">*</span></label>
+                <select name="program" value={formData.program} onChange={handleChange}
+                  className={`w-full px-4 py-2.5 rounded-xl border focus:outline-none focus:ring-2 transition-all font-medium ${inputCls}`}>
+                  <option value="BSIT">BSIT</option>
+                  <option value="BSCS">BSCS</option>
+                </select>
+              </div>
+              <div>
+                <label className={`block text-sm font-semibold mb-1 ${labelClr}`}>Year Level <span className="text-red-500">*</span></label>
+                <select name="year_level" value={formData.year_level} onChange={handleChange}
+                  className={`w-full px-4 py-2.5 rounded-xl border focus:outline-none focus:ring-2 transition-all font-medium ${inputCls}`}>
+                  <option>1st Year</option>
+                  <option>2nd Year</option>
+                  <option>3rd Year</option>
+                  <option>4th Year</option>
+                </select>
+              </div>
+              <div>
+                <label className={`block text-sm font-semibold mb-1 ${labelClr}`}>Semester <span className="text-red-500">*</span></label>
+                <select name="semester" value={formData.semester} onChange={handleChange}
+                  className={`w-full px-4 py-2.5 rounded-xl border focus:outline-none focus:ring-2 transition-all font-medium ${inputCls}`}>
+                  <option>1st Semester</option>
+                  <option>2nd Semester</option>
+                </select>
+              </div>
+            </div>
+
             {[
-              { name: 'subject_code', label: 'Subject Code', placeholder: 'e.g. IT 111', type: 'text', required: true },
+              { name: 'subject_code', label: 'Subject Code', placeholder: 'e.g. CCS101', type: 'text', required: true },
               { name: 'descriptive_title', label: 'Descriptive Title', placeholder: 'e.g. Introduction to Computing', type: 'text', required: true },
             ].map(f => (
               <div key={f.name}>
@@ -115,7 +148,7 @@ const AddSubjectModal = ({ isOpen, onClose, onSuccess }) => {
               <label className={`block text-sm font-semibold mb-1 ${labelClr}`}>Pre-requisite(s)</label>
               <input
                 type="text" name="pre_requisites" value={formData.pre_requisites}
-                onChange={handleChange} placeholder="e.g. IT 111, CS 101 (Optional)"
+                onChange={handleChange} placeholder="e.g. CCS101, CCS102 (Optional)"
                 className={`w-full px-4 py-2.5 rounded-xl border focus:outline-none focus:ring-2 transition-all font-medium ${inputCls}`}
               />
             </div>

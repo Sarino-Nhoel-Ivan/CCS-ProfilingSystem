@@ -100,6 +100,13 @@ class StudentController extends Controller
             \Log::error('Welcome email error: ' . $e->getMessage());
         }
 
+        \App\Http\Controllers\NotificationController::push(
+            'student_created',
+            'New Student Registered',
+            "{$validatedData['first_name']} {$validatedData['last_name']} ({$validatedData['student_number']}) has been registered.",
+            ['student_id' => $student->id, 'student_number' => $validatedData['student_number']]
+        );
+
         return response()->json($student, 201);
     }
 
@@ -197,12 +204,26 @@ HTML;
             'honors_received'          => 'nullable|string',
         ]);
         $student->update($validatedData);
+        \App\Http\Controllers\NotificationController::push(
+            'student_updated',
+            'Student Profile Updated',
+            "{$student->first_name} {$student->last_name} ({$student->student_number})'s profile was updated.",
+            ['student_id' => $student->id]
+        );
         return response()->json($student->fresh());
     }
 
     public function destroy(Student $student)
     {
+        $name   = "{$student->first_name} {$student->last_name}";
+        $number = $student->student_number;
         $student->delete();
+        \App\Http\Controllers\NotificationController::push(
+            'student_deleted',
+            'Student Record Deleted',
+            "Student {$name} ({$number}) has been removed from the system.",
+            ['student_number' => $number]
+        );
         return response()->json(null, 204);
     }
 
@@ -257,6 +278,12 @@ HTML;
             'resolution_date' => 'nullable|date',
         ]);
         $record = $student->violations()->create($data);
+        \App\Http\Controllers\NotificationController::push(
+            'violation_added',
+            'Violation Recorded',
+            "A {$data['severity_level']} violation ({$data['violation_type']}) was recorded for {$student->first_name} {$student->last_name}.",
+            ['student_id' => $student->id, 'violation_id' => $record->id, 'severity' => $data['severity_level']]
+        );
         return response()->json($record, 201);
     }
 

@@ -1,6 +1,6 @@
-﻿import { useState, useEffect, useCallback, createContext, useContext } from 'react';
+﻿import { useState, useEffect, useCallback, createContext, useContext, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { api } from '../../utils/api';
+import { api, fetchApi, cache } from '../../utils/api';
 import { STORAGE_URL } from '../../utils/config';
 import {
   HomeIcon, UserIcon, ClipboardDocumentListIcon, LightBulbIcon,
@@ -28,6 +28,7 @@ const useTheme = () => useContext(ThemeCtx);
 const NAV = [
   { id: 'dashboard',    label: 'Dashboard',            Icon: HomeIcon },
   { id: 'profile',      label: 'My Profile',           Icon: UserIcon },
+  { id: 'subjects',     label: 'My Subjects',          Icon: BookOpenIcon },
   { id: 'skills',       label: 'My Skills',            Icon: LightBulbIcon },
   { id: 'affiliations', label: 'My Affiliations',      Icon: BuildingLibraryIcon },
   { id: 'violations',   label: 'My Violations',        Icon: ExclamationTriangleIcon },
@@ -1012,7 +1013,7 @@ const StudentDashboard = ({ user, onLogout }) => {
     setActive(section);
     setSearchParams({ section }, { replace: true });
   };
-  const [tasks, setTasks]               = useState(TASKS_DEFAULT);
+  const [tasks, setTasks]               = useState([]);
   const [sidebarPinned, setSidebarPinned] = useState(false);
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const [profileTab, setProfileTab] = useState('personal');
@@ -1021,52 +1022,71 @@ const StudentDashboard = ({ user, onLogout }) => {
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [profileErr, setProfileErr]   = useState(null);
   const [dark, setDark]               = useState(() => localStorage.getItem('sd_theme') !== 'light');
-  const [notifOpen, setNotifOpen]       = useState(false);
-  const [readIds, setReadIds]           = useState(() => { try { return JSON.parse(localStorage.getItem('sd_notif_read') || '[]'); } catch { return []; } });
-
   const toggleTheme = () => setDark(d => { const next = !d; localStorage.setItem('sd_theme', next ? 'dark' : 'light'); return next; });
+  /* ── notifications (API-backed, admin-style) ── */
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount]     = useState(0);
+  const [notifOpen, setNotifOpen]         = useState(false);
+  const notifRef                          = useRef(null);
 
-  /* ── notifications derived from student data ── */
-  const buildNotifications = (s, taskList) => {
-    const items = [];
-    if (!s) return items;
-    (s.violations ?? []).forEach(v => items.push({
-      id: `viol-${v.id}`, type: 'violation',
-      Icon: ExclamationTriangleIcon, iconCls: 'text-red-400',
-      title: 'Violation Recorded',
-      body: `${v.violation_type} — ${v.severity_level} severity`,
-      date: v.date_reported, nav: 'violations',
-    }));
-    (s.academic_histories ?? []).forEach(ah => items.push({
-      id: `ah-${ah.id}`, type: 'academic',
-      Icon: ClipboardDocumentListIcon, iconCls: 'text-blue-400',
-      title: 'Academic Record Updated',
-      body: `${ah.school_year} ${ah.semester} — GPA: ${ah.gpa ?? '—'}`,
-      date: ah.updated_at ?? ah.created_at, nav: 'academic',
-    }));
-    taskList.filter(t => !t.done).forEach(t => items.push({
-      id: `task-${t.id}`, type: 'task',
-      Icon: ClipboardDocumentCheckIcon, iconCls: 'text-brand-400',
-      title: 'Pending Task',
-      body: `${t.title} — Due ${t.due}`,
-      date: null, nav: 'tasks',
-    }));
-    return items;
+  const STUDENT_NOTIF_TYPES = ['task_assigned', 'event_created'];
+  const STUDENT_NOTIF_ICONS = {
+    task_assigned: { emoji: '📋', bg: dark ? 'bg-brand-900/40' : 'bg-brand-100' },
+    event_created: { emoji: '📅', bg: dark ? 'bg-violet-900/40' : 'bg-violet-100' },
+  };
+  const getSNotifIcon = (type) => STUDENT_NOTIF_ICONS[type] || { emoji: '🔔', bg: dark ? 'bg-slate-700' : 'bg-slate-100' };
+  const getSTimeAgo  = (d) => { if (!d) return ''; const diff = Math.floor((Date.now() - new Date(d.includes(' ') ? d.replace(' ', 'T') : d).getTime()) / 1000); if (diff < 60) return 'Just now'; if (diff < 3600) return `${Math.floor(diff / 60)}m ago`; if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`; return `${Math.floor(diff / 86400)}d ago`; };
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const data = await api.notifications.getAll();
+      const filtered = (data.notifications || []).filter(n => STUDENT_NOTIF_TYPES.includes(n.type));
+      setNotifications(filtered);
+      setUnreadCount(filtered.filter(n => !n.is_read).length);
+    } catch { /* silent */ }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSNotifMarkRead = async (id) => {
+    await api.notifications.markRead(id).catch(() => {});
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+    setUnreadCount(prev => Math.max(0, prev - 1));
+  };
+  const handleSNotifMarkAllRead = async () => {
+    await api.notifications.markAllRead().catch(() => {});
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    setUnreadCount(0);
+  };
+  const handleSNotifDelete = async (id) => {
+    await api.notifications.delete(id).catch(() => {});
+    const n = notifications.find(x => x.id === id);
+    setNotifications(prev => prev.filter(x => x.id !== id));
+    if (n && !n.is_read) setUnreadCount(prev => Math.max(0, prev - 1));
+  };
+  const handleSNotifClearAll = async () => {
+    await api.notifications.clearAll().catch(() => {});
+    setNotifications([]);
+    setUnreadCount(0);
+  };
+  const handleSNotifClick = (notif) => {
+    if (!notif.is_read) handleSNotifMarkRead(notif.id);
+    const d = notif.data || {};
+    if (notif.type === 'task_assigned' || d.task_id) navigateTo('tasks');
+    else if (notif.type === 'event_created' || d.event_id) navigateTo('dashboard');
+    setNotifOpen(false);
   };
 
-  const notifications = buildNotifications(student, tasks);
-  const unreadCount   = notifications.filter(n => !readIds.includes(n.id)).length;
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
 
-  const openNotif = () => {
-    setNotifOpen(o => {
-      if (!o) {
-        const allIds = notifications.map(n => n.id);
-        setReadIds(allIds);
-        localStorage.setItem('sd_notif_read', JSON.stringify(allIds));
-      }
-      return !o;
-    });
-  };
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e) => { if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const initials   = student
     ? `${student.first_name?.[0] ?? ''}${student.last_name?.[0] ?? ''}`.toUpperCase() || 'ST'
@@ -1089,7 +1109,43 @@ const StudentDashboard = ({ user, onLogout }) => {
       </div>
     );
   };
-  const toggleTask = (id) => setTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+  // Shared localStorage key — same one faculty writes to
+  const LS_TASKS_KEY = 'faculty_tasks_local';
+  const getLocalTasks = () => { try { return JSON.parse(localStorage.getItem(LS_TASKS_KEY)||'[]'); } catch { return []; } };
+  const saveLocalTasks = (all) => localStorage.setItem(LS_TASKS_KEY, JSON.stringify(all));
+
+  const loadTasks = useCallback(async () => {
+    if (!user?.student_id) return;
+    try {
+      // Try API first
+      const apiTasks = await api.tasks.getByStudent(user.student_id).catch(()=>[]);
+      const fromApi = Array.isArray(apiTasks) ? apiTasks : [];
+      // Merge with localStorage tasks assigned to this student
+      const local = getLocalTasks().filter(t => String(t.student_id) === String(user.student_id));
+      const apiIds = new Set(fromApi.map(t => t.id));
+      const merged = [...fromApi, ...local.filter(t => !apiIds.has(t.id))];
+      setTasks(merged);
+    } catch {
+      // Full fallback to localStorage only
+      const local = getLocalTasks().filter(t => String(t.student_id) === String(user.student_id));
+      setTasks(local);
+    }
+  }, [user?.student_id]);
+
+  const toggleTask = async (id) => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    const newDone = !task.done;
+    // Optimistic UI update
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, done: newDone } : t));
+    // Try API
+    try { await api.tasks.update(task.student_id, id, { done: newDone }); }
+    catch {
+      // Sync to localStorage fallback
+      const all = getLocalTasks().map(t => t.id === id ? { ...t, done: newDone } : t);
+      saveLocalTasks(all);
+    }
+  };
 
   const loadStudent = useCallback(async () => {
     if (!user?.student_id) return;
@@ -1100,14 +1156,26 @@ const StudentDashboard = ({ user, onLogout }) => {
   }, [user?.student_id]);
 
   useEffect(() => { loadStudent(); }, [loadStudent]);
+  useEffect(() => { loadTasks(); }, [loadTasks]);
 
-  // Close notification dropdown on outside click
+  /* ── events (for announcements) ── */
+  const [events, setEvents] = useState([]);
   useEffect(() => {
-    if (!notifOpen) return;
-    const handler = (e) => { if (!e.target.closest('[data-notif]')) setNotifOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [notifOpen]);
+    fetchApi('/events').then(data => setEvents(Array.isArray(data) ? data : [])).catch(() => {});
+  }, []);
+
+  /* ── schedules for My Subjects tab ── */
+  const [schedules, setSchedules] = useState([]);
+  const loadSchedules = useCallback(async () => {
+    if (!student?.section) return;
+    try {
+      cache.bust('schedules');
+      const all = await fetchApi('/schedules');
+      cache.set('schedules', all);
+      setSchedules(all.filter(s => s.section?.section_name === student.section));
+    } catch { setSchedules([]); }
+  }, [student?.section]);
+  useEffect(() => { loadSchedules(); }, [loadSchedules]);
 
   const sidebarExpanded = sidebarPinned || sidebarHovered;
 
@@ -1468,57 +1536,111 @@ const StudentDashboard = ({ user, onLogout }) => {
               <BookOpenIcon className="w-4 h-4 text-orange-500" />
               <h4 className="text-xs font-bold uppercase tracking-widest text-orange-500">Current Subjects</h4>
             </div>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-500'}`}>{COURSES_DEMO.length} subjects</span>
+            <button onClick={() => navigateTo('subjects')} className={`text-[10px] font-semibold px-2 py-1 rounded-lg transition-all ${dark ? 'text-orange-400 hover:bg-orange-500/10' : 'text-orange-600 hover:bg-orange-50'}`}>View all →</button>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className={`border-b ${dark ? 'border-slate-700/60' : 'border-slate-100'}`}>
-                  {['Code', 'Subject', 'Instructor', 'Schedule', 'Room', 'Units'].map(h => (
-                    <th key={h} className={`px-4 py-3 text-left font-bold uppercase tracking-wider text-[10px] ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className={`divide-y ${dark ? 'divide-slate-700/30' : 'divide-slate-100'}`}>
-                {COURSES_DEMO.map(c => (
-                  <tr key={c.code} className={`transition-colors ${dark ? 'hover:bg-slate-800/60' : 'hover:bg-slate-50'}`}>
-                    <td className="px-4 py-3 font-bold text-orange-400 whitespace-nowrap">{c.code}</td>
-                    <td className={`px-4 py-3 font-medium max-w-[180px] truncate ${dark ? 'text-slate-200' : 'text-slate-700'}`}>{c.title}</td>
-                    <td className={`px-4 py-3 whitespace-nowrap ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{c.instructor}</td>
-                    <td className={`px-4 py-3 whitespace-nowrap ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{c.schedule}</td>
-                    <td className={`px-4 py-3 whitespace-nowrap ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{c.room}</td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] ${dark ? 'bg-orange-500/20 text-orange-300' : 'bg-orange-100 text-orange-700'}`}>{c.units}</span>
-                    </td>
+            {schedules.length === 0 ? (
+              <div className={`p-8 text-center ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
+                <BookOpenIcon className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                <p className="text-xs font-semibold">No subjects assigned yet.</p>
+                <p className="text-[10px] mt-0.5">Your subjects will appear here once the admin assigns your schedule.</p>
+              </div>
+            ) : (
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className={`border-b ${dark ? 'border-slate-700/60' : 'border-slate-100'}`}>
+                    {['Code', 'Subject', 'Instructor', 'Schedule', 'Room', 'Units'].map(h => (
+                      <th key={h} className={`px-4 py-3 text-left font-bold uppercase tracking-wider text-[10px] ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className={`divide-y ${dark ? 'divide-slate-700/30' : 'divide-slate-100'}`}>
+                  {schedules.map(sc => {
+                    const faculty = sc.faculty;
+                    const instructorName = faculty ? [faculty.first_name, faculty.last_name].filter(Boolean).join(' ') : '—';
+                    const schedStr = sc.day_of_week && sc.start_time && sc.end_time
+                      ? `${sc.day_of_week} ${sc.start_time}–${sc.end_time}`
+                      : '—';
+                    return (
+                      <tr key={sc.id}
+                        onClick={() => navigateTo('subjects')}
+                        className={`transition-colors cursor-pointer ${dark ? 'hover:bg-slate-800/60' : 'hover:bg-orange-50/60'}`}>
+                        <td className="px-4 py-3 font-bold text-orange-400 whitespace-nowrap">{sc.subject?.subject_code ?? '—'}</td>
+                        <td className={`px-4 py-3 font-medium max-w-[180px] truncate ${dark ? 'text-slate-200' : 'text-slate-700'}`}>{sc.subject?.descriptive_title ?? '—'}</td>
+                        <td className={`px-4 py-3 whitespace-nowrap ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{instructorName}</td>
+                        <td className={`px-4 py-3 whitespace-nowrap ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{schedStr}</td>
+                        <td className={`px-4 py-3 whitespace-nowrap ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{sc.room ?? '—'}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] ${dark ? 'bg-orange-500/20 text-orange-300' : 'bg-orange-100 text-orange-700'}`}>{sc.subject?.total_units ?? '—'}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
-        {/* ── Announcements ── */}
+        {/* ── Announcements (live events from admin) ── */}
         <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
-          <div className={`px-5 py-3.5 border-b ${dark ? 'border-slate-700/60 bg-slate-900' : 'border-slate-100 bg-slate-50'}`}>
-            <h3 className="text-xs font-bold uppercase tracking-widest text-orange-500">Announcements</h3>
+          <div className={`flex items-center justify-between px-5 py-3.5 border-b ${dark ? 'border-slate-700/60 bg-slate-900' : 'border-slate-100 bg-slate-50'}`}>
+            <div className="flex items-center gap-2">
+              <MegaphoneIcon className="w-4 h-4 text-orange-500" />
+              <h4 className="text-xs font-bold uppercase tracking-widest text-orange-500">Announcements & Events</h4>
+            </div>
+            {events.length > 0 && (
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-500'}`}>{events.length} event{events.length !== 1 ? 's' : ''}</span>
+            )}
           </div>
-          <div className="divide-y divide-slate-100 dark:divide-slate-700/40">
-            {ANNOUNCEMENTS.map(a => (
-              <div key={a.id} className={`flex gap-4 px-5 py-4 transition-colors ${dark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}`}>
-                <div className={`w-1 rounded-full shrink-0 self-stretch bg-gradient-to-b ${a.color}`} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2 flex-wrap mb-1">
-                    <p className={`text-sm font-semibold ${dark ? 'text-slate-200' : 'text-slate-700'}`}>{a.title}</p>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r ${a.color} text-white`}>{a.tag}</span>
-                      <span className={`text-[10px] ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{a.date}</span>
+          {events.length === 0 ? (
+            <div className={`p-10 text-center ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
+              <MegaphoneIcon className="w-8 h-8 mx-auto mb-2 opacity-40" />
+              <p className="text-xs font-semibold">No announcements yet.</p>
+              <p className="text-[10px] mt-0.5">Events and announcements from the admin will appear here.</p>
+            </div>
+          ) : (
+            <div className={`divide-y ${dark ? 'divide-slate-700/40' : 'divide-slate-100'}`}>
+              {events.map((ev, idx) => {
+                // Cycle through accent colors
+                const COLORS = [
+                  'from-brand-500 to-amber-500',
+                  'from-blue-500 to-purple-500',
+                  'from-emerald-500 to-teal-500',
+                  'from-rose-500 to-pink-500',
+                  'from-violet-500 to-indigo-500',
+                  'from-cyan-500 to-sky-500',
+                ];
+                const color = COLORS[idx % COLORS.length];
+                const eventDate = ev.event_date || ev.start_date || ev.date || ev.created_at;
+                const formattedDate = eventDate ? (() => { try { return new Date(eventDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); } catch { return eventDate; } })() : '';
+                return (
+                  <div key={ev.id} className={`flex gap-4 px-5 py-4 transition-colors ${dark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}`}>
+                    {/* Color accent bar */}
+                    <div className={`w-1 rounded-full shrink-0 self-stretch bg-gradient-to-b ${color}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 flex-wrap mb-1">
+                        <p className={`text-sm font-semibold ${dark ? 'text-slate-200' : 'text-slate-700'}`}>{ev.event_name || ev.title || 'Event'}</p>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {ev.status && (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r ${color} text-white`}>{ev.status}</span>
+                          )}
+                          {formattedDate && <span className={`text-[10px] ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{formattedDate}</span>}
+                        </div>
+                      </div>
+                      {ev.description && <p className={`text-xs leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{ev.description}</p>}
+                      {ev.location && (
+                        <p className={`text-[10px] mt-1 flex items-center gap-1 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
+                          <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                          {ev.location}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <p className={`text-xs leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{a.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
       </div>
@@ -2600,8 +2722,9 @@ const StudentDashboard = ({ user, onLogout }) => {
   ════════════════════════════════ */
   const TasksPanel = () => {
     const [filter, setFilter]       = useState('All');
-    const [view, setView]           = useState('tasks');   // 'tasks' | 'archive'
-    const [confirmDelete, setConfirmDelete] = useState(null); // task id to confirm
+    const [view, setView]           = useState('tasks');
+    const [confirmDelete, setConfirmDelete] = useState(null);
+    const [selectedTask, setSelectedTask]   = useState(null);
 
     const pending = tasks.filter(t => !t.done);
     const done    = tasks.filter(t => t.done);
@@ -2610,16 +2733,38 @@ const StudentDashboard = ({ user, onLogout }) => {
     const highCount   = pending.filter(t => t.priority === 'High').length;
     const mediumCount = pending.filter(t => t.priority === 'Medium').length;
 
-    // When a task is checked → move to archive (mark done)
-    const handleCheck = (id) => {
+    // When a task is checked → mark done via API
+    const handleCheck = async (id) => {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+      try {
+        await api.tasks.update(task.student_id, id, { done: true });
+      } catch {
+        // Sync to localStorage fallback
+        saveLocalTasks(getLocalTasks().map(t => t.id === id ? { ...t, done: true } : t));
+      }
       setTasks(prev => prev.map(t => t.id === id ? { ...t, done: true } : t));
     };
 
     // Delete from archive with confirmation
     const handleDelete = (id) => setConfirmDelete(id);
-    const confirmDel = () => {
-      if (confirmDelete === '__all__') setTasks(prev => prev.filter(t => !t.done));
-      else setTasks(prev => prev.filter(t => t.id !== confirmDelete));
+    const confirmDel = async () => {
+      if (confirmDelete === '__all__') {
+        const doneTasks = tasks.filter(t => t.done);
+        await Promise.allSettled(doneTasks.map(t => api.tasks.delete(t.student_id, t.id).catch(()=>{})));
+        // Also remove from localStorage
+        const remaining = getLocalTasks().filter(t => !doneTasks.some(d => d.id === t.id));
+        saveLocalTasks(remaining);
+        setTasks(prev => prev.filter(t => !t.done));
+      } else {
+        const task = tasks.find(t => t.id === confirmDelete);
+        if (task) {
+          await api.tasks.delete(task.student_id, task.id).catch(()=>{});
+          // Also remove from localStorage
+          saveLocalTasks(getLocalTasks().filter(t => t.id !== confirmDelete));
+        }
+        setTasks(prev => prev.filter(t => t.id !== confirmDelete));
+      }
       setConfirmDelete(null);
     };
 
@@ -2630,6 +2775,78 @@ const StudentDashboard = ({ user, onLogout }) => {
 
     return (
       <div className="space-y-5">
+
+        {/* ── Task Detail Modal ── */}
+        {selectedTask && (() => {
+          const t = selectedTask;
+          const dueDate = t.due_date || t.due;
+          const formattedDue = dueDate ? (() => { try { return new Date(dueDate).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}); } catch { return dueDate; } })() : '—';
+          const facultyName = t.faculty ? [t.faculty.first_name,t.faculty.last_name].filter(Boolean).join(' ') : t.faculty_name || '—';
+          const pColor = t.priority==='High' ? dark?'bg-red-900/40 text-red-300 border-red-700':'bg-red-100 text-red-700 border-red-200'
+            : t.priority==='Medium' ? dark?'bg-amber-900/40 text-amber-300 border-amber-700':'bg-amber-100 text-amber-700 border-amber-200'
+            : dark?'bg-slate-700 text-slate-300 border-slate-600':'bg-slate-100 text-slate-600 border-slate-200';
+          const R = ({label,value,highlight}) => (
+            <div className={`flex justify-between items-start gap-4 px-5 py-3 border-b last:border-0 ${dark?'border-slate-700/60':'border-slate-100'}`}>
+              <span className={`text-xs shrink-0 w-36 ${dark?'text-slate-500':'text-slate-400'}`}>{label}</span>
+              <span className={`text-xs font-medium text-right break-words ${highlight?dark?'text-orange-400':'text-orange-600':dark?'text-slate-200':'text-slate-700'}`}>{value||'—'}</span>
+            </div>
+          );
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className={`absolute inset-0 backdrop-blur-md ${dark?'bg-slate-950/60':'bg-slate-900/30'}`} onClick={()=>setSelectedTask(null)}/>
+              <div className={`relative w-full max-w-lg rounded-2xl border shadow-2xl overflow-hidden ${dark?'bg-slate-900 border-slate-700/60':'bg-white border-slate-200'}`}>
+                {/* Header */}
+                <div className={`px-6 py-5 border-b ${dark?'border-slate-700/60 bg-slate-800/60':'border-slate-100 bg-slate-50'}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${dark?'bg-orange-900/40 text-orange-400':'bg-orange-100 text-orange-600'}`}>
+                        <ClipboardDocumentCheckIcon className="w-5 h-5"/>
+                      </div>
+                      <div>
+                        <p className={`text-[10px] font-bold uppercase tracking-widest ${dark?'text-orange-400':'text-orange-500'}`}>Task Details</p>
+                        <h3 className={`text-base font-bold mt-0.5 ${dark?'text-slate-100':'text-slate-800'}`}>{t.title}</h3>
+                      </div>
+                    </div>
+                    <button onClick={()=>setSelectedTask(null)} className={`shrink-0 transition-colors ${dark?'text-slate-500 hover:text-slate-300':'text-slate-400 hover:text-slate-600'}`}>
+                      <XMarkIcon className="w-5 h-5"/>
+                    </button>
+                  </div>
+                  {/* Badges */}
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${pColor}`}>{t.priority} Priority</span>
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${t.done?dark?'bg-emerald-900/40 text-emerald-300 border-emerald-700':'bg-emerald-100 text-emerald-700 border-emerald-200':dark?'bg-red-900/40 text-red-300 border-red-700':'bg-red-100 text-red-700 border-red-200'}`}>
+                      {t.done?'✓ Completed':'⏳ Pending'}
+                    </span>
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${dark?'bg-orange-900/40 text-orange-300 border-orange-700':'bg-orange-50 text-orange-600 border-orange-200'}`}>{t.subject}</span>
+                  </div>
+                </div>
+                {/* Info rows */}
+                <div className={`${dark?'divide-slate-700/60':'divide-slate-100'}`}>
+                  <R label="Subject"      value={t.subject}/>
+                  <R label="Due Date"     value={formattedDue}/>
+                  <R label="Priority"     value={t.priority}/>
+                  <R label="Status"       value={t.done?'Completed':'Pending'}/>
+                  <R label="Assigned by"  value={facultyName} highlight/>
+                  {(t.description) && <R label="Description" value={t.description}/>}
+                </div>
+                {/* Footer */}
+                <div className={`px-6 py-4 border-t flex justify-between items-center gap-3 ${dark?'border-slate-700/60 bg-slate-900':'border-slate-100 bg-slate-50'}`}>
+                  <button onClick={()=>setSelectedTask(null)}
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-all ${dark?'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700':'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                    Close
+                  </button>
+                  {!t.done && (
+                    <button onClick={()=>{handleCheck(t.id);setSelectedTask(null);}}
+                      className="px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-500 hover:bg-emerald-600 text-white transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2">
+                      <CheckCircleIcon className="w-4 h-4"/>
+                      Mark as Done
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Delete confirmation modal */}
         {confirmDelete && (
@@ -2757,7 +2974,7 @@ const StudentDashboard = ({ user, onLogout }) => {
                 {filtered.map(t => {
                   const pStyle = priorityStyle(t.priority, dark);
                   return (
-                    <div key={t.id} className={`group flex items-start gap-4 p-4 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
+                    <div key={t.id} onClick={() => setSelectedTask(t)} className={`group flex items-start gap-4 p-4 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer ${
                       t.priority === 'High'
                         ? dark ? 'bg-red-900/10 border-red-500/20 hover:border-brand-500/40' : 'bg-red-50/60 border-red-200 hover:border-brand-400/40'
                         : t.priority === 'Medium'
@@ -2765,7 +2982,7 @@ const StudentDashboard = ({ user, onLogout }) => {
                           : dark ? 'bg-slate-900 border-slate-700/60 hover:border-brand-500/40' : 'bg-white border-slate-200 hover:border-brand-400/40 shadow-sm'
                     }`}>
                       {/* Checkbox — checking moves to archive */}
-                      <button onClick={() => handleCheck(t.id)}
+                      <button onClick={(e) => { e.stopPropagation(); handleCheck(t.id); }}
                         className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${dark ? 'border-slate-600 hover:border-emerald-500 hover:bg-emerald-500/10' : 'border-slate-300 hover:border-emerald-500 hover:bg-emerald-50'}`}>
                       </button>
                       <div className="flex-1 min-w-0">
@@ -2856,9 +3073,226 @@ const StudentDashboard = ({ user, onLogout }) => {
     );
   };
 
+  /* ════════════════════════════════
+     PANEL: MY SUBJECTS
+  ════════════════════════════════ */
+  const SubjectsPanel = () => {
+    const [selected, setSelected] = useState(null);
+    const fmtTime = (t) => { if (!t) return '—'; const [h, m] = t.split(':'); const hr = parseInt(h); return `${hr % 12 || 12}:${m} ${hr < 12 ? 'AM' : 'PM'}`; };
+
+    return (
+      <div className="space-y-5">
+        {/* Subject Detail Modal */}
+        {selected && (() => {
+          const sc = selected;
+          const faculty = sc.faculty;
+          const facultyName = faculty ? [faculty.first_name, faculty.last_name].filter(Boolean).join(' ') : '—';
+          const photoSrc = faculty?.profile_photo
+            ? (faculty.profile_photo.startsWith('http') ? faculty.profile_photo : `${STORAGE_URL}/${faculty.profile_photo}`)
+            : null;
+          const facultyInitials = faculty ? `${faculty.first_name?.[0] ?? ''}${faculty.last_name?.[0] ?? ''}`.toUpperCase() : '?';
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className={`absolute inset-0 backdrop-blur-md ${dark ? 'bg-slate-950/60' : 'bg-slate-900/30'}`} onClick={() => setSelected(null)} />
+              <div className={`relative w-full max-w-lg rounded-2xl border shadow-2xl overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200'}`}>
+                {/* Header */}
+                <div className={`px-6 py-5 border-b ${dark ? 'border-slate-700/60 bg-gradient-to-br from-slate-800 to-slate-900' : 'border-slate-100 bg-gradient-to-br from-orange-50/60 to-white'}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${dark ? 'bg-orange-900/40 text-orange-400' : 'bg-orange-100 text-orange-600'}`}>
+                        <BookOpenIcon className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className={`text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-orange-400' : 'text-orange-500'}`}>{sc.subject?.subject_code}</p>
+                        <h3 className={`text-base font-bold mt-0.5 ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{sc.subject?.descriptive_title ?? '—'}</h3>
+                      </div>
+                    </div>
+                    <button onClick={() => setSelected(null)} className={`shrink-0 ${dark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}>
+                      <XMarkIcon className="w-5 h-5" />
+                    </button>
+                  </div>
+                  {/* Badges */}
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {sc.subject?.total_units && <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${dark ? 'bg-orange-900/40 text-orange-300 border-orange-700' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>{sc.subject.total_units} units</span>}
+                    {sc.day_of_week && <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${dark ? 'bg-blue-900/40 text-blue-300 border-blue-700' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>{sc.day_of_week}</span>}
+                    {sc.section?.section_name && <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${dark ? 'bg-emerald-900/40 text-emerald-300 border-emerald-700' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}`}>{sc.section.section_name}</span>}
+                  </div>
+                </div>
+                {/* Info rows */}
+                <div className={`divide-y ${dark ? 'divide-slate-700/60' : 'divide-slate-100'}`}>
+                  {[
+                    { label: 'Subject Code',   value: sc.subject?.subject_code },
+                    { label: 'Descriptive Title', value: sc.subject?.descriptive_title },
+                    { label: 'Lec Units',      value: sc.subject?.lec_units },
+                    { label: 'Lab Units',      value: sc.subject?.lab_units },
+                    { label: 'Total Units',    value: sc.subject?.total_units },
+                    { label: 'Day',            value: sc.day_of_week },
+                    { label: 'Time',           value: sc.start_time && sc.end_time ? `${fmtTime(sc.start_time)} – ${fmtTime(sc.end_time)}` : null },
+                    { label: 'Room',           value: sc.room },
+                    { label: 'Section',        value: sc.section?.section_name },
+                  ].map(({ label, value }) => value ? (
+                    <div key={label} className={`flex justify-between items-start gap-4 px-5 py-3`}>
+                      <span className={`text-xs shrink-0 w-36 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{label}</span>
+                      <span className={`text-xs font-medium text-right break-words ${dark ? 'text-slate-200' : 'text-slate-700'}`}>{value}</span>
+                    </div>
+                  ) : null)}
+                </div>
+                {/* Faculty section */}
+                <div className={`px-5 py-4 border-t ${dark ? 'border-slate-700/60' : 'border-slate-100'}`}>
+                  <p className={`text-[10px] font-bold uppercase tracking-widest mb-3 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Instructor</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full overflow-hidden shrink-0">
+                      {photoSrc
+                        ? <img src={photoSrc} alt={facultyInitials} className="w-full h-full object-cover" />
+                        : <div className={`w-full h-full flex items-center justify-center text-sm font-bold ${dark ? 'bg-orange-900/40 text-orange-300' : 'bg-orange-100 text-orange-600'}`}>{facultyInitials}</div>}
+                    </div>
+                    <div>
+                      <p className={`text-sm font-bold ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{facultyName}</p>
+                      {faculty?.department && <p className={`text-xs ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{faculty.department}</p>}
+                      {faculty?.email && <p className={`text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{faculty.email}</p>}
+                    </div>
+                  </div>
+                  {/* Consultation Hours */}
+                  {faculty?.office_hours && (
+                    <div className={`mt-3 flex items-start gap-2.5 p-3 rounded-xl border ${dark ? 'bg-amber-900/20 border-amber-700/40' : 'bg-amber-50 border-amber-200'}`}>
+                      <svg className={`w-4 h-4 shrink-0 mt-0.5 ${dark ? 'text-amber-400' : 'text-amber-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                      <div>
+                        <p className={`text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-amber-400' : 'text-amber-600'}`}>Consultation Hours</p>
+                        <p className={`text-xs font-semibold mt-0.5 ${dark ? 'text-amber-200' : 'text-amber-900'}`}>{faculty.office_hours}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {/* Footer */}
+                <div className={`px-6 py-4 border-t flex justify-end ${dark ? 'border-slate-700/60 bg-slate-900' : 'border-slate-100 bg-slate-50'}`}>
+                  <button onClick={() => setSelected(null)}
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-all ${dark ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Header banner */}
+        <div className={`relative overflow-hidden rounded-2xl border p-5 ${dark ? 'bg-gradient-to-br from-blue-600/15 via-brand-600/10 to-slate-900/0 border-blue-500/20' : 'bg-gradient-to-br from-blue-50 via-orange-50 to-white border-blue-100'}`}>
+          <div className="absolute right-0 top-0 w-48 h-48 bg-blue-500/10 rounded-full -translate-y-1/3 translate-x-1/3 blur-3xl pointer-events-none" />
+          <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${dark ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
+                <BookOpenIcon className="w-6 h-6 text-blue-500" />
+              </div>
+              <div>
+                <h2 className={`text-lg font-black ${dark ? 'text-white' : 'text-slate-800'}`}>My Subjects</h2>
+                <p className={`text-xs mt-0.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  {schedules.length > 0
+                    ? `${schedules.length} subject${schedules.length !== 1 ? 's' : ''} · Section ${student?.section ?? ''}`
+                    : 'Your enrolled subjects and instructors'}
+                </p>
+              </div>
+            </div>
+            {schedules.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                {[
+                  { label: 'Subjects', val: schedules.length, c: dark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700' },
+                  { label: 'Total Units', val: schedules.reduce((sum, sc) => sum + (sc.subject?.total_units ?? 0), 0), c: dark ? 'bg-orange-500/20 text-orange-300' : 'bg-orange-100 text-orange-700' },
+                ].map(st => (
+                  <div key={st.label} className={`px-3 py-1.5 rounded-xl text-center ${st.c}`}>
+                    <p className="text-xl font-black leading-none">{st.val}</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide mt-0.5">{st.label}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* No section assigned */}
+        {!student?.section ? (
+          <div className={`rounded-2xl border-2 border-dashed p-12 text-center ${dark ? 'border-slate-700' : 'border-slate-200'}`}>
+            <BookOpenIcon className={`w-14 h-14 mb-3 mx-auto ${dark ? 'text-slate-600' : 'text-slate-300'}`} />
+            <p className={`text-sm font-bold ${dark ? 'text-slate-400' : 'text-slate-600'}`}>No section assigned yet</p>
+            <p className={`text-xs mt-1 ${dark ? 'text-slate-600' : 'text-slate-400'}`}>Your subjects will appear here once the admin assigns your section and schedule.</p>
+          </div>
+        ) : schedules.length === 0 ? (
+          <div className={`rounded-2xl border-2 border-dashed p-12 text-center ${dark ? 'border-slate-700' : 'border-slate-200'}`}>
+            <BookOpenIcon className={`w-14 h-14 mb-3 mx-auto ${dark ? 'text-slate-600' : 'text-slate-300'}`} />
+            <p className={`text-sm font-bold ${dark ? 'text-slate-400' : 'text-slate-600'}`}>No subjects scheduled yet</p>
+            <p className={`text-xs mt-1 ${dark ? 'text-slate-600' : 'text-slate-400'}`}>Section: <span className="font-semibold text-orange-400">{student.section}</span> — waiting for schedule assignment.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {schedules.map(sc => {
+              const faculty = sc.faculty;
+              const facultyName = faculty ? [faculty.first_name, faculty.last_name].filter(Boolean).join(' ') : '—';
+              const photoSrc = faculty?.profile_photo
+                ? (faculty.profile_photo.startsWith('http') ? faculty.profile_photo : `${STORAGE_URL}/${faculty.profile_photo}`)
+                : null;
+              const facultyInitials = faculty ? `${faculty.first_name?.[0] ?? ''}${faculty.last_name?.[0] ?? ''}`.toUpperCase() : '?';
+              const schedStr = sc.day_of_week && sc.start_time && sc.end_time
+                ? `${sc.day_of_week} · ${fmtTime(sc.start_time)} – ${fmtTime(sc.end_time)}`
+                : sc.day_of_week ?? '—';
+              return (
+                <button key={sc.id} onClick={() => setSelected(sc)}
+                  className={`text-left rounded-2xl border p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl group ${dark ? 'bg-slate-900 border-slate-700/60 hover:border-brand-500/50 hover:shadow-brand-500/10' : 'bg-white border-slate-200 hover:border-brand-300 hover:shadow-brand-500/10 shadow-sm'}`}>
+                  {/* Subject header */}
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="flex-1 min-w-0">
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${dark ? 'bg-blue-900/40 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>{sc.subject?.subject_code ?? '—'}</span>
+                      <h4 className={`text-sm font-bold mt-2 leading-tight ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{sc.subject?.descriptive_title ?? '—'}</h4>
+                    </div>
+                    <div className={`text-center shrink-0 px-3 py-1.5 rounded-xl ${dark ? 'bg-slate-700/50' : 'bg-slate-100'}`}>
+                      <p className={`text-lg font-black ${dark ? 'text-white' : 'text-slate-800'}`}>{sc.subject?.total_units ?? '—'}</p>
+                      <p className={`text-[10px] ${dark ? 'text-slate-400' : 'text-slate-500'}`}>units</p>
+                    </div>
+                  </div>
+
+                  {/* Schedule info */}
+                  <div className={`flex flex-wrap gap-2 mb-4 text-[10px] font-semibold`}>
+                    {sc.day_of_week && (
+                      <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
+                        <CalendarDaysIcon className="w-3 h-3" />{schedStr}
+                      </span>
+                    )}
+                    {sc.room && (
+                      <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
+                        <BuildingOfficeIcon className="w-3 h-3" />{sc.room}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Faculty */}
+                  <div className={`flex items-center gap-2.5 pt-3 border-t ${dark ? 'border-slate-700/60' : 'border-slate-100'}`}>
+                    <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
+                      {photoSrc
+                        ? <img src={photoSrc} alt={facultyInitials} className="w-full h-full object-cover" />
+                        : <div className={`w-full h-full flex items-center justify-center text-xs font-bold ${dark ? 'bg-orange-900/40 text-orange-300' : 'bg-orange-100 text-orange-600'}`}>{facultyInitials}</div>}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs font-semibold truncate ${dark ? 'text-slate-200' : 'text-slate-700'}`}>{facultyName}</p>
+                      {faculty?.department && <p className={`text-[10px] truncate ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{faculty.department}</p>}
+                    </div>
+                    <svg className={`w-4 h-4 shrink-0 transition-transform group-hover:translate-x-0.5 ${dark ? 'text-slate-600' : 'text-slate-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        <div className={`flex items-start gap-3 p-4 rounded-xl border text-xs ${dark ? 'bg-blue-900/20 border-blue-500/30 text-blue-300' : 'bg-blue-50 border-blue-300 text-blue-700'}`}>
+          <InformationCircleIcon className={`w-4 h-4 shrink-0 mt-0.5 ${dark ? 'text-blue-400' : 'text-blue-500'}`} />
+          <span>Your subjects are based on your assigned section. Contact the admin if your schedule looks incorrect.</span>
+        </div>
+      </div>
+    );
+  };
+
   /* ── panel map ── */
   const panels = {
     dashboard: <DashboardPanel />, profile: <ProfilePanel />,
+    subjects: <SubjectsPanel />,
     skills: <SkillsPanel />, affiliations: <AffiliationsPanel />, violations: <ViolationsPanel />,
     tasks: <TasksPanel />,
   };
@@ -2888,20 +3322,38 @@ const StudentDashboard = ({ user, onLogout }) => {
         onMouseLeave={() => setSidebarHovered(false)}
       >
         {/* User profile header */}
-        <div className={`flex items-center border-b h-20 overflow-hidden shrink-0 transition-all duration-300 ${sidebarExpanded ? 'px-4' : 'px-0 justify-center'} ${dark ? 'border-slate-800' : 'border-slate-100'}`}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-md shrink-0 overflow-hidden">
-            {photoUrl
-              ? <img src={photoUrl} alt="Profile" className="w-full h-full object-cover object-top" />
-              : <span className="text-sm">{initials}</span>}
+        <div className={`flex items-center border-b h-20 overflow-hidden shrink-0 transition-all duration-300 ${sidebarExpanded ? 'px-4 justify-between' : 'px-0 justify-center'} ${dark ? 'border-slate-800' : 'border-slate-100'}`}>
+          <div className="flex items-center">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-md shrink-0 overflow-hidden">
+              {photoUrl
+                ? <img src={photoUrl} alt="Profile" className="w-full h-full object-cover object-top" />
+                : <span className="text-sm">{initials}</span>}
+            </div>
+            <div className={`flex flex-col whitespace-nowrap transition-all duration-300 ml-3 ${sidebarExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 hidden'}`}>
+              <p className={`text-sm font-semibold leading-tight ${dark ? 'text-slate-100' : 'text-slate-800'}`}>
+                {student
+                  ? `${student.first_name}${student.middle_name ? ' ' + student.middle_name : ''} ${student.last_name}${student.suffix ? ' ' + student.suffix : ''}`
+                  : (user?.name ?? '—')}
+              </p>
+              <p className={`text-[10px] mt-0.5 capitalize ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{user?.role} · CCS</p>
+            </div>
           </div>
-          <div className={`flex flex-col whitespace-nowrap transition-all duration-300 ml-3 ${sidebarExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 hidden'}`}>
-            <p className={`text-sm font-semibold leading-tight ${dark ? 'text-slate-100' : 'text-slate-800'}`}>
-              {student
-                ? `${student.first_name}${student.middle_name ? ' ' + student.middle_name : ''} ${student.last_name}${student.suffix ? ' ' + student.suffix : ''}`
-                : (user?.name ?? '—')}
-            </p>
-            <p className={`text-[10px] mt-0.5 capitalize ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{user?.role} · CCS</p>
-          </div>
+          {sidebarExpanded && (
+            <button
+              onClick={() => setSidebarPinned(p => !p)}
+              title={sidebarPinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
+              className={`p-1.5 rounded-lg transition-colors focus:outline-none shrink-0 ${
+                sidebarPinned
+                  ? dark ? 'bg-slate-800 text-brand-400' : 'bg-brand-50 text-brand-500'
+                  : dark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              {sidebarPinned
+                ? <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z"/></svg>
+                : <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="2" y1="2" x2="22" y2="22"/><line x1="12" y1="17" x2="12" y2="22"/><path d="M9 9v1.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17h12"/><path d="M15 9.34V6h1a2 2 0 000-4H7.89"/></svg>
+              }
+            </button>
+          )}
         </div>
 
         {/* Nav items */}
@@ -2943,40 +3395,96 @@ const StudentDashboard = ({ user, onLogout }) => {
               {dark ? <SunIcon className="w-4 h-4" /> : <MoonIcon className="w-4 h-4" />}
             </button>
             {/* Notification bell */}
-            <div className="relative" data-notif>
-              <button onClick={openNotif} title="Notifications"
-                className={`relative p-2 rounded-xl border transition-all ${dark ? 'bg-slate-900 border-slate-700/60 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'}`}>
-                <BellIcon className="w-4 h-4" />
+            {/* Notification bell */}
+            <div className="relative" ref={notifRef}>
+              <button onClick={() => { setNotifOpen(v => !v); if (!notifOpen) fetchNotifications(); }}
+                className={`relative p-2 rounded-full transition-all duration-300 ${dark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}>
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center shadow">
-                    {unreadCount > 9 ? '9+' : unreadCount}
+                  <span className={`absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 ${dark ? 'border-slate-900' : 'border-white'}`}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
+                <BellIcon className="w-6 h-6" />
               </button>
-              {/* Dropdown */}
+
+              {/* Notification Dropdown */}
               {notifOpen && (
-                <div className={`absolute right-0 top-full mt-2 w-80 rounded-2xl border shadow-2xl z-50 overflow-hidden ${dark ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'}`}>
-                  <div className={`flex items-center justify-between px-4 py-3 border-b ${dark ? 'border-slate-800' : 'border-slate-100'}`}>
-                    <h3 className={`text-sm font-bold ${dark ? 'text-slate-100' : 'text-slate-800'}`}>Notifications</h3>
-                    <button onClick={() => setNotifOpen(false)} className={`text-xs ${dark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}>×</button>
+                <div className={`absolute right-0 top-full mt-2 w-96 rounded-2xl shadow-2xl border overflow-hidden z-50 ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200'}`}>
+                  {/* Header */}
+                  <div className={`flex items-center justify-between px-4 py-3 border-b ${dark ? 'bg-slate-800/60 border-slate-700/60' : 'bg-slate-50 border-slate-100'}`}>
+                    <div className="flex items-center gap-2">
+                      <BellIcon className={`w-4 h-4 ${dark ? 'text-slate-400' : 'text-slate-500'}`} />
+                      <span className={`text-sm font-bold ${dark ? 'text-slate-100' : 'text-slate-800'}`}>Notifications</span>
+                      {unreadCount > 0 && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500 text-white">{unreadCount} new</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {unreadCount > 0 && (
+                        <button onClick={handleSNotifMarkAllRead}
+                          className={`text-xs font-semibold px-2 py-1 rounded-lg transition-colors ${dark ? 'text-brand-400 hover:bg-brand-900/30' : 'text-brand-600 hover:bg-brand-50'}`}>
+                          Mark all read
+                        </button>
+                      )}
+                      {notifications.length > 0 && (
+                        <button onClick={handleSNotifClearAll}
+                          className={`text-xs font-semibold px-2 py-1 rounded-lg transition-colors ${dark ? 'text-slate-400 hover:bg-slate-700 hover:text-red-400' : 'text-slate-400 hover:bg-red-50 hover:text-red-600'}`}>
+                          Clear all
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="max-h-80 overflow-y-auto">
+
+                  {/* List */}
+                  <div className="max-h-[420px] overflow-y-auto">
                     {notifications.length === 0 ? (
-                      <div className="py-10 text-center">
-                        <BellIcon className="w-8 h-8 mb-2 text-slate-400" />
-                        <p className={`text-sm ${dark ? 'text-slate-500' : 'text-slate-400'}`}>No notifications yet</p>
+                      <div className={`flex flex-col items-center justify-center py-12 ${dark ? 'text-slate-600' : 'text-slate-300'}`}>
+                        <BellIcon className="w-10 h-10 mb-2" />
+                        <p className={`text-sm font-medium ${dark ? 'text-slate-500' : 'text-slate-400'}`}>No notifications yet</p>
                       </div>
-                    ) : notifications.map(n => (
-                      <button key={n.id} onClick={() => { navigateTo(n.nav); setNotifOpen(false); }}
-                        className={`w-full text-left flex items-start gap-3 px-4 py-3 border-b transition-colors ${dark ? 'border-slate-800 hover:bg-slate-800' : 'border-slate-50 hover:bg-slate-50'}`}>
-                        <n.Icon className={`w-5 h-5 shrink-0 mt-0.5 ${n.iconCls}`} />
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-xs font-semibold ${dark ? 'text-slate-200' : 'text-slate-700'}`}>{n.title}</p>
-                          <p className={`text-xs mt-0.5 truncate ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{n.body}</p>
-                          {n.date && <p className={`text-[10px] mt-0.5 ${dark ? 'text-slate-600' : 'text-slate-400'}`}>{fmt(n.date)}</p>}
-                        </div>
-                      </button>
-                    ))}
+                    ) : (
+                      <div className={`divide-y ${dark ? 'divide-slate-700/60' : 'divide-slate-100'}`}>
+                        {notifications.map(n => {
+                          const icon = getSNotifIcon(n.type);
+                          const timeAgo = getSTimeAgo(n.created_at);
+                          return (
+                            <div key={n.id}
+                              onClick={() => handleSNotifClick(n)}
+                              className={`flex items-start gap-3 px-4 py-3.5 cursor-pointer transition-colors group ${
+                                !n.is_read
+                                  ? (dark ? 'bg-brand-900/10 hover:bg-brand-900/20' : 'bg-brand-50/60 hover:bg-brand-50')
+                                  : (dark ? 'hover:bg-slate-800/60' : 'hover:bg-slate-50')
+                              }`}>
+                              {/* Icon */}
+                              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-base ${icon.bg}`}>
+                                {icon.emoji}
+                              </div>
+                              {/* Content */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className={`text-xs font-bold leading-tight ${!n.is_read ? (dark ? 'text-slate-100' : 'text-slate-800') : (dark ? 'text-slate-300' : 'text-slate-600')}`}>
+                                    {n.title}
+                                  </p>
+                                  {!n.is_read && <span className="w-2 h-2 rounded-full bg-brand-500 shrink-0 mt-0.5" />}
+                                </div>
+                                <p className={`text-xs mt-0.5 leading-relaxed line-clamp-2 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                                  {n.message}
+                                </p>
+                                <p className={`text-[10px] mt-1 font-medium ${dark ? 'text-slate-600' : 'text-slate-400'}`}>{timeAgo}</p>
+                              </div>
+                              {/* Delete btn */}
+                              <button
+                                onClick={e => { e.stopPropagation(); handleSNotifDelete(n.id); }}
+                                className={`opacity-0 group-hover:opacity-100 p-1 rounded-lg transition-all shrink-0 ${dark ? 'text-slate-500 hover:text-red-400 hover:bg-red-900/20' : 'text-slate-300 hover:text-red-500 hover:bg-red-50'}`}>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

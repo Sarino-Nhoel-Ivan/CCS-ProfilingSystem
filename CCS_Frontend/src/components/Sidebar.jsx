@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   UserIcon, UsersIcon, BookOpenIcon, CalendarIcon,
-  StarIcon, Bars3Icon,
+  StarIcon,
   ArrowRightOnRectangleIcon, HomeIcon,
 } from '@heroicons/react/24/outline';
 import { useDarkMode } from '../context/DarkModeContext';
@@ -57,7 +57,10 @@ const Sidebar = ({ currentModule, setCurrentModule, isOpen, setIsOpen, user, onL
             }`}
             title={isOpen ? 'Unpin Sidebar' : 'Pin Sidebar'}
           >
-            <Bars3Icon className="w-5 h-5" />
+            {isOpen
+              ? <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z"/></svg>
+              : <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="2" y1="2" x2="22" y2="22"/><line x1="12" y1="17" x2="12" y2="22"/><path d="M9 9v1.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17h12"/><path d="M15 9.34V6h1a2 2 0 000-4H7.89"/></svg>
+            }
           </button>
         )}
       </div>

@@ -5,8 +5,11 @@ import { useDarkMode } from '../../context/DarkModeContext';
 const YEAR_PREFIX = { '1st Year': '1', '2nd Year': '2', '3rd Year': '3', '4th Year': '4' };
 const PROGRAM_CODE = { 'Information Technology': 'IT', 'Computer Science': 'CS' };
 const SECTIONS = ['A', 'B', 'C', 'D', 'E'];
+
+// All year levels get sections A–D (plus E if needed). "None" is always the first option.
 const getSectionOptions = (program, yearLevel) => {
-  const yr = YEAR_PREFIX[yearLevel]; const code = PROGRAM_CODE[program];
+  const yr = YEAR_PREFIX[yearLevel];
+  const code = PROGRAM_CODE[program];
   if (!yr || !code) return [];
   return SECTIONS.map(s => `${yr}${code}-${s}`);
 };
@@ -77,8 +80,34 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
   }, [isOpen]);
 
   const ch = (e) => {
+    const { name, value } = e.target;
+    setForm(p => {
+      const next = { ...p, [name]: value };
+      // Clear section when program changes (sections are program-specific)
+      if (name === 'program') next.section = '';
+      return next;
+    });
+    if (fieldErrors[name]) setFieldErrors(p => { const n = { ...p }; delete n[name]; return n; });
+  };
+
+  // Phone: enforce 09 prefix, digits only, max 11 chars
+  const handlePhone = (e) => {
     const { name } = e.target;
-    setForm(p => ({ ...p, [name]: e.target.value }));
+    let val = e.target.value.replace(/\D/g, ''); // digits only
+    if (val.length > 0 && !val.startsWith('09')) {
+      // Force 09 prefix
+      val = '09' + val.replace(/^0+9?/, '');
+    }
+    val = val.slice(0, 11);
+    setForm(p => ({ ...p, [name]: val }));
+    if (fieldErrors[name]) setFieldErrors(p => { const n = { ...p }; delete n[name]; return n; });
+  };
+
+  // Number-only input (for student ID, GPA, etc.)
+  const handleNumberOnly = (e) => {
+    const { name } = e.target;
+    const val = e.target.value.replace(/\D/g, '');
+    setForm(p => ({ ...p, [name]: val }));
     if (fieldErrors[name]) setFieldErrors(p => { const n = { ...p }; delete n[name]; return n; });
   };
 
@@ -239,7 +268,7 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
               <SectionTitle label="Personal Information" />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div><label className={lbl}>Student ID *</label>
-                  <input required name="student_number" value={form.student_number} onChange={ch} placeholder="e.g. 2201509"
+                  <input required name="student_number" value={form.student_number} onChange={handleNumberOnly} placeholder="e.g. 2201509"
                     ref={el => fieldRefs.current.student_number = el}
                     className={inpErr('student_number')} />
                   <ErrMsg field="student_number" /></div>
@@ -260,8 +289,10 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
                     ref={el => fieldRefs.current.email = el}
                     className={inpErr('email')} />
                   <ErrMsg field="email" /></div>
-                <div><label className={lbl}>Phone</label>
-                  <input name="contact_number" value={form.contact_number} onChange={ch}
+                <div>
+                  <label className={lbl}>Phone <span className={`normal-case font-normal ${dark ? 'text-slate-500' : 'text-slate-400'}`}>(starts with 09)</span></label>
+                  <input name="contact_number" value={form.contact_number} onChange={handlePhone}
+                    placeholder="09XXXXXXXXX" maxLength={11}
                     ref={el => fieldRefs.current.contact_number = el}
                     className={inpErr('contact_number')} />
                   <ErrMsg field="contact_number" /></div>
@@ -306,9 +337,10 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
                   <ErrMsg field="year_level" /></div>
                 <div><label className={lbl}>Section</label>
                   <select name="section" value={form.section} onChange={ch} className={sel}>
-                    <option value="">Select Section</option>
+                    <option value="">None</option>
                     {getSectionOptions(form.program, form.year_level).map(s => <option key={s}>{s}</option>)}
-                  </select></div>
+                  </select>
+                </div>
               </div>
             </div>
 

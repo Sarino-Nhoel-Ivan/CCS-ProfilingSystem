@@ -40,7 +40,7 @@ const EditStudentModal = ({ isOpen, onClose, onStudentUpdated, student }) => {
   const boldText      = dark ? 'text-slate-100' : 'text-slate-900';
   const sectionHead = `text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`;
   const SectionTitle = ({ label }) => (
-    <p className={sectionHead}><span className="w-4 h-px bg-orange-400" />{label}</p>
+    <p className={sectionHead}>{label}</p>
   );
   const cardBg        = dark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200';
   const skillCardBase = dark ? 'border-slate-700 bg-slate-800/60' : 'border-slate-200 bg-white';

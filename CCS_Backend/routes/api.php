@@ -134,6 +134,15 @@ Route::apiResource('events',      \App\Http\Controllers\EventController::class);
 Route::apiResource('skills',      \App\Http\Controllers\SkillController::class);
 
 // ══════════════════════════════════════════════════════════════
+// NOTIFICATIONS
+// ══════════════════════════════════════════════════════════════
+Route::get('/notifications',              [\App\Http\Controllers\NotificationController::class, 'index']);
+Route::post('/notifications/{id}/read',   [\App\Http\Controllers\NotificationController::class, 'markRead']);
+Route::post('/notifications/read-all',    [\App\Http\Controllers\NotificationController::class, 'markAllRead']);
+Route::delete('/notifications/clear-all', [\App\Http\Controllers\NotificationController::class, 'clearAll']);
+Route::delete('/notifications/{id}',      [\App\Http\Controllers\NotificationController::class, 'destroy']);
+
+// ══════════════════════════════════════════════════════════════
 // ENROLLMENT & CURRICULUM ROUTES
 // ══════════════════════════════════════════════════════════════
 use App\Http\Controllers\EnrollmentController;
@@ -151,3 +160,16 @@ Route::get('/students/{student}/enrollments',   [EnrollmentController::class, 's
 Route::get('/enrollments',                              [EnrollmentController::class, 'allEnrollments']);
 Route::put('/enrollments/{enrollment}/assign-faculty',  [EnrollmentController::class, 'assignFaculty']);
 Route::put('/enrollments/{enrollment}',                 [EnrollmentController::class, 'updateEnrollment']);
+
+// ══════════════════════════════════════════════════════════════
+// TASKS ROUTES
+// Faculty assigns tasks; students view/complete them
+// ══════════════════════════════════════════════════════════════
+use App\Http\Controllers\TaskController;
+
+Route::get('/tasks',                                          [TaskController::class, 'facultyTasks']);
+Route::post('/tasks/bulk',                                    [TaskController::class, 'bulkStore']);
+Route::get('/students/{student}/tasks',                       [TaskController::class, 'index']);
+Route::post('/students/{student}/tasks',                      [TaskController::class, 'store']);
+Route::put('/students/{student}/tasks/{task}',                [TaskController::class, 'update']);
+Route::delete('/students/{student}/tasks/{task}',             [TaskController::class, 'destroy']);
