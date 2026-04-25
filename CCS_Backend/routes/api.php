@@ -174,11 +174,3 @@ Route::post('/students/{student}/tasks',                      [TaskController::c
 Route::put('/students/{student}/tasks/{task}',                [TaskController::class, 'update']);
 Route::delete('/students/{student}/tasks/{task}',             [TaskController::class, 'destroy']);
 
-// ── TEMP: one-time curriculum reseed (DELETE AFTER USE) ───────────────────
-Route::get('/admin/reseed-curriculum', function () {
-    \DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-    \DB::table('subjects')->truncate();
-    \DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-    \Artisan::call('db:seed', ['--class' => 'CurriculumSeeder', '--force' => true]);
-    return response()->json(['message' => 'Curriculum reseeded successfully.', 'output' => \Artisan::output()]);
-});
