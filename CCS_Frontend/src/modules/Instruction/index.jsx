@@ -252,7 +252,7 @@ const InstructionModule = ({ students = [] }) => {
       </div>
 
       {/* Main Content Area */}
-      <div className={`rounded-2xl shadow-sm border overflow-hidden flex flex-col h-[calc(100vh-280px)] transition-colors duration-300 ${card}`}>
+      <div className={`rounded-2xl shadow-sm border overflow-hidden transition-colors duration-300 ${card}`}>
         <div className={`p-4 border-b flex flex-wrap gap-3 items-center transition-colors duration-300 ${tableBar}`}>
           <div className="flex-1 min-w-0">
             <h2 className={`text-xl font-bold transition-colors duration-300 ${boldText}`}>Curriculum Dashboard</h2>
@@ -316,7 +316,7 @@ const InstructionModule = ({ students = [] }) => {
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto relative">
+        <div className="relative">
           {isLoading ? (
             <div className={`absolute inset-0 flex items-center justify-center z-10 ${loadBg}`}>
               <div className="w-10 h-10 border-4 border-slate-200 border-t-brand-500 rounded-full animate-spin"></div>
