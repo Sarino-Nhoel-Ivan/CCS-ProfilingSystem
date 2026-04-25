@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, createContext, useContext } from 'react';
+﻿import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../../utils/api';
 import { STORAGE_URL } from '../../utils/config';
@@ -28,7 +28,6 @@ const useTheme = () => useContext(ThemeCtx);
 const NAV = [
   { id: 'dashboard',    label: 'Dashboard',            Icon: HomeIcon },
   { id: 'profile',      label: 'My Profile',           Icon: UserIcon },
-  { id: 'academic',     label: 'My Academic History',  Icon: ClipboardDocumentListIcon },
   { id: 'skills',       label: 'My Skills',            Icon: LightBulbIcon },
   { id: 'affiliations', label: 'My Affiliations',      Icon: BuildingLibraryIcon },
   { id: 'violations',   label: 'My Violations',        Icon: ExclamationTriangleIcon },
@@ -87,9 +86,7 @@ const EmptyState = ({ Icon: EmptyIcon, icon, title, sub }) => {
   const dark = useTheme();
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      {EmptyIcon
-        ? <EmptyIcon className={`w-14 h-14 mb-3 ${dark ? 'text-slate-600' : 'text-slate-300'}`} />
-        : <span className="text-5xl mb-3">{icon}</span>}
+      {EmptyIcon && <EmptyIcon className={`w-14 h-14 mb-3 ${dark ? 'text-slate-600' : 'text-slate-300'}`} />}
       <p className={`text-sm font-semibold ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{title}</p>
       {sub && <p className={`text-xs mt-1 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{sub}</p>}
     </div>
@@ -124,8 +121,8 @@ const Row = ({ label, value }) => {
 
 /* theme-aware form class builders */
 const mkInp = (dark) => dark
-  ? 'w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none transition'
-  : 'w-full rounded-xl bg-white border border-slate-300 px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none transition';
+  ? 'w-full rounded-xl bg-slate-800 border border-slate-600 px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:border-orange-400 focus:ring-1 focus:ring-orange-400/20 outline-none transition'
+  : 'w-full rounded-xl bg-white border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-orange-400 focus:ring-1 focus:ring-orange-400/20 outline-none transition';
 const mkSel = (dark) => `${mkInp(dark)} appearance-none`;
 const mkLbl = (dark) => `block text-xs font-semibold mb-1.5 uppercase tracking-wide ${dark ? 'text-slate-400' : 'text-slate-500'}`;
 
@@ -138,9 +135,8 @@ const Field = ({ label, required, icon, children }) => {
   const dark = useTheme();
   return (
     <div>
-      <label className={`flex items-center gap-1.5 text-xs font-semibold mb-1.5 uppercase tracking-wide ${dark ? 'text-slate-400' : 'text-orange-500/80'}`}>
-        {icon && <span className="text-sm leading-none">{icon}</span>}
-        {label}{required && <span className="text-brand-500 ml-0.5">*</span>}
+      <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+        {label}{required && <span className="text-orange-500 ml-0.5">*</span>}
       </label>
       {children}
     </div>
@@ -167,21 +163,30 @@ const Sel = ({ dark: darkProp, className, children, ...props }) => {
 };
 
 /* modal wrapper */
-const Modal = ({ title, subtitle, onClose, children, footer }) => {
+const Modal = ({ title, subtitle, icon: IconComp, onClose, children, footer }) => {
   const dark = useTheme();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className={`absolute inset-0 backdrop-blur-md ${dark ? 'bg-slate-950/30' : 'bg-slate-900/20'}`} onClick={onClose} />
       <div className={`relative w-full max-w-2xl border rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200'}`}>
-        <div className={`flex items-start justify-between px-6 py-5 border-b ${dark ? 'border-slate-700/60' : 'border-slate-100'}`}>
-          <div>
-            <h3 className={`text-base font-bold ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{title}</h3>
-            {subtitle && <p className={`text-xs mt-0.5 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{subtitle}</p>}
+
+        {/* Hero header — matches admin edit modal style */}
+        <div className={`px-6 pt-6 pb-5 border-b ${dark ? 'bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700/60' : 'bg-gradient-to-br from-orange-50/60 to-white border-slate-100'}`}>
+          <div className="flex items-center gap-4">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${dark ? 'bg-orange-900/40 text-orange-400' : 'bg-orange-100 text-orange-500'}`}>
+              {IconComp
+                ? <IconComp className="w-6 h-6" />
+                : <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+              }
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-[10px] font-bold uppercase tracking-widest mb-0.5 ${dark ? 'text-orange-400' : 'text-orange-500'}`}>CCS Profiling System</p>
+              <h3 className={`text-base font-extrabold leading-tight ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{title}</h3>
+              {subtitle && <p className={`text-xs mt-0.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{subtitle}</p>}
+            </div>
           </div>
-          <button onClick={onClose} className={`transition-colors ml-4 mt-0.5 ${dark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}>
-            <XMarkIcon className="w-5 h-5" />
-          </button>
         </div>
+
         <div className="overflow-y-auto flex-1 px-6 py-5">{children}</div>
         {footer && <div className={`px-6 py-4 border-t ${dark ? 'border-slate-700/60 bg-slate-900' : 'border-slate-100 bg-slate-50'}`}>{footer}</div>}
       </div>
@@ -191,8 +196,7 @@ const Modal = ({ title, subtitle, onClose, children, footer }) => {
 
 const BtnPrimary = ({ children, loading, ...props }) => (
   <button {...props} disabled={loading || props.disabled}
-    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-bold transition-all duration-200 disabled:opacity-50 hover:scale-105 active:scale-95"
-    style={{ background: 'linear-gradient(135deg, #f26522, #e04f0f)', boxShadow: '0 4px 14px rgba(242,101,34,0.35)' }}>
+    className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold bg-orange-500 hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/30 disabled:opacity-50 min-w-[110px] justify-center">
     {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : children}
   </button>
 );
@@ -200,7 +204,7 @@ const BtnPrimary = ({ children, loading, ...props }) => (
 const BtnGhost = ({ children, ...props }) => {
   const dark = useTheme();
   return (
-    <button {...props} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95 ${dark ? 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-300' : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-600'}`}>
+    <button {...props} className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-colors ${dark ? 'bg-slate-700 hover:bg-slate-600 border-slate-600 text-slate-200' : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700 shadow-sm'}`}>
       {children}
     </button>
   );
@@ -271,20 +275,23 @@ const PersonalInfoModal = ({ student, onClose, onSaved }) => {
     try { await patchStudent(student, form); onSaved(); } catch (ex) { setErr(ex.message||'Failed to save.'); } finally { setSaving(false); }
   };
   return (
-    <Modal title="Edit Personal Information" onClose={onClose} footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>Save Changes</BtnPrimary></div>}>
+    <Modal title="Edit Personal Information" subtitle="Update your personal details" onClose={onClose} footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>Save Changes</BtnPrimary></div>}>
       <ErrBox msg={err} />
-      <form onSubmit={save} className="grid grid-cols-2 gap-4">
-        <Field label="First Name" required><input name="first_name" value={form.first_name} onChange={ch} className={i} required /></Field>
-        <Field label="Middle Name"><input name="middle_name" value={form.middle_name} onChange={ch} className={i} /></Field>
-        <Field label="Last Name" required><input name="last_name" value={form.last_name} onChange={ch} className={i} required /></Field>
-        <Field label="Suffix"><input name="suffix" value={form.suffix} onChange={ch} className={i} placeholder="Jr, Sr, III…" /></Field>
-        <Field label="Gender" required><Sel name="gender" value={form.gender} onChange={ch} className={s}><option>Male</option><option>Female</option></Sel></Field>
-        <Field label="Birth Date" required><input type="date" name="birth_date" value={form.birth_date} onChange={ch} className={i} required max={new Date(Date.now()-86400000).toISOString().split('T')[0]} /></Field>
-        <Field label="Place of Birth" required><input name="place_of_birth" value={form.place_of_birth} onChange={ch} className={i} required /></Field>
-        <Field label="Nationality"><input name="nationality" value={form.nationality} onChange={ch} className={i} /></Field>
-        <Field label="Civil Status"><Sel name="civil_status" value={form.civil_status} onChange={ch} className={s}><option>Single</option><option>Married</option><option>Widowed</option><option>Separated</option></Sel></Field>
-        <Field label="Religion"><input name="religion" value={form.religion} onChange={ch} className={i} /></Field>
-      </form>
+      <div className={`p-4 rounded-xl border ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+        <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}>Personal Information</p>
+        <form onSubmit={save} className="grid grid-cols-2 gap-3">
+          <Field label="First Name" required><input name="first_name" value={form.first_name} onChange={ch} className={i} required /></Field>
+          <Field label="Middle Name"><input name="middle_name" value={form.middle_name} onChange={ch} className={i} /></Field>
+          <Field label="Last Name" required><input name="last_name" value={form.last_name} onChange={ch} className={i} required /></Field>
+          <Field label="Suffix"><input name="suffix" value={form.suffix} onChange={ch} className={i} placeholder="Jr, Sr, III…" /></Field>
+          <Field label="Gender" required><Sel name="gender" value={form.gender} onChange={ch} className={s}><option>Male</option><option>Female</option></Sel></Field>
+          <Field label="Birth Date" required><input type="date" name="birth_date" value={form.birth_date} onChange={ch} className={i} required max={new Date(Date.now()-86400000).toISOString().split('T')[0]} /></Field>
+          <Field label="Place of Birth" required><input name="place_of_birth" value={form.place_of_birth} onChange={ch} className={i} required /></Field>
+          <Field label="Nationality"><input name="nationality" value={form.nationality} onChange={ch} className={i} /></Field>
+          <Field label="Civil Status"><Sel name="civil_status" value={form.civil_status} onChange={ch} className={s}><option>Single</option><option>Married</option><option>Widowed</option><option>Separated</option></Sel></Field>
+          <Field label="Religion"><input name="religion" value={form.religion} onChange={ch} className={i} /></Field>
+        </form>
+      </div>
     </Modal>
   );
 };
@@ -308,18 +315,28 @@ const ContactInfoModal = ({ student, onClose, onSaved }) => {
     try { await patchStudent(student, form); onSaved(); } catch (ex) { setErr(ex.message||'Failed to save.'); } finally { setSaving(false); }
   };
   return (
-    <Modal title="Edit Contact Information" onClose={onClose} footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>Save Changes</BtnPrimary></div>}>
+    <Modal title="Edit Contact Information" subtitle="Update your contact details and address" onClose={onClose} footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>Save Changes</BtnPrimary></div>}>
       <ErrBox msg={err} />
-      <form onSubmit={save} className="grid grid-cols-2 gap-4">
-        <Field label="Email" required><input type="email" name="email" value={form.email} onChange={ch} className={i} required /></Field>
-        <Field label="Contact Number" required><input name="contact_number" value={form.contact_number} onChange={chPhone} className={i} required maxLength={11} placeholder="09XXXXXXXXX" /></Field>
-        <Field label="Alt. Number"><input name="alternate_contact_number" value={form.alternate_contact_number} onChange={chPhone} className={i} maxLength={11} placeholder="09XXXXXXXXX" /></Field>
-        <Field label="Street"><input name="street" value={form.street} onChange={ch} className={i} /></Field>
-        <Field label="Barangay"><input name="barangay" value={form.barangay} onChange={ch} className={i} /></Field>
-        <Field label="City" required><input name="city" value={form.city} onChange={ch} className={i} required /></Field>
-        <Field label="Province"><input name="province" value={form.province} onChange={ch} className={i} /></Field>
-        <Field label="Zip Code"><input name="zip_code" value={form.zip_code} onChange={chZip} className={i} maxLength={5} placeholder="e.g. 4025" /></Field>
-      </form>
+      <div className="space-y-4">
+        <div className={`p-4 rounded-xl border ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+          <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}>Contact Details</p>
+          <form onSubmit={save} className="grid grid-cols-2 gap-3">
+            <Field label="Email" required><input type="email" name="email" value={form.email} onChange={ch} className={i} required /></Field>
+            <Field label="Contact Number" required><input name="contact_number" value={form.contact_number} onChange={chPhone} className={i} required maxLength={11} placeholder="09XXXXXXXXX" /></Field>
+            <div className="col-span-2"><Field label="Alt. Number"><input name="alternate_contact_number" value={form.alternate_contact_number} onChange={chPhone} className={i} maxLength={11} placeholder="09XXXXXXXXX" /></Field></div>
+          </form>
+        </div>
+        <div className={`p-4 rounded-xl border ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+          <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}>Address</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Street"><input name="street" value={form.street} onChange={ch} className={i} /></Field>
+            <Field label="Barangay"><input name="barangay" value={form.barangay} onChange={ch} className={i} /></Field>
+            <Field label="City" required><input name="city" value={form.city} onChange={ch} className={i} required /></Field>
+            <Field label="Province"><input name="province" value={form.province} onChange={ch} className={i} /></Field>
+            <Field label="Zip Code"><input name="zip_code" value={form.zip_code} onChange={chZip} className={i} maxLength={5} placeholder="e.g. 4025" /></Field>
+          </div>
+        </div>
+      </div>
     </Modal>
   );
 };
@@ -343,16 +360,19 @@ const GuardianFormModal = ({ studentId, record, onClose, onSaved }) => {
     try { if (record?.id) await api.students.updateGuardian(studentId, record.id, form); else await api.students.addGuardian(studentId, form); onSaved(); } catch (ex) { setErr(ex.message||'Failed to save.'); } finally { setSaving(false); }
   };
   return (
-    <Modal title={record ? 'Edit Guardian' : 'Add Guardian'} onClose={onClose} footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>{record ? 'Save Changes' : 'Add Guardian'}</BtnPrimary></div>}>
+    <Modal title={record ? 'Edit Guardian' : 'Add Guardian'} subtitle="Family background information" onClose={onClose} footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>{record ? 'Save Changes' : 'Add Guardian'}</BtnPrimary></div>}>
       <ErrBox msg={err} />
-      <form onSubmit={save} className="grid grid-cols-2 gap-4">
-        <Field label="Full Name" required><input name="full_name" value={form.full_name} onChange={ch} className={i} required /></Field>
-        <Field label="Relationship" required><Sel name="relationship" value={form.relationship} onChange={ch} className={s}><option>Father</option><option>Mother</option><option>Guardian</option><option>Sibling</option><option>Other</option></Sel></Field>
-        <Field label="Occupation"><input name="occupation" value={form.occupation} onChange={ch} className={i} /></Field>
-        <Field label="Contact Number"><input name="contact_number" value={form.contact_number} onChange={chPhone} className={i} maxLength={11} placeholder="09XXXXXXXXX" /></Field>
-        <Field label="Email"><input type="email" name="email" value={form.email} onChange={ch} className={i} /></Field>
-        <div className="col-span-2"><Field label="Address"><input name="address" value={form.address} onChange={ch} className={i} /></Field></div>
-      </form>
+      <div className={`p-4 rounded-xl border ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+        <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}>Guardian Details</p>
+        <form onSubmit={save} className="grid grid-cols-2 gap-3">
+          <Field label="Full Name" required><input name="full_name" value={form.full_name} onChange={ch} className={i} required /></Field>
+          <Field label="Relationship" required><Sel name="relationship" value={form.relationship} onChange={ch} className={s}><option>Father</option><option>Mother</option><option>Guardian</option><option>Sibling</option><option>Other</option></Sel></Field>
+          <Field label="Occupation"><input name="occupation" value={form.occupation} onChange={ch} className={i} /></Field>
+          <Field label="Contact Number"><input name="contact_number" value={form.contact_number} onChange={chPhone} className={i} maxLength={11} placeholder="09XXXXXXXXX" /></Field>
+          <Field label="Email"><input type="email" name="email" value={form.email} onChange={ch} className={i} /></Field>
+          <div className="col-span-2"><Field label="Address"><input name="address" value={form.address} onChange={ch} className={i} /></Field></div>
+        </form>
+      </div>
     </Modal>
   );
 };
@@ -364,16 +384,19 @@ const EnrollmentModal = ({ student, onClose, onSaved }) => {
   const ch = (e) => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
   const save = async (e) => { e.preventDefault(); setSaving(true); setErr(null); try { await patchStudent(student, form); onSaved(); } catch (ex) { setErr(ex.message||'Failed to save.'); } finally { setSaving(false); } };
   return (
-    <Modal title="Edit Enrollment Details" onClose={onClose} footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>Save Changes</BtnPrimary></div>}>
+    <Modal title="Edit Enrollment Details" subtitle="Academic enrollment information" onClose={onClose} footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>Save Changes</BtnPrimary></div>}>
       <ErrBox msg={err} />
-      <form onSubmit={save} className="grid grid-cols-2 gap-4">
-        <Field label="Year Level" required><Sel name="year_level" value={form.year_level} onChange={ch} className={s}><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></Sel></Field>
-        <Field label="Section"><input name="section" value={form.section} onChange={ch} className={i} /></Field>
-        <Field label="Student Type" required><Sel name="student_type" value={form.student_type} onChange={ch} className={s}><option>Regular</option><option>Irregular</option><option>Transferee</option><option>Returnee</option></Sel></Field>
-        <Field label="Enrollment Status" required><Sel name="enrollment_status" value={form.enrollment_status} onChange={ch} className={s}><option>Enrolled</option><option>Not Enrolled</option><option>LOA</option><option>Dropped</option></Sel></Field>
-        <Field label="Date Enrolled" required><input type="date" name="date_enrolled" value={form.date_enrolled} onChange={ch} className={i} required max={new Date().toISOString().split('T')[0]} /></Field>
-        <Field label="Program"><input name="program" value={form.program} onChange={ch} className={i} /></Field>
-      </form>
+      <div className={`p-4 rounded-xl border ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+        <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}>Enrollment Details</p>
+        <form onSubmit={save} className="grid grid-cols-2 gap-3">
+          <Field label="Year Level" required><Sel name="year_level" value={form.year_level} onChange={ch} className={s}><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></Sel></Field>
+          <Field label="Section"><input name="section" value={form.section} onChange={ch} className={i} /></Field>
+          <Field label="Student Type" required><Sel name="student_type" value={form.student_type} onChange={ch} className={s}><option>Regular</option><option>Irregular</option><option>Transferee</option><option>Returnee</option></Sel></Field>
+          <Field label="Enrollment Status" required><Sel name="enrollment_status" value={form.enrollment_status} onChange={ch} className={s}><option>Enrolled</option><option>Not Enrolled</option><option>LOA</option><option>Dropped</option></Sel></Field>
+          <Field label="Date Enrolled" required><input type="date" name="date_enrolled" value={form.date_enrolled} onChange={ch} className={i} required max={new Date().toISOString().split('T')[0]} /></Field>
+          <Field label="Program"><input name="program" value={form.program} onChange={ch} className={i} /></Field>
+        </form>
+      </div>
     </Modal>
   );
 };
@@ -392,14 +415,17 @@ const EducationalBgModal = ({ student, onClose, onSaved }) => {
     try { await patchStudent(student, form); onSaved(); } catch (ex) { setErr(ex.message||'Failed to save.'); } finally { setSaving(false); }
   };
   return (
-    <Modal title="Edit Educational Background" onClose={onClose} footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>Save Changes</BtnPrimary></div>}>
+    <Modal title="Edit Educational Background" subtitle="Previous school and academic records" onClose={onClose} footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>Save Changes</BtnPrimary></div>}>
       <ErrBox msg={err} />
-      <form onSubmit={save} className="grid grid-cols-2 gap-4">
-        <Field label="LRN"><input name="lrn" value={form.lrn} onChange={chLrn} className={i} maxLength={12} placeholder="12-digit LRN" /></Field>
-        <Field label="Last Year Attended"><input name="last_year_attended" value={form.last_year_attended} onChange={ch} className={i} placeholder="e.g. 2022-2023" /></Field>
-        <div className="col-span-2"><Field label="Last School Attended"><input name="last_school_attended" value={form.last_school_attended} onChange={ch} className={i} /></Field></div>
-        <div className="col-span-2"><Field label="Honors / Awards"><textarea name="honors_received" value={form.honors_received} onChange={ch} className={`${i} resize-none`} rows={3} /></Field></div>
-      </form>
+      <div className={`p-4 rounded-xl border ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+        <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}>Educational Background</p>
+        <form onSubmit={save} className="grid grid-cols-2 gap-3">
+          <Field label="LRN"><input name="lrn" value={form.lrn} onChange={chLrn} className={i} maxLength={12} placeholder="12-digit LRN" /></Field>
+          <Field label="Last Year Attended"><input name="last_year_attended" value={form.last_year_attended} onChange={ch} className={i} placeholder="e.g. 2022-2023" /></Field>
+          <div className="col-span-2"><Field label="Last School Attended"><input name="last_school_attended" value={form.last_school_attended} onChange={ch} className={i} /></Field></div>
+          <div className="col-span-2"><Field label="Honors / Awards"><textarea name="honors_received" value={form.honors_received} onChange={ch} className={`${i} resize-none`} rows={3} /></Field></div>
+        </form>
+      </div>
     </Modal>
   );
 };
@@ -433,20 +459,23 @@ const MedicalModal = ({ student, record, onClose, onSaved }) => {
     finally { setSaving(false); }
   };
   return (
-    <Modal title={record ? 'Edit Medical Record' : 'Add Medical Record'} subtitle="Student health information" icon="🏥" onClose={onClose}
+    <Modal title={record ? 'Edit Medical Record' : 'Add Medical Record'} subtitle="Student health information" onClose={onClose}
       footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>Save Changes</BtnPrimary></div>}>
       <ErrBox msg={err} />
-      <form onSubmit={save} className="space-y-4">
-        <Field label="Blood Type" icon="🩸">
+      <div className={`p-4 rounded-xl border ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+        <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}>Medical Information</p>
+        <form onSubmit={save} className="space-y-4">
+        <Field label="Blood Type">
           <Sel name="bloodtype" value={form.bloodtype} onChange={ch} className={s}>
             <option value="">Select…</option>
             {['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(b => <option key={b}>{b}</option>)}
           </Sel>
         </Field>
-        <Field label="Existing Conditions / Allergies" icon="🩺">
+        <Field label="Existing Conditions / Allergies">
           <textarea name="existing_conditions" value={form.existing_conditions} onChange={ch} className={`${i} resize-none`} rows={4} placeholder="e.g. Asthma, Hypertension, Diabetes…" />
         </Field>
       </form>
+      </div>
     </Modal>
   );
 };
@@ -478,39 +507,34 @@ const EmergencyContactModal = ({ student, record, onClose, onSaved }) => {
     finally { setSaving(false); }
   };
   return (
-    <Modal title={record ? 'Edit Emergency Contact' : 'Add Emergency Contact'} subtitle="Person to contact in case of emergency" icon="🚨" onClose={onClose}
+    <Modal title={record ? 'Edit Emergency Contact' : 'Add Emergency Contact'} subtitle="Person to contact in case of emergency" onClose={onClose}
       footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>Save Changes</BtnPrimary></div>}>
       <ErrBox msg={err} />
-      <form onSubmit={save} className="space-y-5">
-        <div>
-          <p className={`text-[10px] font-bold uppercase tracking-widest mb-3 flex items-center gap-2 ${dark ? 'text-orange-400/70' : 'text-orange-400'}`}>
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-            Contact Person
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
-              <Field label="Full Name" required icon="👤">
-                <input name="emergency_contact_name" value={form.emergency_contact_name} onChange={ch} className={i} required placeholder="Complete name" />
-              </Field>
-            </div>
-            <Field label="Relationship" icon="🔗">
-              <Sel name="emergency_contact_relationship" value={form.emergency_contact_relationship} onChange={ch} className={s}>
-                <option value="">Select…</option>
-                <option>Father</option><option>Mother</option><option>Sibling</option>
-                <option>Spouse</option><option>Relative</option><option>Friend</option><option>Other</option>
-              </Sel>
+      <div className={`p-4 rounded-xl border ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+        <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}>Emergency Contact Details</p>
+        <form onSubmit={save} className="grid grid-cols-2 gap-3">
+          <div className="col-span-2">
+            <Field label="Full Name" required>
+              <input name="emergency_contact_name" value={form.emergency_contact_name} onChange={ch} className={i} required placeholder="Complete name" />
             </Field>
-            <Field label="Contact Number" required icon="📱">
-              <input name="emergency_contact_number" value={form.emergency_contact_number} onChange={ch} className={i} required placeholder="09XX-XXX-XXXX" />
-            </Field>
-            <div className="col-span-2">
-              <Field label="Address" icon="🏠">
-                <input name="emergency_contact_address" value={form.emergency_contact_address} onChange={ch} className={i} placeholder="Home address (optional)" />
-              </Field>
-            </div>
           </div>
-        </div>
-      </form>
+          <Field label="Relationship">
+            <Sel name="emergency_contact_relationship" value={form.emergency_contact_relationship} onChange={ch} className={s}>
+              <option value="">Select…</option>
+              <option>Father</option><option>Mother</option><option>Sibling</option>
+              <option>Spouse</option><option>Relative</option><option>Friend</option><option>Other</option>
+            </Sel>
+          </Field>
+          <Field label="Contact Number" required>
+            <input name="emergency_contact_number" value={form.emergency_contact_number} onChange={ch} className={i} required placeholder="09XX-XXX-XXXX" />
+          </Field>
+          <div className="col-span-2">
+            <Field label="Address">
+              <input name="emergency_contact_address" value={form.emergency_contact_address} onChange={ch} className={i} placeholder="Home address (optional)" />
+            </Field>
+          </div>
+        </form>
+      </div>
     </Modal>
   );
 };
@@ -550,17 +574,17 @@ const AcademicModal = ({ studentId, record, onClose, onSaved }) => {
   };
 
   return (
-    <Modal title={record ? 'Edit Academic Record' : 'Add Academic Record'} subtitle="School, year and GPA" icon="📊" onClose={onClose}
+    <Modal title={record ? 'Edit Academic Record' : 'Add Academic Record'} subtitle="School, year and GPA" onClose={onClose}
       footer={<div className="flex justify-end gap-3"><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>{record ? 'Save Changes' : 'Add Record'}</BtnPrimary></div>}>
       <ErrBox msg={err} />
       <form onSubmit={save} className="grid grid-cols-3 gap-3">
-        <Field label="School" icon="🏫">
+        <Field label="School">
           <input name="school_name" value={form.school_name} onChange={ch} className={i} placeholder="e.g. Bigaa National HS" />
         </Field>
-        <Field label="Year" icon="📅">
+        <Field label="Year">
           <input name="school_year" value={form.school_year} onChange={ch} className={i} placeholder="e.g. 2025-2026" required />
         </Field>
-        <Field label="GPA" icon="⭐">
+        <Field label="GPA">
           <input type="number" name="gpa" value={form.gpa} onChange={ch} className={i} step="0.01" min="1" max="5" placeholder="e.g. 1.75" />
         </Field>
       </form>
@@ -732,7 +756,7 @@ const SkillsModal = ({ studentId, currentSkills, onClose, onSaved }) => {
         {/* Header */}
         <div className={`flex items-center justify-between px-6 py-5 border-b rounded-t-2xl ${dark ? 'border-orange-500/20 bg-orange-500/5' : 'border-orange-100 bg-orange-50/60'}`}>
           <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 ${dark ? 'bg-orange-500/15 border border-orange-500/30' : 'bg-orange-100 border border-orange-200'}`}>💡</div>
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 ${dark ? 'bg-orange-500/15 border border-orange-500/30' : 'bg-orange-100 border border-orange-200'}`}></div>
             <div>
               <h3 className={`text-base font-bold ${dark ? 'text-slate-100' : 'text-slate-800'}`}>Manage Skills</h3>
               <p className={`text-xs mt-0.5 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Pick your skills and set your proficiency level</p>
@@ -766,7 +790,7 @@ const SkillsModal = ({ studentId, currentSkills, onClose, onSaved }) => {
                   className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === tab
                     ? 'bg-brand-500 text-white shadow'
                     : dark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
-                  {tab === 'Academic' ? '💻 Academic' : '🏅 Non-Academic'}
+                  {tab === 'Academic' ? 'Academic' : 'Non-Academic'}
                 </button>
               ))}
             </div>
@@ -837,7 +861,7 @@ const SkillsModal = ({ studentId, currentSkills, onClose, onSaved }) => {
                     <div className={`flex items-center justify-between px-3 py-2 ${dark ? 'bg-slate-900/60' : 'bg-white/60'}`}>
                       <div className="flex items-center gap-2 min-w-0">
                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${s.skill_category === 'Academic' ? dark ? 'bg-brand-500/20 text-brand-300 border-brand-500/30' : 'bg-brand-100 text-brand-700 border-brand-200' : dark ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-purple-100 text-purple-700 border-purple-200'}`}>
-                          {s.skill_category === 'Academic' ? '💻' : '🏅'}
+                          {''}
                         </span>
                         <span className={`text-xs font-semibold truncate ${dark ? 'text-orange-100' : 'text-slate-800'}`}>{s.skill_name}</span>
                       </div>
@@ -991,6 +1015,7 @@ const StudentDashboard = ({ user, onLogout }) => {
   const [tasks, setTasks]               = useState(TASKS_DEFAULT);
   const [sidebarPinned, setSidebarPinned] = useState(false);
   const [sidebarHovered, setSidebarHovered] = useState(false);
+  const [profileTab, setProfileTab] = useState('personal');
   const [student, setStudent]           = useState(null);
   const [mustChangePassword, setMustChangePassword] = useState(() => user?.must_change_password === true);
   const [loadingProfile, setLoadingProfile] = useState(false);
@@ -1124,61 +1149,161 @@ const StudentDashboard = ({ user, onLogout }) => {
 
     const quickLinks = [
       { id: 'profile',      label: 'My Profile',      Icon: UserIcon,                desc: 'View & edit your info',                                                    color: dark ? 'from-blue-500/20 to-purple-500/10 border-blue-500/20'    : 'bg-blue-50 border-blue-100',    iconColor: 'text-blue-500'    },
-      { id: 'academic',     label: 'Academic History', Icon: ClipboardDocumentListIcon, desc: 'Grades & academic records',                                              color: dark ? 'from-emerald-500/20 to-teal-500/10 border-emerald-500/20': 'bg-emerald-50 border-emerald-100', iconColor: 'text-emerald-500' },
+      { id: 'profile', tab: 'academic', label: 'Academic History', Icon: ClipboardDocumentListIcon, desc: 'Grades & academic records',                                              color: dark ? 'from-emerald-500/20 to-teal-500/10 border-emerald-500/20': 'bg-emerald-50 border-emerald-100', iconColor: 'text-emerald-500' },
       { id: 'skills',       label: 'My Skills',        Icon: LightBulbIcon,           desc: `${skillCount} skill${skillCount !== 1 ? 's' : ''} recorded`,              color: dark ? 'from-amber-500/20 to-orange-500/10 border-amber-500/20'  : 'bg-amber-50 border-amber-100',   iconColor: 'text-amber-500'   },
       { id: 'affiliations', label: 'My Affiliations',  Icon: BuildingLibraryIcon,     desc: `${affiliationCount} org${affiliationCount !== 1 ? 's' : ''} joined`,      color: dark ? 'from-purple-500/20 to-pink-500/10 border-purple-500/20'  : 'bg-purple-50 border-purple-100', iconColor: 'text-purple-500'  },
       { id: 'violations',   label: 'My Violations',    Icon: ExclamationTriangleIcon, desc: violationCount ? `${violationCount} record${violationCount !== 1 ? 's' : ''}` : 'Clean record', color: dark ? 'from-red-500/20 to-rose-500/10 border-red-500/20' : 'bg-red-50 border-red-100', iconColor: 'text-red-500' },
     ];
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-5">
 
         {/* ── Hero Banner ── */}
-        <div className={`relative overflow-hidden rounded-2xl border p-6 ${dark ? 'bg-gradient-to-br from-brand-600/25 via-purple-600/10 to-slate-900/0 border-brand-500/20' : 'bg-gradient-to-br from-brand-50 via-purple-50 to-white border-brand-100'}`}>
-          <div className="absolute right-0 top-0 w-64 h-64 bg-brand-500/10 rounded-full -translate-y-1/3 translate-x-1/3 blur-3xl pointer-events-none" />
-          <div className="absolute left-1/2 bottom-0 w-48 h-48 bg-purple-500/10 rounded-full translate-y-1/2 blur-2xl pointer-events-none" />
-          <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-5">
+        <div className={`rounded-2xl border p-6 ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
+          <div className="flex items-center gap-5">
+            {/* Avatar */}
             <div className="relative shrink-0">
-              <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gradient-to-tr from-brand-500 to-purple-500 flex items-center justify-center text-white text-2xl font-bold shadow-xl ring-4 ring-brand-500/20">
+              <div className="w-20 h-20 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-orange-500/20">
                 {photoUrl ? <img src={photoUrl} alt="Profile" className="w-full h-full object-cover" /> : <span>{initials}</span>}
               </div>
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-400 border-2 border-slate-900 shadow" />
+              <span className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-full bg-emerald-400 border-2 border-white shadow-sm" />
             </div>
+            {/* Identity — admin style */}
             <div className="flex-1 min-w-0">
-              <p className={`text-xs font-semibold uppercase tracking-widest mb-0.5 ${dark ? 'text-brand-400' : 'text-brand-600'}`}>Welcome back</p>
-              <h2 className={`text-2xl font-black truncate ${dark ? 'text-white' : 'text-slate-800'}`}>{user?.name} 👋</h2>
-              <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                {s?.program && <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${dark ? 'bg-brand-500/20 text-brand-300 border border-brand-500/30' : 'bg-brand-100 text-brand-700'}`}>{s.program}</span>}
-                {s?.year_level && <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>{s.year_level}</span>}
-                {s?.section && <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${dark ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-700'}`}>Section {s.section}</span>}
-                {s?.enrollment_status && <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${dark ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-blue-100 text-blue-700'}`}>{s.enrollment_status}</span>}
+              <h2 className={`text-2xl font-bold tracking-tight ${dark ? 'text-slate-100' : 'text-slate-800'}`}>
+                {s ? `${s.first_name}${s.middle_name ? ' ' + s.middle_name : ''} ${s.last_name}${s.suffix ? ' ' + s.suffix : ''}` : (user?.name ?? '—')}
+              </h2>
+              <div className={`flex flex-wrap items-center gap-4 mt-1.5 text-sm ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                {s?.student_number && (
+                  <span className="flex items-center gap-1">
+                    <svg className={`w-4 h-4 ${dark ? 'text-slate-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" /></svg>
+                    Student No: {s.student_number}
+                  </span>
+                )}
+                {(s?.program || s?.year_level) && (
+                  <span className="flex items-center gap-1">
+                    <svg className={`w-4 h-4 ${dark ? 'text-slate-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                    {[s?.program, s?.year_level].filter(Boolean).join(' · ')}
+                  </span>
+                )}
+                {s?.student_type && (
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${dark ? 'bg-green-900/40 text-green-300 border border-green-700' : 'bg-green-100 text-green-800 border border-green-200'}`}>
+                    {s.student_type}
+                  </span>
+                )}
                 {!s && <span className={`text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>CCS Student · Profile Hub</span>}
               </div>
             </div>
-            {s?.student_number && (
-              <div className={`shrink-0 text-right hidden sm:block`}>
-                <p className={`text-[10px] uppercase tracking-widest font-semibold ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Student No.</p>
-                <p className={`text-sm font-black font-mono ${dark ? 'text-slate-200' : 'text-slate-700'}`}>{s.student_number}</p>
-              </div>
-            )}
           </div>
         </div>
 
         {/* ── Stats Row ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Enrolled Units',  val: s?.year_level ? '14' : '—', Icon: BookmarkIcon,              iconCls: 'text-brand-500',   dc: 'from-brand-500/20 to-amber-500/10 border-brand-500/20',   lc: 'bg-orange-50 border-orange-100' },
-            { label: 'Active Subjects', val: COURSES_DEMO.length,         Icon: BookOpenIcon,              iconCls: 'text-blue-500',    dc: 'from-blue-500/20 to-purple-500/10 border-blue-500/20',    lc: 'bg-blue-50 border-blue-100' },
-            { label: 'Pending Tasks',   val: pendingTasks.length,          Icon: ClipboardDocumentCheckIcon, iconCls: 'text-red-500',   dc: 'from-red-500/20 to-pink-500/10 border-red-500/20',        lc: 'bg-red-50 border-red-100' },
-            { label: 'GPA (Prelim)',    val: '1.40',                       Icon: AcademicCapIcon,           iconCls: 'text-emerald-500', dc: 'from-emerald-500/20 to-teal-500/10 border-emerald-500/20', lc: 'bg-emerald-50 border-emerald-100' },
+            { label: 'Enrolled Units',  val: s?.year_level ? '14' : '—', Icon: BookmarkIcon,               iconBg: dark ? 'bg-orange-900/40 text-orange-400' : 'bg-orange-50 text-orange-500',   accent: 'border-l-orange-500' },
+            { label: 'Active Subjects', val: COURSES_DEMO.length,          Icon: BookOpenIcon,               iconBg: dark ? 'bg-blue-900/40 text-blue-400'    : 'bg-blue-50 text-blue-500',       accent: 'border-l-blue-500'   },
+            { label: 'Pending Tasks',   val: pendingTasks.length,           Icon: ClipboardDocumentCheckIcon, iconBg: dark ? 'bg-red-900/40 text-red-400'      : 'bg-red-50 text-red-500',         accent: 'border-l-red-500'    },
+            { label: 'GPA (Prelim)',    val: '1.40',                        Icon: AcademicCapIcon,            iconBg: dark ? 'bg-emerald-900/40 text-emerald-400': 'bg-emerald-50 text-emerald-500', accent: 'border-l-emerald-500'},
           ].map(st => (
-            <div key={st.label} className={`rounded-2xl border p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:border-brand-400/60 hover:shadow-brand-500/20 ${dark ? `bg-gradient-to-br ${st.dc}` : st.lc}`}>
-              <st.Icon className={`w-6 h-6 mb-2 ${st.iconCls}`} />
-              <div className={`text-2xl font-black ${dark ? 'text-white' : 'text-slate-800'}`}>{st.val}</div>
-              <div className={`text-xs mt-0.5 font-medium ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{st.label}</div>
+            <div key={st.label} className={`rounded-2xl border-l-4 border shadow-sm flex items-center gap-3 p-4 transition-colors duration-200 ${st.accent} ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-100'}`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${st.iconBg}`}>
+                <st.Icon className="w-5 h-5" />
+              </div>
+              <div>
+                <div className={`text-xl font-black ${dark ? 'text-white' : 'text-slate-800'}`}>{st.val}</div>
+                <div className={`text-[10px] font-semibold uppercase tracking-wider mt-0.5 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{st.label}</div>
+              </div>
             </div>
           ))}
         </div>
+
+        {/* ── Analytics Row ── */}
+        {s && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* GPA Ring */}
+            <div className={`rounded-2xl border p-5 flex items-center gap-4 ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
+              <div className="relative w-16 h-16 shrink-0">
+                <svg className="w-16 h-16 -rotate-90" viewBox="0 0 36 36">
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke={dark ? '#1e293b' : '#f1f5f9'} strokeWidth="3.5" />
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f97316" strokeWidth="3.5"
+                    strokeDasharray={`${Math.round(((5 - 1.40) / 4) * 100)} ${100 - Math.round(((5 - 1.40) / 4) * 100)}`} strokeLinecap="round" />
+                </svg>
+                <span className={`absolute inset-0 flex items-center justify-center text-xs font-extrabold ${dark ? 'text-slate-100' : 'text-slate-800'}`}>1.40</span>
+              </div>
+              <div>
+                <p className={`text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Current GPA</p>
+                <p className={`text-sm font-bold mt-0.5 ${dark ? 'text-slate-100' : 'text-slate-800'}`}>Prelim Period</p>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 inline-block ${dark ? 'bg-emerald-900/40 text-emerald-300' : 'bg-emerald-100 text-emerald-700'}`}>Good Standing</span>
+              </div>
+            </div>
+
+            {/* Skills breakdown */}
+            <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-widest mb-3 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Skills Breakdown</p>
+              {(() => {
+                const academic    = s?.skills?.filter(sk => sk.skill_category === 'Academic')?.length ?? 0;
+                const nonAcademic = s?.skills?.filter(sk => sk.skill_category !== 'Academic')?.length ?? 0;
+                const total       = academic + nonAcademic || 1;
+                return (
+                  <div className="space-y-2.5">
+                    {[
+                      { label: 'Academic',     count: academic,    color: 'bg-orange-500', pct: Math.round((academic / total) * 100) },
+                      { label: 'Non-Academic', count: nonAcademic, color: 'bg-purple-500', pct: Math.round((nonAcademic / total) * 100) },
+                    ].map(({ label, count, color, pct }) => (
+                      <div key={label}>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className={`text-xs font-semibold ${dark ? 'text-slate-400' : 'text-slate-600'}`}>{label}</span>
+                          <span className={`text-xs font-bold ${dark ? 'text-slate-300' : 'text-slate-700'}`}>{count}</span>
+                        </div>
+                        <div className={`h-1.5 rounded-full overflow-hidden ${dark ? 'bg-slate-700' : 'bg-slate-100'}`}>
+                          <div className={`h-full rounded-full ${color} transition-all duration-700`} style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                    <p className={`text-[10px] mt-1 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{s?.skills?.length ?? 0} total skills recorded</p>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Profile completeness */}
+            <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-widest mb-3 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Profile Completeness</p>
+              {(() => {
+                const checks = [
+                  { label: 'Personal Info',    done: !!(s?.gender && s?.birth_date) },
+                  { label: 'Contact Details',  done: !!(s?.contact_number && s?.email) },
+                  { label: 'Medical Record',   done: !!(s?.medical_histories?.length) },
+                  { label: 'Guardian Added',   done: !!(s?.guardians?.length) },
+                  { label: 'Skills Added',     done: !!(s?.skills?.length) },
+                ];
+                const done = checks.filter(c => c.done).length;
+                const pct  = Math.round((done / checks.length) * 100);
+                return (
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className={`text-xs font-semibold ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{pct}% complete</span>
+                      <span className={`text-xs font-bold ${dark ? 'text-orange-400' : 'text-orange-600'}`}>{done}/{checks.length}</span>
+                    </div>
+                    <div className={`h-2 rounded-full overflow-hidden mb-3 ${dark ? 'bg-slate-700' : 'bg-slate-100'}`}>
+                      <div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400 transition-all duration-700" style={{ width: `${pct}%` }} />
+                    </div>
+                    <div className="space-y-1.5">
+                      {checks.map(({ label, done: isDone }) => (
+                        <div key={label} className="flex items-center gap-2">
+                          <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 ${isDone ? 'bg-emerald-500' : dark ? 'bg-slate-700' : 'bg-slate-200'}`}>
+                            {isDone && <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
+                          </div>
+                          <span className={`text-[10px] font-medium ${isDone ? (dark ? 'text-slate-300' : 'text-slate-700') : (dark ? 'text-slate-600' : 'text-slate-400')}`}>{label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        )}
 
         {/* ── Violations / Notices ── */}
         {(() => {
@@ -1186,9 +1311,7 @@ const StudentDashboard = ({ user, onLogout }) => {
           const pending = viols.filter(v => v.status !== 'Resolved');
           const high    = pending.filter(v => v.severity_level === 'High');
           const hasPending = pending.length > 0;
-
           if (!s) return null;
-
           return (
             <div className={`rounded-2xl border overflow-hidden ${
               hasPending
@@ -1197,11 +1320,9 @@ const StudentDashboard = ({ user, onLogout }) => {
                   : dark ? 'border-amber-500/40 bg-amber-900/10' : 'border-amber-200 bg-amber-50'
                 : dark ? 'border-emerald-500/30 bg-emerald-900/10' : 'border-emerald-200 bg-emerald-50'
             }`}>
-              {/* Header */}
               <div className={`flex items-center justify-between px-5 py-3.5 border-b ${
                 hasPending
-                  ? high.length > 0
-                    ? dark ? 'border-red-500/30 bg-red-900/20' : 'border-red-200 bg-red-100/60'
+                  ? high.length > 0 ? dark ? 'border-red-500/30 bg-red-900/20' : 'border-red-200 bg-red-100/60'
                     : dark ? 'border-amber-500/30 bg-amber-900/20' : 'border-amber-200 bg-amber-100/60'
                   : dark ? 'border-emerald-500/20 bg-emerald-900/20' : 'border-emerald-200 bg-emerald-100/60'
               }`}>
@@ -1209,36 +1330,22 @@ const StudentDashboard = ({ user, onLogout }) => {
                   {hasPending
                     ? (high.length > 0 ? <ExclamationTriangleIcon className="w-4 h-4 text-red-400" /> : <ExclamationCircleIcon className="w-4 h-4 text-amber-400" />)
                     : <CheckCircleIcon className="w-4 h-4 text-emerald-500" />}
-                  <h4 className={`text-xs font-bold uppercase tracking-widest ${
-                    hasPending
-                      ? high.length > 0 ? 'text-red-400' : 'text-amber-400'
-                      : 'text-emerald-500'
-                  }`}>
+                  <h4 className={`text-xs font-bold uppercase tracking-widest ${hasPending ? high.length > 0 ? 'text-red-400' : 'text-amber-400' : 'text-emerald-500'}`}>
                     {hasPending ? 'Disciplinary Notices' : 'Disciplinary Record'}
                   </h4>
-                  {hasPending && (
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${high.length > 0 ? 'bg-red-500 text-white' : 'bg-amber-500 text-white'}`}>
-                      {pending.length} unresolved
-                    </span>
-                  )}
+                  {hasPending && <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${high.length > 0 ? 'bg-red-500 text-white' : 'bg-amber-500 text-white'}`}>{pending.length} unresolved</span>}
                 </div>
-                <button onClick={() => navigateTo('violations')}
-                  className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-all border ${
-                    hasPending
-                      ? high.length > 0
-                        ? dark ? 'text-red-400 border-red-500/30 hover:bg-red-500/10' : 'text-red-600 border-red-300 hover:bg-red-100'
-                        : dark ? 'text-amber-400 border-amber-500/30 hover:bg-amber-500/10' : 'text-amber-600 border-amber-300 hover:bg-amber-100'
-                      : dark ? 'text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10' : 'text-emerald-600 border-emerald-300 hover:bg-emerald-100'
-                  }`}>
-                  View all →
-                </button>
+                <button onClick={() => navigateTo('violations')} className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-all border ${
+                  hasPending ? high.length > 0
+                    ? dark ? 'text-red-400 border-red-500/30 hover:bg-red-500/10' : 'text-red-600 border-red-300 hover:bg-red-100'
+                    : dark ? 'text-amber-400 border-amber-500/30 hover:bg-amber-500/10' : 'text-amber-600 border-amber-300 hover:bg-amber-100'
+                  : dark ? 'text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10' : 'text-emerald-600 border-emerald-300 hover:bg-emerald-100'
+                }`}>View all →</button>
               </div>
-
               <div className="p-5">
                 {!hasPending ? (
-                  /* Clean record */
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${dark ? 'bg-emerald-500/20' : 'bg-emerald-100'}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${dark ? 'bg-emerald-500/20' : 'bg-emerald-100'}`}>
                       <CheckCircleIcon className="w-5 h-5 text-emerald-400" />
                     </div>
                     <div>
@@ -1247,50 +1354,33 @@ const StudentDashboard = ({ user, onLogout }) => {
                     </div>
                   </div>
                 ) : (
-                  /* Violation cards */
                   <div className="space-y-3">
                     {pending.slice(0, 3).map(v => {
                       const isHigh = v.severity_level === 'High';
                       const isMed  = v.severity_level === 'Medium';
                       return (
-                        <div key={v.id} className={`flex items-start gap-3 p-4 rounded-xl border transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-brand-400/60 hover:shadow-brand-500/20 ${
-                          isHigh
-                            ? dark ? 'bg-red-900/20 border-red-500/30 hover:bg-red-900/30' : 'bg-red-100/60 border-red-300 hover:bg-red-100'
-                            : isMed
-                              ? dark ? 'bg-amber-900/20 border-amber-500/30 hover:bg-amber-900/30' : 'bg-amber-100/60 border-amber-300 hover:bg-amber-100'
-                              : dark ? 'bg-slate-800 border-slate-600/40 hover:bg-slate-700' : 'bg-white border-slate-200 hover:bg-brand-50/40'
+                        <div key={v.id} className={`flex items-start gap-3 p-3.5 rounded-xl border ${
+                          isHigh ? dark ? 'bg-red-900/20 border-red-500/30' : 'bg-red-100/60 border-red-300'
+                          : isMed ? dark ? 'bg-amber-900/20 border-amber-500/30' : 'bg-amber-100/60 border-amber-300'
+                          : dark ? 'bg-slate-800 border-slate-600/40' : 'bg-white border-slate-200'
                         }`}>
-                          {/* Severity icon */}
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                            isHigh ? 'bg-red-500/20 text-red-400' : isMed ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-500/20 text-slate-400'
-                          }`}>
-                            <ExclamationTriangleIcon className="w-4 h-4" />
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isHigh ? 'bg-red-500/20 text-red-400' : isMed ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-500/20 text-slate-400'}`}>
+                            <ExclamationTriangleIcon className="w-3.5 h-3.5" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                              <p className={`text-sm font-bold ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{v.violation_type}</p>
-                              <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                                isHigh ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                                : isMed ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                                : 'bg-slate-500/20 text-slate-400 border border-slate-500/30'
-                              }`}>{v.severity_level}</span>
-                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                                v.status === 'Pending' ? 'bg-orange-500/20 text-orange-400' : 'bg-blue-500/20 text-blue-400'
-                              }`}>{v.status}</span>
+                              <p className={`text-xs font-bold ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{v.violation_type}</p>
+                              <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase ${isHigh ? 'bg-red-500/20 text-red-400' : isMed ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-500/20 text-slate-400'}`}>{v.severity_level}</span>
+                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${v.status === 'Pending' ? 'bg-orange-500/20 text-orange-400' : 'bg-blue-500/20 text-blue-400'}`}>{v.status}</span>
                             </div>
-                            {v.description && <p className={`text-xs truncate ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{v.description}</p>}
-                            <p className={`text-[10px] mt-1 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
-                              Reported {fmt(v.date_reported)}{v.reported_by ? ` · by ${v.reported_by}` : ''}
-                            </p>
+                            {v.description && <p className={`text-[10px] truncate ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{v.description}</p>}
+                            <p className={`text-[10px] mt-0.5 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Reported {fmt(v.date_reported)}{v.reported_by ? ` · by ${v.reported_by}` : ''}</p>
                           </div>
                         </div>
                       );
                     })}
                     {pending.length > 3 && (
-                      <button onClick={() => navigateTo('violations')}
-                        className={`w-full text-center text-xs font-semibold py-2.5 rounded-xl border transition-all ${
-                          dark ? 'border-slate-700 text-slate-400 hover:bg-slate-800' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
-                        }`}>
+                      <button onClick={() => navigateTo('violations')} className={`w-full text-center text-xs font-semibold py-2.5 rounded-xl border transition-all ${dark ? 'border-slate-700 text-slate-400 hover:bg-slate-800' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
                         +{pending.length - 3} more violation{pending.length - 3 > 1 ? 's' : ''} — View all
                       </button>
                     )}
@@ -1307,25 +1397,26 @@ const StudentDashboard = ({ user, onLogout }) => {
           {/* Task Progress */}
           <div className={`lg:col-span-2 rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
             <div className={`flex items-center justify-between px-5 py-3.5 border-b ${dark ? 'border-slate-700/60 bg-slate-900' : 'border-slate-100 bg-slate-50'}`}>
-              <div className="flex items-center gap-2"><ClipboardDocumentCheckIcon className="w-4 h-4 text-brand-500" /><h4 className="text-xs font-bold uppercase tracking-widest text-brand-500">My Pending Tasks</h4></div>
-              <button onClick={() => navigateTo('tasks')} className={`text-[10px] font-semibold px-2 py-1 rounded-lg transition-all ${dark ? 'text-brand-400 hover:bg-brand-500/10' : 'text-brand-600 hover:bg-brand-50'}`}>View all →</button>
+              <div className="flex items-center gap-2">
+                <ClipboardDocumentCheckIcon className="w-4 h-4 text-orange-500" />
+                <h4 className="text-xs font-bold uppercase tracking-widest text-orange-500">My Pending Tasks</h4>
+              </div>
+              <button onClick={() => navigateTo('tasks')} className={`text-[10px] font-semibold px-2 py-1 rounded-lg transition-all ${dark ? 'text-orange-400 hover:bg-orange-500/10' : 'text-orange-600 hover:bg-orange-50'}`}>View all →</button>
             </div>
             <div className="p-5 space-y-4">
-              {/* Progress bar */}
               <div>
                 <div className="flex justify-between items-center mb-1.5">
                   <span className={`text-xs font-semibold ${dark ? 'text-slate-300' : 'text-slate-600'}`}>Task Completion</span>
-                  <span className={`text-xs font-black ${dark ? 'text-brand-400' : 'text-brand-600'}`}>{taskPct}%</span>
+                  <span className={`text-xs font-black ${dark ? 'text-orange-400' : 'text-orange-600'}`}>{taskPct}%</span>
                 </div>
                 <div className={`h-2 rounded-full overflow-hidden ${dark ? 'bg-slate-700' : 'bg-slate-100'}`}>
-                  <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-amber-400 transition-all duration-700" style={{ width: `${taskPct}%` }} />
+                  <div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400 transition-all duration-700" style={{ width: `${taskPct}%` }} />
                 </div>
                 <p className={`text-[10px] mt-1 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{doneTasks.length} of {tasks.length} tasks done</p>
               </div>
-              {/* Pending list */}
               <div className="space-y-2">
                 {pendingTasks.slice(0, 4).map(t => (
-                  <div key={t.id} className={`flex items-start gap-3 p-3 rounded-xl border transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-brand-400/60 hover:shadow-brand-500/20 ${dark ? 'bg-slate-900 border-slate-700/60 hover:bg-slate-800' : 'bg-slate-50 border-slate-200 hover:bg-brand-50/40'}`}>
+                  <div key={t.id} className={`flex items-start gap-3 p-3 rounded-xl border ${dark ? 'bg-slate-800/60 border-slate-700/60' : 'bg-slate-50 border-slate-100'}`}>
                     <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${t.priority === 'High' ? 'bg-red-400' : t.priority === 'Medium' ? 'bg-amber-400' : 'bg-slate-400'}`} />
                     <div className="flex-1 min-w-0">
                       <p className={`text-xs font-semibold truncate ${dark ? 'text-slate-200' : 'text-slate-700'}`}>{t.title}</p>
@@ -1336,7 +1427,7 @@ const StudentDashboard = ({ user, onLogout }) => {
                 ))}
                 {pendingTasks.length === 0 && (
                   <div className="text-center py-4">
-                    <CheckCircleIcon className="w-8 h-8 text-emerald-400" />
+                    <CheckCircleIcon className="w-8 h-8 text-emerald-400 mx-auto" />
                     <p className={`text-xs mt-1 font-semibold ${dark ? 'text-emerald-400' : 'text-emerald-600'}`}>All tasks done!</p>
                   </div>
                 )}
@@ -1344,14 +1435,24 @@ const StudentDashboard = ({ user, onLogout }) => {
             </div>
           </div>
 
-          {/* Quick Navigation Links */}
-          <div className="lg:col-span-3 space-y-3">
-            <h3 className={`text-xs font-bold uppercase tracking-wider ${dark ? 'text-slate-400' : 'text-slate-500'}`}>🔗 Quick Navigation</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {/* Quick Navigation */}
+          <div className="lg:col-span-3 flex flex-col gap-3">
+            <div className={`flex items-center justify-between`}>
+              <h3 className={`text-xs font-bold uppercase tracking-wider ${dark ? 'text-slate-400' : 'text-slate-500'}`}>Quick Navigation</h3>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 flex-1">
               {quickLinks.map(ql => (
-                <button key={ql.id} onClick={() => navigateTo(ql.id)}
-                  className={`text-left p-4 rounded-2xl border transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:border-brand-400/60 hover:shadow-brand-500/20 ${dark ? `bg-gradient-to-br ${ql.color}` : `${ql.color} shadow-sm`}`}>
-                  <ql.Icon className={`w-7 h-7 mb-2 ${ql.iconColor}`} />
+                <button key={ql.label} onClick={() => {
+                  if (ql.tab) {
+                    setActive('profile');
+                    setSearchParams({ section: 'profile' }, { replace: true });
+                    setProfileTab(ql.tab);
+                  } else {
+                    navigateTo(ql.id);
+                  }
+                }}
+                  className={`text-left p-4 rounded-2xl border transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${dark ? `bg-gradient-to-br ${ql.color}` : `${ql.color} shadow-sm`}`}>
+                  <ql.Icon className={`w-6 h-6 mb-2.5 ${ql.iconColor}`} />
                   <p className={`text-xs font-bold leading-tight ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{ql.label}</p>
                   <p className={`text-[10px] mt-0.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{ql.desc}</p>
                 </button>
@@ -1363,13 +1464,16 @@ const StudentDashboard = ({ user, onLogout }) => {
         {/* ── Current Subjects ── */}
         <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
           <div className={`flex items-center justify-between px-5 py-3.5 border-b ${dark ? 'border-slate-700/60 bg-slate-900' : 'border-slate-100 bg-slate-50'}`}>
-            <div className="flex items-center gap-2"><span>📖</span><h4 className="text-xs font-bold uppercase tracking-widest text-brand-500">Current Subjects</h4></div>
+            <div className="flex items-center gap-2">
+              <BookOpenIcon className="w-4 h-4 text-orange-500" />
+              <h4 className="text-xs font-bold uppercase tracking-widest text-orange-500">Current Subjects</h4>
+            </div>
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-500'}`}>{COURSES_DEMO.length} subjects</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className={`border-b ${dark ? 'border-slate-700/60 bg-slate-900' : 'border-slate-100 bg-slate-50'}`}>
+                <tr className={`border-b ${dark ? 'border-slate-700/60' : 'border-slate-100'}`}>
                   {['Code', 'Subject', 'Instructor', 'Schedule', 'Room', 'Units'].map(h => (
                     <th key={h} className={`px-4 py-3 text-left font-bold uppercase tracking-wider text-[10px] ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{h}</th>
                   ))}
@@ -1377,14 +1481,14 @@ const StudentDashboard = ({ user, onLogout }) => {
               </thead>
               <tbody className={`divide-y ${dark ? 'divide-slate-700/30' : 'divide-slate-100'}`}>
                 {COURSES_DEMO.map(c => (
-                  <tr key={c.code} className={`transition-colors ${dark ? 'hover:bg-slate-700/20' : 'hover:bg-slate-50'}`}>
-                    <td className="px-4 py-3 font-bold text-brand-400 whitespace-nowrap">{c.code}</td>
+                  <tr key={c.code} className={`transition-colors ${dark ? 'hover:bg-slate-800/60' : 'hover:bg-slate-50'}`}>
+                    <td className="px-4 py-3 font-bold text-orange-400 whitespace-nowrap">{c.code}</td>
                     <td className={`px-4 py-3 font-medium max-w-[180px] truncate ${dark ? 'text-slate-200' : 'text-slate-700'}`}>{c.title}</td>
                     <td className={`px-4 py-3 whitespace-nowrap ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{c.instructor}</td>
                     <td className={`px-4 py-3 whitespace-nowrap ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{c.schedule}</td>
                     <td className={`px-4 py-3 whitespace-nowrap ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{c.room}</td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] ${dark ? 'bg-brand-500/20 text-brand-300' : 'bg-brand-100 text-brand-700'}`}>{c.units}</span>
+                      <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] ${dark ? 'bg-orange-500/20 text-orange-300' : 'bg-orange-100 text-orange-700'}`}>{c.units}</span>
                     </td>
                   </tr>
                 ))}
@@ -1394,18 +1498,20 @@ const StudentDashboard = ({ user, onLogout }) => {
         </div>
 
         {/* ── Announcements ── */}
-        <div>
-          <h3 className={`text-xs font-bold uppercase tracking-wider mb-4 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>📢 Announcements</h3>
-          <div className="space-y-3">
+        <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
+          <div className={`px-5 py-3.5 border-b ${dark ? 'border-slate-700/60 bg-slate-900' : 'border-slate-100 bg-slate-50'}`}>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-orange-500">Announcements</h3>
+          </div>
+          <div className="divide-y divide-slate-100 dark:divide-slate-700/40">
             {ANNOUNCEMENTS.map(a => (
-              <div key={a.id} className={`flex gap-4 p-4 rounded-2xl border transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:border-brand-400/60 hover:shadow-brand-500/20 ${dark ? 'bg-slate-900 border-slate-700/60 hover:bg-slate-800' : 'bg-white border-slate-200 shadow-sm hover:bg-brand-50/40'}`}>
-                <div className={`w-2 h-2 rounded-full mt-2 shrink-0 bg-gradient-to-b ${a.color}`} />
+              <div key={a.id} className={`flex gap-4 px-5 py-4 transition-colors ${dark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}`}>
+                <div className={`w-1 rounded-full shrink-0 self-stretch bg-gradient-to-b ${a.color}`} />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                  <div className="flex items-start justify-between gap-2 flex-wrap mb-1">
                     <p className={`text-sm font-semibold ${dark ? 'text-slate-200' : 'text-slate-700'}`}>{a.title}</p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r ${a.color} text-white`}>{a.tag}</span>
-                      <span className={`text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{a.date}</span>
+                      <span className={`text-[10px] ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{a.date}</span>
                     </div>
                   </div>
                   <p className={`text-xs leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{a.desc}</p>
@@ -1415,6 +1521,137 @@ const StudentDashboard = ({ user, onLogout }) => {
           </div>
         </div>
 
+      </div>
+    );
+  };
+
+  /* ════════════════════════════════
+     PROFILE SUB-COMPONENT: ACADEMIC HISTORY TAB
+  ════════════════════════════════ */
+  const ProfileAcademicTab = ({ student: s }) => {
+    const dark = useTheme();
+    const [ahModal, setAhModal] = useState(null);
+    const [ahDeleting, setAhDeleting] = useState(null);
+
+    const grouped = {};
+    (s?.academic_histories ?? []).forEach(ah => {
+      if (!grouped[ah.school_year]) grouped[ah.school_year] = [];
+      grouped[ah.school_year].push(ah);
+    });
+    const sortedYears = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+
+    const standingStyle = (standing) => {
+      if (standing === "Dean's List")        return dark ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'   : 'bg-amber-100 text-amber-700 border-amber-200';
+      if (standing === 'Good Standing')      return dark ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-emerald-100 text-emerald-700 border-emerald-200';
+      if (standing === 'Academic Probation') return dark ? 'bg-red-500/20 text-red-300 border-red-500/30'         : 'bg-red-100 text-red-700 border-red-200';
+      return dark ? 'bg-slate-700 text-slate-300 border-slate-600' : 'bg-slate-100 text-slate-600 border-slate-200';
+    };
+    const standingIcon = (standing) => {
+      if (standing === "Dean's List")        return '';
+      if (standing === 'Good Standing')      return '';
+      if (standing === 'Academic Probation') return '!';
+      return '';
+    };
+    const gpaColor = (gpa) => {
+      if (!gpa) return dark ? 'text-slate-500' : 'text-slate-400';
+      if (gpa <= 1.5)  return dark ? 'text-amber-300' : 'text-amber-600';
+      if (gpa <= 2.0)  return dark ? 'text-emerald-300' : 'text-emerald-600';
+      if (gpa <= 3.0)  return dark ? 'text-blue-300' : 'text-blue-600';
+      return dark ? 'text-red-300' : 'text-red-600';
+    };
+
+    const allRecords = s?.academic_histories ?? [];
+
+    const delAh = async (id) => {
+      if (!window.confirm('Delete this academic record?')) return;
+      setAhDeleting(id);
+      try { await api.students.deleteAcademicHistory(s.id, id); await loadStudent(); }
+      catch { alert('Failed to delete.'); }
+      finally { setAhDeleting(null); }
+    };
+
+    return (
+      <div className="space-y-4">
+        {ahModal && <AcademicModal studentId={s?.id} record={ahModal === 'add' ? null : ahModal} onClose={() => setAhModal(null)} onSaved={() => { setAhModal(null); loadStudent(); }} />}
+
+        {/* Header row with Add button */}
+        <div className="flex items-center justify-between">
+          <p className={`text-xs font-bold uppercase tracking-widest ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+            {allRecords.length} semester{allRecords.length !== 1 ? 's' : ''} on record
+          </p>
+          {s && <AddBtn onClick={() => setAhModal('add')} label="Add Record" />}
+        </div>
+
+        {/* Records grouped by school year */}
+        {sortedYears.length === 0 ? (
+          <EmptyState Icon={AcademicCapIcon} title="No academic history yet." sub="Click 'Add Record' to get started." />
+        ) : (
+          <div className="space-y-4">
+            {sortedYears.map(year => {
+              const records = grouped[year].sort((a, b) => {
+                const order = { '1st Semester': 1, '2nd Semester': 2, 'Summer': 3 };
+                return (order[a.semester] ?? 9) - (order[b.semester] ?? 9);
+              });
+              const yearGpa = records.filter(r => r.gpa);
+              const yearAvg = yearGpa.length
+                ? (yearGpa.reduce((sum, r) => sum + parseFloat(r.gpa), 0) / yearGpa.length).toFixed(2)
+                : null;
+              return (
+                <div key={year} className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50 border-slate-200'}`}>
+                  {/* Year header */}
+                  <div className={`flex items-center justify-between px-5 py-3 border-b ${dark ? 'border-slate-700/60 bg-slate-800/60' : 'border-slate-200 bg-white'}`}>
+                    <div className="flex items-center gap-2.5">
+                      <h4 className={`text-sm font-black ${dark ? 'text-slate-100' : 'text-slate-800'}`}>S.Y. {year}</h4>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${dark ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>{records.length} semester{records.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    {yearAvg && (
+                      <div className="text-right">
+                        <p className={`text-[10px] uppercase tracking-wider font-semibold ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Year Avg GPA</p>
+                        <p className={`text-base font-black ${gpaColor(parseFloat(yearAvg))}`}>{yearAvg}</p>
+                      </div>
+                    )}
+                  </div>
+                  {/* Semester cards */}
+                  <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {records.map(ah => (
+                      <div key={ah.id} className={`rounded-xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${dark ? 'bg-slate-900 border-slate-700/60 hover:border-brand-500/40 hover:shadow-brand-500/10' : 'bg-white border-slate-200 hover:border-brand-400/50 hover:shadow-brand-500/10'}`}>
+                        <div className="flex items-center justify-between mb-3">
+                          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${dark ? 'bg-brand-500/20 text-brand-300 border-brand-500/30' : 'bg-brand-100 text-brand-700 border-brand-200'}`}>{ah.semester}</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${standingStyle(ah.academic_standing)}`}>{standingIcon(ah.academic_standing)} {ah.academic_standing}</span>
+                        </div>
+                        {ah.school_name && <p className={`text-[10px] font-semibold mb-2 truncate ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{ah.school_name}</p>}
+                        <div className="mb-3">
+                          <p className={`text-[10px] uppercase tracking-wider font-semibold mb-0.5 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>GPA</p>
+                          <p className={`text-3xl font-black ${gpaColor(ah.gpa ? parseFloat(ah.gpa) : null)}`}>
+                            {ah.gpa ?? <span className={`text-lg ${dark ? 'text-slate-600' : 'text-slate-300'}`}>N/A</span>}
+                          </p>
+                        </div>
+                        <div className="mb-3">
+                          <div className="flex justify-between items-center mb-1">
+                            <p className={`text-[10px] uppercase tracking-wider font-semibold ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Units</p>
+                            <p className={`text-xs font-bold ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{ah.completed_units} / {ah.total_units}</p>
+                          </div>
+                          <div className={`h-1.5 rounded-full overflow-hidden ${dark ? 'bg-slate-700' : 'bg-slate-200'}`}>
+                            <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-amber-400 transition-all duration-700"
+                              style={{ width: ah.total_units > 0 ? `${Math.min(100, (ah.completed_units / ah.total_units) * 100)}%` : '0%' }} />
+                          </div>
+                        </div>
+                        <div className={`flex items-center justify-end gap-1 pt-2 border-t ${dark ? 'border-slate-700/50' : 'border-slate-100'}`}>
+                          <BtnEdit onClick={() => setAhModal(ah)} />
+                          <BtnDanger onClick={() => delAh(ah.id)} disabled={ahDeleting === ah.id}>
+                            {ahDeleting === ah.id
+                              ? <div className="w-3 h-3 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                              : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>}
+                          </BtnDanger>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   };
@@ -1490,21 +1727,10 @@ const StudentDashboard = ({ user, onLogout }) => {
         )}
 
         {/* Avatar card */}
-        <div className="relative overflow-hidden rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-5 border"
-          style={dark ? {
-            background: 'linear-gradient(135deg, #2a1200 0%, #1a0d00 100%)',
-            borderColor: 'rgba(249,115,22,0.5)',
-            boxShadow: '0 0 20px 2px rgba(249,115,22,0.2), inset 0 0 30px rgba(249,115,22,0.04)',
-          } : {
-            background: '#fff8f5',
-            borderColor: 'rgba(249,115,22,0.35)',
-            boxShadow: '0 0 14px 2px rgba(249,115,22,0.12)',
-          }}>
-          <div className="absolute top-0 right-0 w-40 h-40 rounded-full -translate-y-1/3 translate-x-1/3 blur-2xl pointer-events-none"
-            style={{ background: dark ? 'rgba(249,115,22,0.06)' : 'rgba(249,115,22,0.08)' }} />
+        <div className={`rounded-2xl border p-6 flex flex-col sm:flex-row items-center gap-5 ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
           {/* Clickable avatar with upload */}
           <div className="relative shrink-0 group">
-            <div className="w-28 h-28 rounded-2xl overflow-hidden bg-gradient-to-tr from-brand-500 to-purple-500 flex items-center justify-center text-white text-3xl font-bold shadow-xl">
+            <div className="w-20 h-20 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-orange-500/20">
               {photoUploading
                 ? <div className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full animate-spin" />
                 : photoUrl
@@ -1513,8 +1739,8 @@ const StudentDashboard = ({ user, onLogout }) => {
             </div>
             {s && !photoUploading && (
               <>
-                <label htmlFor="photo-upload" className="absolute inset-0 rounded-2xl bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer gap-1">
-                  <CameraIcon className="w-6 h-6 text-white" />
+                <label htmlFor="photo-upload" className="absolute inset-0 rounded-full bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer gap-1">
+                  <CameraIcon className="w-5 h-5 text-white" />
                   <span className="text-white text-[10px] font-semibold">Change</span>
                 </label>
                 <input id="photo-upload" type="file" accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,image/heic,image/heif" className="hidden" onChange={handlePhotoChange} />
@@ -1526,143 +1752,175 @@ const StudentDashboard = ({ user, onLogout }) => {
               <div className="mb-2 flex items-center gap-2 px-3 py-2 rounded-xl bg-red-900/30 border border-red-700/40 text-red-400 text-xs">
                 <ExclamationCircleIcon className="w-3.5 h-3.5 shrink-0" />
                 {photoErr}
-                <button onClick={() => setPhotoErr(null)} className="ml-auto text-red-400 hover:text-red-300">✕</button>
+                <button onClick={() => setPhotoErr(null)} className="ml-auto text-red-400 hover:text-red-300">×</button>
               </div>
             )}
-            <h2 className={`text-xl font-bold ${dark ? 'text-orange-50' : 'text-slate-800'}`}>
+            <h2 className={`text-2xl font-bold tracking-tight ${dark ? 'text-slate-100' : 'text-slate-800'}`}>
               {s ? `${s.first_name}${s.middle_name ? ' ' + s.middle_name : ''} ${s.last_name}${s.suffix ? ' ' + s.suffix : ''}` : (user?.name ?? '—')}
             </h2>
-            <p className="text-orange-400 font-medium mt-0.5 text-sm capitalize">{user?.role}</p>
-            <p className={`text-sm mt-0.5 ${dark ? 'text-orange-200/50' : 'text-slate-500'}`}>{user?.email}</p>
-            {s?.student_number && <p className={`text-xs mt-0.5 ${dark ? 'text-orange-300/40' : 'text-slate-400'}`}>Student No. {s.student_number}</p>}
-            {s && (
-              <div className="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
-                <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">✓ {s.enrollment_status ?? 'Enrolled'}</span>
-                {s.year_level && <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-500/15 text-orange-300 border border-orange-500/30">{s.year_level}</span>}
-                {s.program && <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${dark ? 'bg-orange-900/20 text-orange-200/70 border-orange-500/20' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>{s.program}</span>}
-              </div>
-            )}
+            <div className={`flex flex-wrap items-center gap-4 mt-1.5 text-sm justify-center sm:justify-start ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+              {s?.student_number && (
+                <span className="flex items-center gap-1">
+                  <svg className={`w-4 h-4 ${dark ? 'text-slate-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" /></svg>
+                  Student No: {s.student_number}
+                </span>
+              )}
+              {(s?.program || s?.year_level) && (
+                <span className="flex items-center gap-1">
+                  <svg className={`w-4 h-4 ${dark ? 'text-slate-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                  {[s?.program, s?.year_level].filter(Boolean).join(' · ')}
+                </span>
+              )}
+              {s?.student_type && (
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${dark ? 'bg-green-900/40 text-green-300 border border-green-700' : 'bg-green-100 text-green-800 border border-green-200'}`}>
+                  {s.student_type}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        {!s ? <EmptyState icon="👤" title="No profile linked" sub="Your account is not linked to a student record yet." /> : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <SectionCard title="Personal Information" icon="👤" action={<BtnEdit onClick={() => setModal('personal')} />}>
-              <div className="space-y-1">
-                <Row label="Gender"         value={val(s.gender)} />
-                <Row label="Civil Status"   value={val(s.civil_status)} />
-                <Row label="Nationality"    value={val(s.nationality)} />
-                <Row label="Religion"       value={val(s.religion)} />
-                <Row label="Date of Birth"  value={fmt(s.birth_date)} />
-                <Row label="Place of Birth" value={val(s.place_of_birth)} />
+        {!s ? <EmptyState title="No profile linked" sub="Your account is not linked to a student record yet." /> : (() => {
+          const tabs = [
+            { id: 'personal',   label: 'Personal Info' },
+            { id: 'family',     label: 'Family & Medical' },
+            { id: 'enrollment', label: 'Enrollment' },
+            { id: 'academic',   label: 'Academic History' },
+          ];
+          return (
+            <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
+              {/* Tab bar */}
+              <div className={`flex border-b px-4 pt-1 ${dark ? 'bg-slate-800/50 border-slate-700/60' : 'bg-slate-50/50 border-slate-100'}`}>
+                {tabs.map(tab => (
+                  <button key={tab.id} type="button"
+                    onClick={() => setProfileTab(tab.id)}
+                    className={`px-4 py-3.5 text-sm font-medium transition-all relative ${
+                      profileTab === tab.id
+                        ? 'text-orange-500'
+                        : dark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/40 rounded-t-lg'
+                               : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50 rounded-t-lg'}`}>
+                    {tab.label}
+                    {profileTab === tab.id && (
+                      <div className="absolute bottom-0 left-0 w-full h-0.5 bg-orange-500 rounded-t shadow-[0_-2px_8px_rgba(249,115,22,0.4)]" />
+                    )}
+                  </button>
+                ))}
               </div>
-            </SectionCard>
 
-            <SectionCard title="Contact Information" icon="📞" action={<BtnEdit onClick={() => setModal('contact')} />}>
-              <div className="space-y-1">
-                <Row label="Address"        value={val([s.street, s.barangay, s.city, s.province].filter(Boolean).join(', ') || null)} />
-                <Row label="Zip Code"       value={val(s.zip_code)} />
-                <Row label="Mobile Number"  value={val(s.contact_number)} />
-                <Row label="Alt. Number"    value={val(s.alternate_contact_number)} />
-                <Row label="Email Address"  value={val(s.email ?? user?.email)} />
-              </div>
-            </SectionCard>
+              {/* Tab content */}
+              <div className="p-5 space-y-4">
 
-            <SectionCard title="Family Background" icon="👨‍👩‍👦" action={<AddBtn onClick={() => setGuardianModal('add')} label="Add Guardian" />}>
-              {s.guardians?.length > 0 ? (
-                <div className="space-y-3">
-                  {s.guardians.map(g => (
-                    <div key={g.id} className="flex items-start justify-between gap-2 p-3 rounded-xl border transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-brand-500/20"
-                      style={dark ? {
-                        background: 'rgba(249,115,22,0.06)',
-                        borderColor: 'rgba(249,115,22,0.25)',
-                      } : {
-                        background: '#fff3ec',
-                        borderColor: 'rgba(249,115,22,0.25)',
-                      }}>
-                      <div className="min-w-0">
-                        <p className={`text-sm font-semibold ${dark ? 'text-orange-50' : 'text-slate-800'}`}>{g.full_name}</p>
-                        <p className="text-xs text-orange-400 font-medium">{g.relationship}</p>
-                        {g.occupation && <p className={`text-xs mt-0.5 ${dark ? 'text-orange-200/50' : 'text-slate-500'}`}>{g.occupation}</p>}
-                        {g.contact_number && <p className={`text-xs mt-0.5 ${dark ? 'text-orange-300/40' : 'text-slate-400'}`}>{g.contact_number}</p>}
+                {/* Personal Info tab */}
+                {profileTab === 'personal' && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <SectionCard title="Personal Information" action={<BtnEdit onClick={() => setModal('personal')} />}>
+                      <div className="space-y-1">
+                        <Row label="Gender"         value={val(s.gender)} />
+                        <Row label="Civil Status"   value={val(s.civil_status)} />
+                        <Row label="Nationality"    value={val(s.nationality)} />
+                        <Row label="Religion"       value={val(s.religion)} />
+                        <Row label="Date of Birth"  value={fmt(s.birth_date)} />
+                        <Row label="Place of Birth" value={val(s.place_of_birth)} />
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <BtnEdit onClick={() => setGuardianModal(g)} />
-                        <BtnDanger onClick={() => delGuardian(g.id)} disabled={deletingGuardian === g.id}>
-                          {deletingGuardian === g.id
-                            ? <div className="w-3 h-3 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
-                            : <TrashIcon className="w-3.5 h-3.5" />}
-                        </BtnDanger>
+                    </SectionCard>
+                    <SectionCard title="Contact Information" action={<BtnEdit onClick={() => setModal('contact')} />}>
+                      <div className="space-y-1">
+                        <Row label="Address"        value={val([s.street, s.barangay, s.city, s.province].filter(Boolean).join(', ') || null)} />
+                        <Row label="Zip Code"       value={val(s.zip_code)} />
+                        <Row label="Mobile Number"  value={val(s.contact_number)} />
+                        <Row label="Alt. Number"    value={val(s.alternate_contact_number)} />
+                        <Row label="Email Address"  value={val(s.email ?? user?.email)} />
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : <EmptyState icon="👨‍👩‍👦" title="No guardians recorded." sub="Click 'Add Guardian' to add family background." />}
-            </SectionCard>
+                    </SectionCard>
+                  </div>
+                )}
 
-            <SectionCard title="Enrollment Details" icon="🎓" action={<BtnEdit onClick={() => setModal('enrollment')} />}>
-              <div className="space-y-1">
-                <Row label="Student Number"    value={val(s.student_number)} />
-                <Row label="College"           value="College of Computing Studies" />
-                <Row label="Program"           value={val(s.program)} />
-                <Row label="Year Level"        value={val(s.year_level)} />
-                <Row label="Section"           value={val(s.section)} />
-                <Row label="Student Type"      value={val(s.student_type)} />
-                <Row label="Date Enrolled"     value={fmt(s.date_enrolled)} />
-                <Row label="Enrollment Status" value={val(s.enrollment_status)} />
-              </div>
-            </SectionCard>
-
-            <SectionCard title="Educational Background" icon="🏫" action={<BtnEdit onClick={() => setModal('education')} />}>
-              <div className="space-y-1">
-                <Row label="Last School Attended" value={val(s.last_school_attended)} />
-                <Row label="Last Year Attended"   value={val(s.last_year_attended)} />
-                <Row label="LRN"                  value={val(s.lrn)} />
-                <Row label="Honors / Awards"      value={val(s.honors_received)} />
-              </div>
-            </SectionCard>
-
-            <SectionCard title="Medical Record" icon="🏥" action={<BtnEdit onClick={() => setModal('medical')} />}>
-              {s.medical_histories?.length > 0 ? s.medical_histories.map(mh => (
-                <div key={mh.id} className="space-y-1">
-                  <Row label="Blood Type"          value={val(mh.bloodtype)} />
-                  <Row label="Existing Conditions" value={val(mh.existing_conditions)} />
-                </div>
-              )) : <EmptyState icon="🩺" title="No medical record yet." sub="Click the edit button to add one." />}
-            </SectionCard>
-
-            <SectionCard title="Emergency Contact" icon="🚨" action={<BtnEdit onClick={() => setModal('emergency')} />}>
-              {s.medical_histories?.length > 0 && s.medical_histories[0].emergency_contact_name ? (() => {
-                const ec = s.medical_histories[0];
-                return (
-                  <div className={`flex items-center gap-4 p-4 rounded-xl border ${dark ? 'bg-orange-500/5 border-orange-500/20' : 'bg-orange-50/60 border-orange-200/60'}`}>
-                    {/* Phone icon circle */}
-                    <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${dark ? 'bg-orange-500/15 border border-orange-500/30' : 'bg-orange-100 border border-orange-200'}`}>
-                      <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                      </svg>
-                    </div>
-                    {/* Details */}
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-bold leading-tight ${dark ? 'text-orange-50' : 'text-slate-800'}`}>{ec.emergency_contact_name}</p>
-                      <p className="text-sm font-semibold text-orange-400 mt-0.5">{ec.emergency_contact_number || '—'}</p>
-                      {ec.emergency_contact_relationship && (
-                        <span className={`inline-block mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${dark ? 'bg-orange-500/15 text-orange-300 border-orange-500/30' : 'bg-orange-100 text-orange-600 border-orange-200'}`}>
-                          {ec.emergency_contact_relationship}
-                        </span>
-                      )}
-                      {ec.emergency_contact_address && (
-                        <p className={`text-xs mt-1 truncate ${dark ? 'text-orange-200/50' : 'text-slate-400'}`}>📍 {ec.emergency_contact_address}</p>
-                      )}
+                {/* Family & Medical tab */}
+                {profileTab === 'family' && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <SectionCard title="Family Background" action={<AddBtn onClick={() => setGuardianModal('add')} label="Add Guardian" />}>
+                      {s.guardians?.length > 0 ? (
+                        <div className="space-y-3">
+                          {s.guardians.map(g => (
+                            <div key={g.id} className="flex items-start justify-between gap-2 p-3 rounded-xl border transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-brand-500/20"
+                              style={dark ? { background: 'rgba(249,115,22,0.06)', borderColor: 'rgba(249,115,22,0.25)' } : { background: '#fff3ec', borderColor: 'rgba(249,115,22,0.25)' }}>
+                              <div className="min-w-0">
+                                <p className={`text-sm font-semibold ${dark ? 'text-orange-50' : 'text-slate-800'}`}>{g.full_name}</p>
+                                <p className="text-xs text-orange-400 font-medium">{g.relationship}</p>
+                                {g.occupation && <p className={`text-xs mt-0.5 ${dark ? 'text-orange-200/50' : 'text-slate-500'}`}>{g.occupation}</p>}
+                                {g.contact_number && <p className={`text-xs mt-0.5 ${dark ? 'text-orange-300/40' : 'text-slate-400'}`}>{g.contact_number}</p>}
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <BtnEdit onClick={() => setGuardianModal(g)} />
+                                <BtnDanger onClick={() => delGuardian(g.id)} disabled={deletingGuardian === g.id}>
+                                  {deletingGuardian === g.id
+                                    ? <div className="w-3 h-3 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                                    : <TrashIcon className="w-3.5 h-3.5" />}
+                                </BtnDanger>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : <EmptyState title="No guardians recorded." sub="Click 'Add Guardian' to add family background." />}
+                    </SectionCard>
+                    <div className="space-y-4">
+                      <SectionCard title="Medical Record" action={<BtnEdit onClick={() => setModal('medical')} />}>
+                        {s.medical_histories?.length > 0 ? s.medical_histories.map(mh => (
+                          <div key={mh.id} className="space-y-1">
+                            <Row label="Blood Type"          value={val(mh.bloodtype)} />
+                            <Row label="Existing Conditions" value={val(mh.existing_conditions)} />
+                          </div>
+                        )) : <EmptyState title="No medical record yet." sub="Click the edit button to add one." />}
+                      </SectionCard>
+                      <SectionCard title="Emergency Contact" action={<BtnEdit onClick={() => setModal('emergency')} />}>
+                        {s.medical_histories?.length > 0 && s.medical_histories[0].emergency_contact_name ? (() => {
+                          const ec = s.medical_histories[0];
+                          return (
+                            <div className={`flex items-center gap-4 p-4 rounded-xl border ${dark ? 'bg-orange-500/5 border-orange-500/20' : 'bg-orange-50/60 border-orange-200/60'}`}>
+                              <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${dark ? 'bg-orange-500/15 border border-orange-500/30' : 'bg-orange-100 border border-orange-200'}`}>
+                                <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm font-bold leading-tight ${dark ? 'text-orange-50' : 'text-slate-800'}`}>{ec.emergency_contact_name}</p>
+                                <p className="text-sm font-semibold text-orange-400 mt-0.5">{ec.emergency_contact_number || '—'}</p>
+                                {ec.emergency_contact_relationship && (
+                                  <span className={`inline-block mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${dark ? 'bg-orange-500/15 text-orange-300 border-orange-500/30' : 'bg-orange-100 text-orange-600 border-orange-200'}`}>{ec.emergency_contact_relationship}</span>
+                                )}
+                                {ec.emergency_contact_address && (
+                                  <p className={`text-xs mt-1 truncate ${dark ? 'text-orange-200/50' : 'text-slate-400'}`}>{ec.emergency_contact_address}</p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })() : <EmptyState title="No emergency contact yet." sub="Click the edit button to add one." />}
+                      </SectionCard>
                     </div>
                   </div>
-                );
-              })() : (
-                <EmptyState icon="🚨" title="No emergency contact yet." sub="Click the edit button to add one." />
-              )}
-            </SectionCard>
-          </div>
-        )}
+                )}
+
+                {/* Enrollment tab */}
+                {profileTab === 'enrollment' && (
+                  <SectionCard title="Enrollment Details" action={<BtnEdit onClick={() => setModal('enrollment')} />}>
+                    <div className="space-y-1">
+                      <Row label="Student Number"    value={val(s.student_number)} />
+                      <Row label="College"           value="College of Computing Studies" />
+                      <Row label="Program"           value={val(s.program)} />
+                      <Row label="Year Level"        value={val(s.year_level)} />
+                      <Row label="Section"           value={val(s.section)} />
+                      <Row label="Student Type"      value={val(s.student_type)} />
+                      <Row label="Date Enrolled"     value={fmt(s.date_enrolled)} />
+                      <Row label="Enrollment Status" value={val(s.enrollment_status)} />
+                    </div>
+                  </SectionCard>
+                )}
+
+                {/* Academic History tab */}
+                {profileTab === 'academic' && <ProfileAcademicTab student={s} />}
+
+              </div>
+            </div>
+          );
+        })()}
       </div>
     );
   };
@@ -1692,10 +1950,10 @@ const StudentDashboard = ({ user, onLogout }) => {
     };
 
     const standingIcon = (standing) => {
-      if (standing === "Dean's List")        return '🏆';
-      if (standing === 'Good Standing')      return '✅';
-      if (standing === 'Academic Probation') return '⚠️';
-      return '📋';
+      if (standing === "Dean's List")        return '';
+      if (standing === 'Good Standing')      return '';
+      if (standing === 'Academic Probation') return '!';
+      return '';
     };
 
     const gpaColor = (gpa) => {
@@ -1731,10 +1989,10 @@ const StudentDashboard = ({ user, onLogout }) => {
         {allRecords.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: 'Semesters on Record', val: allRecords.length, icon: '📅', dc: 'from-blue-500/20 to-purple-500/10 border-blue-500/20', lc: 'bg-blue-50 border-blue-100' },
-              { label: 'Average GPA',          val: avgGpa ?? '—',    icon: '📊', dc: 'from-brand-500/20 to-amber-500/10 border-brand-500/20', lc: 'bg-orange-50 border-orange-100' },
-              { label: 'Units Completed',      val: totalCompleted,   icon: '📚', dc: 'from-emerald-500/20 to-teal-500/10 border-emerald-500/20', lc: 'bg-emerald-50 border-emerald-100' },
-              { label: "Dean's List",          val: deansListCount,   icon: '🏆', dc: 'from-amber-500/20 to-yellow-500/10 border-amber-500/20', lc: 'bg-amber-50 border-amber-100' },
+              { label: 'Semesters on Record', val: allRecords.length, icon: null, dc: 'from-blue-500/20 to-purple-500/10 border-blue-500/20', lc: 'bg-blue-50 border-blue-100' },
+              { label: 'Average GPA',          val: avgGpa ?? '—',    icon: null, dc: 'from-brand-500/20 to-amber-500/10 border-brand-500/20', lc: 'bg-orange-50 border-orange-100' },
+              { label: 'Units Completed',      val: totalCompleted,   icon: null, dc: 'from-emerald-500/20 to-teal-500/10 border-emerald-500/20', lc: 'bg-emerald-50 border-emerald-100' },
+              { label: "Dean's List",          val: deansListCount,   icon: '', dc: 'from-amber-500/20 to-yellow-500/10 border-amber-500/20', lc: 'bg-amber-50 border-amber-100' },
             ].map(st => (
               <div key={st.label} className={`rounded-2xl border p-4 ${dark ? `bg-gradient-to-br ${st.dc}` : st.lc}`}>
                 <div className="text-xl mb-1">{st.icon}</div>
@@ -1746,11 +2004,11 @@ const StudentDashboard = ({ user, onLogout }) => {
         )}
 
         {/* Records grouped by school year */}
-        <SectionCard title="Academic History" icon="📊" action={s && <AddBtn onClick={() => setModal('add')} label="Add Record" />}>
+        <SectionCard title="Academic History" action={s && <AddBtn onClick={() => setModal('add')} label="Add Record" />}>
           {!s ? (
-            <EmptyState icon="📚" title="No profile linked." />
+            <EmptyState title="No profile linked." />
           ) : sortedYears.length === 0 ? (
-            <EmptyState icon="📚" title="No academic history yet." sub="Click 'Add Record' to get started." />
+            <EmptyState title="No academic history yet." sub="Click 'Add Record' to get started." />
           ) : (
             <div className="space-y-5 -mx-5 -mb-5 px-5 pb-5">
               {sortedYears.map(year => {
@@ -1768,7 +2026,7 @@ const StudentDashboard = ({ user, onLogout }) => {
                     {/* Year header */}
                     <div className={`flex items-center justify-between px-5 py-3.5 border-b ${dark ? 'border-slate-700/60 bg-slate-900' : 'border-slate-100 bg-slate-50'}`}>
                       <div className="flex items-center gap-2.5">
-                        <span className="text-base">🎓</span>
+                        
                         <h4 className={`text-sm font-black ${dark ? 'text-slate-100' : 'text-slate-800'}`}>S.Y. {year}</h4>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${dark ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>{records.length} semester{records.length !== 1 ? 's' : ''}</span>
                       </div>
@@ -1795,7 +2053,7 @@ const StudentDashboard = ({ user, onLogout }) => {
                           </div>
                           {/* School name */}
                           {ah.school_name && (
-                            <p className={`text-[10px] font-semibold mb-2 truncate ${dark ? 'text-slate-500' : 'text-slate-400'}`}>🏫 {ah.school_name}</p>
+                            <p className={`text-[10px] font-semibold mb-2 truncate ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{ah.school_name}</p>
                           )}
 
                           {/* GPA */}
@@ -1855,36 +2113,68 @@ const StudentDashboard = ({ user, onLogout }) => {
     const nonAcademic = s?.skills?.filter(sk => sk.skill_category === 'Non-Academic') ?? [];
 
     const SkillCard = ({ skill }) => {
-      const meta = LEVEL_META[skill.pivot?.skill_level];
+      const isAcademic  = skill.skill_category === 'Academic';
+      const isCertified = !!skill.pivot?.certification;
+      const meta        = LEVEL_META[skill.pivot?.skill_level];
       return (
-        <div className={`group relative rounded-2xl border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-xl ${dark ? 'bg-slate-900 border-slate-700/60 hover:bg-slate-800 hover:border-brand-500/60 hover:shadow-brand-500/25' : 'bg-white border-slate-200 hover:bg-brand-50/40 hover:border-brand-400/60 hover:shadow-brand-500/20'}`}>
-          <div className={`h-1 w-full ${skill.skill_category === 'Academic' ? 'bg-gradient-to-r from-brand-500 to-amber-400' : 'bg-gradient-to-r from-purple-500 to-pink-400'}`} />
-          <div className="p-4">
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <h4 className={`font-bold text-sm leading-tight ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{skill.skill_name}</h4>
-              {skill.pivot?.certification && (
-                <span className="shrink-0 flex items-center gap-1 text-[9px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">
-                  <CheckCircleIcon className="w-2.5 h-2.5" />
+        <div className={`relative rounded-2xl border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-xl ${dark ? 'bg-slate-900 border-slate-700/60 hover:border-orange-500/40 hover:shadow-orange-500/10' : 'bg-white border-slate-200 hover:border-orange-400/60 hover:shadow-orange-500/10'}`}>
+          {/* Left accent bar */}
+          <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl ${isAcademic ? 'bg-gradient-to-b from-orange-400 to-orange-500' : 'bg-gradient-to-b from-purple-400 to-pink-500'}`} />
+          <div className="pl-4 pr-4 pt-4 pb-4">
+            {/* Top row: category badge + certified icon */}
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${isAcademic ? (dark ? 'bg-orange-900/40 text-orange-300' : 'bg-orange-50 text-orange-600') : (dark ? 'bg-purple-900/40 text-purple-300' : 'bg-purple-50 text-purple-600')}`}>
+                {isAcademic
+                  ? <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l9-5-9-5-9 5 9 5z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
+                  : <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                }
+                {skill.skill_category}
+              </span>
+              {isCertified && (
+                <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 shadow-sm shadow-emerald-500/30">
+                  <CheckCircleIcon className="w-4 h-4 text-white" />
+                </div>
+              )}
+            </div>
+
+            {/* Skill name + description */}
+            <h4 className={`font-bold text-sm leading-tight mb-1 ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{skill.skill_name}</h4>
+            {skill.description && <p className={`text-xs line-clamp-2 mb-3 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{skill.description}</p>}
+
+            {/* Level + certified label row */}
+            <div className={`flex items-center justify-between pt-3 border-t ${dark ? 'border-slate-700/60' : 'border-slate-100'}`}>
+              {meta ? (
+                <span className={`inline-flex items-center gap-1.5 text-xs font-medium border px-2.5 py-1 rounded-lg ${dark ? 'border-slate-600 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                  {skill.pivot.skill_level}
+                </span>
+              ) : (
+                <span className={`text-xs ${dark ? 'text-slate-600' : 'text-slate-400'}`}>No level set</span>
+              )}
+              {isCertified && (
+                <span className={`inline-flex items-center gap-1 text-xs font-semibold ${dark ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                  <CheckCircleIcon className="w-3.5 h-3.5" />
                   Certified
                 </span>
               )}
             </div>
-            {skill.description && <p className={`text-xs line-clamp-2 mb-3 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{skill.description}</p>}
-            {meta ? (
-              <div className="mt-auto">
-                <div className="flex items-center justify-between mb-1">
-                  <span className={`text-[10px] font-semibold ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Proficiency</span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${meta.color}`}>{skill.pivot.skill_level}</span>
-                </div>
-                <div className={`h-1.5 rounded-full overflow-hidden ${dark ? 'bg-slate-700' : 'bg-slate-100'}`}>
-                  <div className={`h-full rounded-full transition-all duration-700 ${meta.bar}`} style={{ width: `${meta.pct}%` }} />
-                </div>
+
+            {/* Certification details box */}
+            {isCertified && (skill.pivot?.certification_name || skill.pivot?.certification_date) && (
+              <div className={`mt-3 p-3 rounded-xl space-y-1 ${dark ? 'bg-emerald-900/20 border border-emerald-800/40' : 'bg-emerald-50 border border-emerald-100'}`}>
+                {skill.pivot.certification_name && (
+                  <p className={`text-xs font-bold flex items-center gap-1.5 ${dark ? 'text-emerald-300' : 'text-emerald-700'}`}>
+                    <CheckCircleIcon className="w-3.5 h-3.5 shrink-0" />
+                    {skill.pivot.certification_name}
+                  </p>
+                )}
+                {skill.pivot.certification_date && (
+                  <p className={`text-xs flex items-center gap-1.5 ${dark ? 'text-emerald-400/70' : 'text-emerald-600/80'}`}>
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    {skill.pivot.certification_date}
+                  </p>
+                )}
               </div>
-            ) : (
-              <span className={`text-[10px] ${dark ? 'text-slate-600' : 'text-slate-400'}`}>No level set</span>
-            )}
-            {skill.pivot?.certification && skill.pivot?.certification_name && (
-              <p className={`text-[10px] mt-2 truncate ${dark ? 'text-slate-500' : 'text-slate-400'}`}>📜 {skill.pivot.certification_name}</p>
             )}
           </div>
         </div>
@@ -1932,7 +2222,7 @@ const StudentDashboard = ({ user, onLogout }) => {
           )}
         </div>
 
-        {!s ? <EmptyState icon="🛠️" title="No profile linked." /> : s.skills?.length === 0 ? (
+        {!s ? <EmptyState title="No profile linked." /> : s.skills?.length === 0 ? (
           <div className={`rounded-2xl border-2 border-dashed flex flex-col items-center justify-center py-16 gap-3 ${dark ? 'border-slate-700 bg-slate-800/30' : 'border-slate-200 bg-slate-50'}`}>
             <WrenchScrewdriverIcon className="w-14 h-14 text-slate-300" />
             <p className={`font-bold text-sm ${dark ? 'text-slate-400' : 'text-slate-600'}`}>No skills recorded yet</p>
@@ -1941,8 +2231,8 @@ const StudentDashboard = ({ user, onLogout }) => {
         ) : (
           <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
             <div className="p-5 space-y-7">
-              <CategorySection title="Academic Skills" emoji="💻" skills={academic} emptyMsg="No academic skills added." />
-              <CategorySection title="Non-Academic Skills" emoji="🏅" skills={nonAcademic} emptyMsg="No non-academic skills added." />
+              <CategorySection title="Academic Skills" skills={academic} emptyMsg="No academic skills added." />
+              <CategorySection title="Non-Academic Skills" skills={nonAcademic} emptyMsg="No non-academic skills added." />
             </div>
           </div>
         )}
@@ -2017,7 +2307,7 @@ const StudentDashboard = ({ user, onLogout }) => {
           )}
         </div>
 
-        {!s ? <EmptyState icon="🏛️" title="No profile linked." /> : (
+        {!s ? <EmptyState title="No profile linked." /> : (
           <>
             {/* Search + filter */}
             {affs.length > 0 && (
@@ -2041,7 +2331,7 @@ const StudentDashboard = ({ user, onLogout }) => {
 
             {/* Cards grid */}
             {filtered.length === 0 && affs.length > 0 ? (
-              <EmptyState icon="🔍" title="No results found." sub="Try adjusting your search or filter." />
+              <EmptyState title="No results found." sub="Try adjusting your search or filter." />
             ) : filtered.length === 0 ? (
               <div className={`rounded-2xl border-2 border-dashed p-12 text-center ${dark ? 'border-slate-700' : 'border-slate-200'}`}>
                 <BuildingLibraryIcon className="w-14 h-14 mb-3 text-slate-300" />
@@ -2201,7 +2491,7 @@ const StudentDashboard = ({ user, onLogout }) => {
           </div>
         </div>
 
-        {!s ? <EmptyState icon="⚠️" title="No profile linked." /> : (
+        {!s ? <EmptyState title="No profile linked." /> : (
           <>
             {viols.length === 0 ? (
               /* ── Clean record ── */
@@ -2231,7 +2521,7 @@ const StudentDashboard = ({ user, onLogout }) => {
 
                 {/* ── Violation cards ── */}
                 {filtered.length === 0 ? (
-                  <EmptyState icon="🔍" title="No records match this filter." sub="Try a different filter above." />
+                  <EmptyState title="No records match this filter." sub="Try a different filter above." />
                 ) : (
                   <div className="space-y-4">
                     {filtered.map((v, idx) => {
@@ -2568,7 +2858,7 @@ const StudentDashboard = ({ user, onLogout }) => {
 
   /* ── panel map ── */
   const panels = {
-    dashboard: <DashboardPanel />, profile: <ProfilePanel />, academic: <AcademicPanel />,
+    dashboard: <DashboardPanel />, profile: <ProfilePanel />,
     skills: <SkillsPanel />, affiliations: <AffiliationsPanel />, violations: <ViolationsPanel />,
     tasks: <TasksPanel />,
   };
@@ -2668,7 +2958,7 @@ const StudentDashboard = ({ user, onLogout }) => {
                 <div className={`absolute right-0 top-full mt-2 w-80 rounded-2xl border shadow-2xl z-50 overflow-hidden ${dark ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'}`}>
                   <div className={`flex items-center justify-between px-4 py-3 border-b ${dark ? 'border-slate-800' : 'border-slate-100'}`}>
                     <h3 className={`text-sm font-bold ${dark ? 'text-slate-100' : 'text-slate-800'}`}>Notifications</h3>
-                    <button onClick={() => setNotifOpen(false)} className={`text-xs ${dark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}>✕</button>
+                    <button onClick={() => setNotifOpen(false)} className={`text-xs ${dark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}>×</button>
                   </div>
                   <div className="max-h-80 overflow-y-auto">
                     {notifications.length === 0 ? (

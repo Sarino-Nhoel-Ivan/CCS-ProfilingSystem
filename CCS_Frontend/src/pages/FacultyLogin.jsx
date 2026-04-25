@@ -37,7 +37,7 @@ const Particles = () => (
   </div>
 );
 
-const FacultyLogin = ({ onLogin, onGoToSignUp }) => {
+const FacultyLogin = ({ onLogin }) => {
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [error, setError]       = useState('');
@@ -188,20 +188,6 @@ const FacultyLogin = ({ onLogin, onGoToSignUp }) => {
             </button>
           </form>
 
-          <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px" style={{background:'rgba(242,101,34,0.2)'}} />
-            <span className="text-xs" style={{color:'#c06030'}}>or</span>
-            <div className="flex-1 h-px" style={{background:'rgba(242,101,34,0.2)'}} />
-          </div>
-
-          <p className="text-sm text-center" style={{color:'#b05020'}}>
-            Don't have an account?{' '}
-            <button onClick={onGoToSignUp} className="font-bold transition-colors hover:underline" style={{color:'#e04f0f'}}>Create one</button>
-          </p>
-          <p className="text-xs mt-2 text-center" style={{color:'#c06030'}}>
-            Student?{' '}
-            <a href="/student/login" className="font-semibold transition-colors hover:underline" style={{color:'#e04f0f'}}>Student Login →</a>
-          </p>
           <p className="text-center text-xs mt-8" style={{color:'rgba(180,80,20,0.5)'}}>© 2026 CCS Profiling System</p>
         </div>
       </div>

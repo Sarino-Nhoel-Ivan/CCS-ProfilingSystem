@@ -259,16 +259,6 @@ const StudentLogin = ({ onLogin, onGoToSignUp }) => {
             </button>
           </form>
 
-          <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px" style={{ background: 'rgba(242,101,34,0.2)' }} />
-            <span className="text-xs" style={{ color: '#c06030' }}>or</span>
-            <div className="flex-1 h-px" style={{ background: 'rgba(242,101,34,0.2)' }} />
-          </div>
-
-          <p className="text-xs text-center" style={{ color: '#c06030' }}>
-            Faculty?{' '}
-            <a href="/faculty/login" className="font-semibold transition-colors hover:underline" style={{ color: '#e04f0f' }}>Faculty Login →</a>
-          </p>
           <p className="text-center text-xs mt-8" style={{ color: 'rgba(180,80,20,0.5)' }}>© 2026 CCS Profiling System</p>
         </div>
       </div>

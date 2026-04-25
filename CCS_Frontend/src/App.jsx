@@ -177,14 +177,12 @@ function App() {
       <Route
         path="/faculty/login"
         element={!user
-          ? <FacultyLogin onLogin={handleLogin} onGoToSignUp={() => navigate('/faculty/signup')} />
+          ? <FacultyLogin onLogin={handleLogin} />
           : <Navigate to={dashboardPath(user)} replace />}
       />
       <Route
         path="/faculty/signup"
-        element={!user
-          ? <FacultySignUp onSignUp={handleSignUp} onGoToLogin={() => navigate('/faculty/login')} />
-          : <Navigate to={dashboardPath(user)} replace />}
+        element={<Navigate to="/faculty/login" replace />}
       />
 
       {/* Admin route (no signup) */}

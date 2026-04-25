@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { useDarkMode } from '../../context/DarkModeContext';
 import { STORAGE_URL } from '../../utils/config';
 import {
@@ -166,7 +166,7 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
 
           {/* Row 1: Basic Info + Enrollment */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+            <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
               <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Basic Information</p>
               <div className="space-y-0">
                 {[['Gender',student.gender],['Place of Birth',student.place_of_birth],['Nationality',student.nationality],['Civil Status',student.civil_status],['Religion',student.religion]].map(([label,val])=>(
@@ -184,7 +184,7 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
                 </div>
               </div>
             </div>
-            <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+            <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
               <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Enrollment Details</p>
               <div className="space-y-0">
                 {[['Date Enrolled',student.date_enrolled?new Date(student.date_enrolled).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):'N/A'],['Section',student.section],['Student Type',student.student_type]].map(([label,val])=>(
@@ -222,7 +222,7 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
 
           {/* Row 2: Address + Guardians */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+            <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
               <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Address</p>
               <div className="grid grid-cols-2 gap-2">
                 {[{label:'Street',value:student.street,full:true},{label:'Barangay',value:student.barangay,full:true},{label:'City',value:student.city},{label:'Province',value:student.province},{label:'Zip Code',value:student.zip_code}].map(({label,value,full})=>(
@@ -233,7 +233,7 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
                 ))}
               </div>
             </div>
-            <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+            <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
               <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Guardians</p>
               {student.guardians&&student.guardians.length>0?(
                 <div className="space-y-3">
@@ -258,7 +258,7 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
 
           {/* Row 3: Medical + Emergency */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+            <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
               <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Medical Records</p>
               {student.medical_histories&&student.medical_histories.length>0?(
                 <div className="space-y-3">
@@ -280,7 +280,7 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
                 </div>
               )}
             </div>
-            <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+            <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
               <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Emergency Contacts</p>
               {student.medical_histories&&student.medical_histories.length>0&&student.medical_histories.some(mh=>mh.emergency_contact_name)?(
                 <div className="space-y-3">
@@ -306,7 +306,7 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
           </div>
 
           {/* Row 4: Affiliations */}
-          <div className={`rounded-2xl border p-5 ${dark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/60 border-slate-100'}`}>
+          <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
             <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Affiliations & Organizations</p>
             {student.affiliations&&student.affiliations.length>0?(
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
