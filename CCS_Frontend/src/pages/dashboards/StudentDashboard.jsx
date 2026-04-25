@@ -3322,20 +3322,38 @@ const StudentDashboard = ({ user, onLogout }) => {
         onMouseLeave={() => setSidebarHovered(false)}
       >
         {/* User profile header */}
-        <div className={`flex items-center border-b h-20 overflow-hidden shrink-0 transition-all duration-300 ${sidebarExpanded ? 'px-4' : 'px-0 justify-center'} ${dark ? 'border-slate-800' : 'border-slate-100'}`}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-md shrink-0 overflow-hidden">
-            {photoUrl
-              ? <img src={photoUrl} alt="Profile" className="w-full h-full object-cover object-top" />
-              : <span className="text-sm">{initials}</span>}
+        <div className={`flex items-center border-b h-20 overflow-hidden shrink-0 transition-all duration-300 ${sidebarExpanded ? 'px-4 justify-between' : 'px-0 justify-center'} ${dark ? 'border-slate-800' : 'border-slate-100'}`}>
+          <div className="flex items-center">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-md shrink-0 overflow-hidden">
+              {photoUrl
+                ? <img src={photoUrl} alt="Profile" className="w-full h-full object-cover object-top" />
+                : <span className="text-sm">{initials}</span>}
+            </div>
+            <div className={`flex flex-col whitespace-nowrap transition-all duration-300 ml-3 ${sidebarExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 hidden'}`}>
+              <p className={`text-sm font-semibold leading-tight ${dark ? 'text-slate-100' : 'text-slate-800'}`}>
+                {student
+                  ? `${student.first_name}${student.middle_name ? ' ' + student.middle_name : ''} ${student.last_name}${student.suffix ? ' ' + student.suffix : ''}`
+                  : (user?.name ?? '—')}
+              </p>
+              <p className={`text-[10px] mt-0.5 capitalize ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{user?.role} · CCS</p>
+            </div>
           </div>
-          <div className={`flex flex-col whitespace-nowrap transition-all duration-300 ml-3 ${sidebarExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 hidden'}`}>
-            <p className={`text-sm font-semibold leading-tight ${dark ? 'text-slate-100' : 'text-slate-800'}`}>
-              {student
-                ? `${student.first_name}${student.middle_name ? ' ' + student.middle_name : ''} ${student.last_name}${student.suffix ? ' ' + student.suffix : ''}`
-                : (user?.name ?? '—')}
-            </p>
-            <p className={`text-[10px] mt-0.5 capitalize ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{user?.role} · CCS</p>
-          </div>
+          {sidebarExpanded && (
+            <button
+              onClick={() => setSidebarPinned(p => !p)}
+              title={sidebarPinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
+              className={`p-1.5 rounded-lg transition-colors focus:outline-none shrink-0 ${
+                sidebarPinned
+                  ? dark ? 'bg-slate-800 text-brand-400' : 'bg-brand-50 text-brand-500'
+                  : dark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              {sidebarPinned
+                ? <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z"/></svg>
+                : <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="2" y1="2" x2="22" y2="22"/><line x1="12" y1="17" x2="12" y2="22"/><path d="M9 9v1.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17h12"/><path d="M15 9.34V6h1a2 2 0 000-4H7.89"/></svg>
+              }
+            </button>
+          )}
         </div>
 
         {/* Nav items */}
