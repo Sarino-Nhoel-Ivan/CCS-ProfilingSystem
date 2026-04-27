@@ -79,25 +79,30 @@ class StudentController extends Controller
         try {
             $fullName = trim($validatedData['first_name'] . ' ' . $validatedData['last_name']);
             $apiKey   = config('services.brevo.key', env('BREVO_API_KEY'));
-            $response = \Illuminate\Support\Facades\Http::withHeaders([
-                'api-key'      => $apiKey,
-                'Content-Type' => 'application/json',
-            ])->post('https://api.brevo.com/v3/smtp/email', [
-                'sender'      => [
-                    'name'  => config('mail.from.name'),
-                    'email' => config('mail.from.address'),
-                ],
-                'to'          => [['email' => $validatedData['email'], 'name' => $fullName]],
-                'subject'     => 'Your CCS Profiling System Account Has Been Created',
-                'htmlContent' => $this->buildWelcomeEmail($fullName, $validatedData['student_number']),
-            ]);
-            if ($response->successful()) {
-                \Log::info('Welcome email sent to: ' . $validatedData['email']);
+
+            if (empty($apiKey)) {
+                \Log::error('Student welcome email: BREVO_API_KEY is not set.');
             } else {
-                \Log::error('Welcome email failed: ' . $response->body());
+                $response = \Illuminate\Support\Facades\Http::withHeaders([
+                    'api-key'      => $apiKey,
+                    'Content-Type' => 'application/json',
+                ])->post('https://api.brevo.com/v3/smtp/email', [
+                    'sender'      => [
+                        'name'  => config('mail.from.name'),
+                        'email' => config('mail.from.address'),
+                    ],
+                    'to'          => [['email' => $validatedData['email'], 'name' => $fullName]],
+                    'subject'     => 'Your CCS Profiling System Account Has Been Created',
+                    'htmlContent' => $this->buildWelcomeEmail($fullName, $validatedData['student_number']),
+                ]);
+                if ($response->successful()) {
+                    \Log::info('Student welcome email sent to: ' . $validatedData['email']);
+                } else {
+                    \Log::error('Student welcome email failed. Status: ' . $response->status() . ' Body: ' . $response->body());
+                }
             }
         } catch (\Throwable $e) {
-            \Log::error('Welcome email error: ' . $e->getMessage());
+            \Log::error('Student welcome email error: ' . $e->getMessage());
         }
 
         \App\Http\Controllers\NotificationController::push(
@@ -112,7 +117,7 @@ class StudentController extends Controller
 
     private function buildWelcomeEmail(string $name, string $studentNumber): string
     {
-        $loginUrl = rtrim(env('FRONTEND_URL', 'https://ccs-profiling-system-iota.vercel.app'), '/') . '/student/login';
+        $loginUrl = rtrim(env('FRONTEND_URL', 'https://ccs-profiling-system-sigma.vercel.app'), '/') . '/student/login';
         return <<<HTML
 <!DOCTYPE html>
 <html>
