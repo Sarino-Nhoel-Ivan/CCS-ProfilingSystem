@@ -69,7 +69,7 @@ const getStudentTypeBadge = (type, dark) => {
   return m[type] || 'bg-slate-100 text-slate-700 border border-slate-200';
 };
 
-const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) => {
+const StudentProfileTabs = ({ activeTab, student, schedules = [], onEditClick, onDeleteClick }) => {
   const dark = useDarkMode();
 
   // Theme tokens
@@ -160,179 +160,145 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
         </div>
       </div>
 
-      {/* Tab Content */}
-      {activeTab === 'personal_details' && (
-        <div className="space-y-5">
+      {/* ── helpers scoped to this render ── */}
+      {activeTab === 'personal_details' && (() => {
+        /* SectionCard — matches student POV style */
+        const SC = ({ title, children }) => (
+          <div className={`rounded-2xl border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:border-orange-400/60 hover:shadow-orange-500/20 ${dark ? 'bg-slate-900 border-slate-700/60 hover:bg-slate-800' : 'bg-white border-slate-200 shadow-sm hover:bg-orange-50/40'}`}>
+            <div className={`flex items-center justify-between px-5 py-3.5 border-b ${dark ? 'border-slate-700/60 bg-slate-900' : 'border-slate-100 bg-slate-50'}`}>
+              <h4 className={`text-xs font-bold uppercase tracking-widest ${dark ? 'text-orange-400' : 'text-orange-500'}`}>{title}</h4>
+            </div>
+            <div className="p-5">{children}</div>
+          </div>
+        );
+        /* Row — label left, value right */
+        const R = ({ label, value, highlight }) => (
+          <div className="flex justify-between items-start gap-4 py-1">
+            <span className={`text-xs shrink-0 w-44 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{label}</span>
+            <span className={`text-xs font-medium text-right break-words ${highlight ? (dark ? 'text-orange-400' : 'text-orange-600') : (dark ? 'text-slate-200' : 'text-slate-700')}`}>{value || '—'}</span>
+          </div>
+        );
+        /* Empty state */
+        const Empty = ({ msg }) => (
+          <p className={`text-xs text-center py-6 ${subText}`}>{msg}</p>
+        );
 
-          {/* Row 1: Basic Info + Enrollment */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
-              <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Basic Information</p>
-              <div className="space-y-0">
-                {[['Gender',student.gender],['Place of Birth',student.place_of_birth],['Nationality',student.nationality],['Civil Status',student.civil_status],['Religion',student.religion]].map(([label,val])=>(
-                  <div key={label} className={`flex items-center justify-between py-2.5 border-b ${dark?'border-slate-700/60':'border-slate-100'}`}>
-                    <span className={`text-xs font-semibold ${dark?'text-slate-500':'text-slate-400'}`}>{label}</span>
-                    <span className={`text-sm font-semibold ${valueRow}`}>{val||'N/A'}</span>
-                  </div>
-                ))}
-                <div className={`flex items-center justify-between py-2.5`}>
-                  <span className={`text-xs font-semibold ${dark?'text-slate-500':'text-slate-400'}`}>Birth Date</span>
-                  <div className="text-right">
-                    <span className={`text-sm font-semibold ${valueRow}`}>{student.birth_date?new Date(student.birth_date).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):'N/A'}</span>
-                    {getAge(student.birth_date)!==null&&<span className={`ml-2 text-xs ${subText}`}>({getAge(student.birth_date)} yrs old)</span>}
-                  </div>
-                </div>
+        const address = [student.street, student.barangay, student.city, student.province].filter(Boolean).join(', ');
+        const birthFormatted = student.birth_date
+          ? new Date(student.birth_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+          : null;
+        const age = getAge(student.birth_date);
+        const dateEnrolled = student.date_enrolled
+          ? new Date(student.date_enrolled).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+          : null;
+
+        return (
+        <div className="space-y-4">
+
+          {/* Row 1: Personal Info + Contact Info */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <SC title="Personal Information">
+              <div className="space-y-1">
+                <R label="Gender"         value={student.gender} />
+                <R label="Civil Status"   value={student.civil_status} />
+                <R label="Nationality"    value={student.nationality} />
+                <R label="Religion"       value={student.religion} />
+                <R label="Date of Birth"  value={birthFormatted ? `${birthFormatted}${age !== null ? ` (${age} yrs old)` : ''}` : null} />
+                <R label="Place of Birth" value={student.place_of_birth} />
               </div>
-            </div>
-            <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
-              <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Enrollment Details</p>
-              <div className="space-y-0">
-                {[['Date Enrolled',student.date_enrolled?new Date(student.date_enrolled).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):'N/A'],['Section',student.section],['Student Type',student.student_type]].map(([label,val])=>(
-                  <div key={label} className={`flex items-center justify-between py-2.5 border-b ${dark?'border-slate-700/60':'border-slate-100'}`}>
-                    <span className={`text-xs font-semibold ${dark?'text-slate-500':'text-slate-400'}`}>{label}</span>
-                    <span className={`text-sm font-semibold ${valueRow}`}>{val||'N/A'}</span>
-                  </div>
-                ))}
-                <div className={`flex items-center justify-between py-2.5 border-b ${dark?'border-slate-700/60':'border-slate-100'}`}>
-                  <span className={`text-xs font-semibold ${dark?'text-slate-500':'text-slate-400'}`}>Enrollment Status</span>
-                  <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${student.enrollment_status==='Enrolled'?(dark?'bg-green-900/40 text-green-300 border border-green-700':'bg-green-100 text-green-700 border border-green-200'):(dark?'bg-slate-700 text-slate-300 border border-slate-600':'bg-slate-100 text-slate-600 border border-slate-200')}`}>
-                    {student.enrollment_status==='Enrolled'&&<span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"/>}{student.enrollment_status||'N/A'}
-                  </span>
-                </div>
+            </SC>
+            <SC title="Contact Information">
+              <div className="space-y-1">
+                <R label="Address"        value={address || null} />
+                <R label="Zip Code"       value={student.zip_code} />
+                <R label="Mobile Number"  value={student.contact_number} />
+                <R label="Alt. Number"    value={student.alternate_contact_number} />
+                <R label="Email Address"  value={student.email} highlight />
               </div>
-              <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mt-5 mb-3 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Contact Details</p>
-              <div className="space-y-0">
-                <div className={`flex items-center justify-between py-2.5 border-b ${dark?'border-slate-700/60':'border-slate-100'}`}>
-                  <span className={`text-xs font-semibold ${dark?'text-slate-500':'text-slate-400'}`}>Email</span>
-                  <span className={`text-sm font-semibold ${dark?'text-orange-400':'text-orange-600'}`}>{student.email||'N/A'}</span>
-                </div>
-                <div className={`flex items-center justify-between py-2.5 ${student.alternate_contact_number?`border-b ${dark?'border-slate-700/60':'border-slate-100'}`:''}`}>
-                  <span className={`text-xs font-semibold ${dark?'text-slate-500':'text-slate-400'}`}>Contact Number</span>
-                  <span className={`text-sm font-semibold ${valueRow}`}>{student.contact_number||'N/A'}</span>
-                </div>
-                {student.alternate_contact_number&&(
-                  <div className="flex items-center justify-between py-2.5">
-                    <span className={`text-xs font-semibold ${dark?'text-slate-500':'text-slate-400'}`}>Alt. Number</span>
-                    <span className={`text-sm font-semibold ${valueRow}`}>{student.alternate_contact_number}</span>
-                  </div>
-                )}
-              </div>
-            </div>
+            </SC>
           </div>
 
-          {/* Row 2: Address + Guardians */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
-              <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Address</p>
-              <div className="grid grid-cols-2 gap-2">
-                {[{label:'Street',value:student.street,full:true},{label:'Barangay',value:student.barangay,full:true},{label:'City',value:student.city},{label:'Province',value:student.province},{label:'Zip Code',value:student.zip_code}].map(({label,value,full})=>(
-                  <div key={label} className={`${full?'col-span-2':''} ${dark?'bg-slate-800 border-slate-700':'bg-white border-slate-100'} border rounded-xl p-3`}>
-                    <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${dark?'text-slate-500':'text-slate-400'}`}>{label}</p>
-                    <p className={`text-sm font-semibold ${valueRow}`}>{value||'N/A'}</p>
-                  </div>
-                ))}
+          {/* Row 2: Enrollment + Guardians */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <SC title="Enrollment Details">
+              <div className="space-y-1">
+                <R label="Date Enrolled"     value={dateEnrolled} />
+                <R label="Section"           value={student.section} />
+                <R label="Student Type"      value={student.student_type} />
+                <R label="Enrollment Status" value={student.enrollment_status} />
               </div>
-            </div>
-            <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
-              <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Guardians</p>
-              {student.guardians&&student.guardians.length>0?(
+            </SC>
+            <SC title="Guardians">
+              {student.guardians && student.guardians.length > 0 ? (
                 <div className="space-y-3">
-                  {student.guardians.map(g=>(
-                    <div key={g.id} className={`flex items-start gap-3 p-3 rounded-xl border ${dark?'bg-slate-800 border-slate-700':'bg-white border-slate-100'}`}>
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${dark?'bg-orange-900/40 text-orange-400':'bg-orange-50 text-orange-600'}`}>{g.full_name?.[0]||'?'}</div>
-                      <div><p className={`text-sm font-bold ${boldText}`}>{g.full_name}<span className={`ml-1.5 text-xs font-normal ${subText}`}>({g.relationship})</span></p>
-                        <p className={`text-xs mt-0.5 ${subText}`}>{g.contact_number}</p>
-                        <p className={`text-xs ${subText}`}>{g.email}</p>
+                  {student.guardians.map(g => (
+                    <div key={g.id} className={`flex items-start gap-3 p-3 rounded-xl border ${dark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${dark ? 'bg-orange-900/40 text-orange-400' : 'bg-orange-50 text-orange-600'}`}>{g.full_name?.[0] || '?'}</div>
+                      <div>
+                        <p className={`text-xs font-bold ${boldText}`}>{g.full_name} <span className={`font-normal ${subText}`}>({g.relationship})</span></p>
+                        {g.contact_number && <p className={`text-xs mt-0.5 ${subText}`}>{g.contact_number}</p>}
+                        {g.email && <p className={`text-xs ${subText}`}>{g.email}</p>}
                       </div>
                     </div>
                   ))}
                 </div>
-              ):(
-                <div className={`flex flex-col items-center justify-center py-8 rounded-xl border ${dark?'border-slate-700 bg-slate-800/40':'border-slate-100 bg-white'}`}>
-                  <svg className={`w-8 h-8 mb-2 ${dark?'text-slate-600':'text-slate-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                  <p className={`text-xs ${subText}`}>No guardians recorded</p>
-                </div>
-              )}
-            </div>
+              ) : <Empty msg="No guardians recorded." />}
+            </SC>
           </div>
 
           {/* Row 3: Medical + Emergency */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
-              <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Medical Records</p>
-              {student.medical_histories&&student.medical_histories.length>0?(
-                <div className="space-y-3">
-                  {student.medical_histories.map(mh=>(
-                    <div key={mh.id} className={`rounded-xl border p-4 ${medCard}`}>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className={`text-xs font-bold uppercase tracking-wider ${dark?'text-slate-400':'text-slate-500'}`}>Blood Type</span>
-                        <span className={`font-bold text-sm px-3 py-1 rounded-lg ${medBlood}`}>{mh.bloodtype||'Unknown'}</span>
-                      </div>
-                      <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${condLabel}`}>Conditions / Allergies</p>
-                      <p className={`text-sm ${condText}`}>{mh.existing_conditions||'None reported'}</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <SC title="Medical Record">
+              {student.medical_histories && student.medical_histories.length > 0 ? (
+                student.medical_histories.map(mh => (
+                  <div key={mh.id} className="space-y-1">
+                    <R label="Blood Type"           value={mh.bloodtype} />
+                    <R label="Conditions / Allergies" value={mh.existing_conditions || 'None reported'} />
+                  </div>
+                ))
+              ) : <Empty msg="No medical record yet." />}
+            </SC>
+            <SC title="Emergency Contact">
+              {student.medical_histories && student.medical_histories.length > 0 && student.medical_histories[0].emergency_contact_name ? (() => {
+                const ec = student.medical_histories[0];
+                return (
+                  <div className={`flex items-center gap-3 p-3 rounded-xl border ${dark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${dark ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-500'}`}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
                     </div>
-                  ))}
-                </div>
-              ):(
-                <div className={`flex flex-col items-center justify-center py-8 rounded-xl border ${dark?'border-slate-700 bg-slate-800/40':'border-slate-100 bg-white'}`}>
-                  <svg className={`w-8 h-8 mb-2 ${dark?'text-slate-600':'text-slate-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                  <p className={`text-xs ${subText}`}>No medical history recorded</p>
-                </div>
-              )}
-            </div>
-            <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
-              <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Emergency Contacts</p>
-              {student.medical_histories&&student.medical_histories.length>0&&student.medical_histories.some(mh=>mh.emergency_contact_name)?(
-                <div className="space-y-3">
-                  {student.medical_histories.filter(mh=>mh.emergency_contact_name).map(mh=>(
-                    <div key={mh.id} className={`flex items-center gap-3 p-3 rounded-xl border ${dark?'bg-slate-800 border-slate-700':'bg-white border-slate-100'}`}>
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${emergIcon}`}>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                      </div>
-                      <div>
-                        <p className={`text-sm font-bold ${boldText}`}>{mh.emergency_contact_name||'N/A'}</p>
-                        <p className={`text-xs font-semibold ${dark?'text-orange-400':'text-orange-600'}`}>{mh.emergency_contact_number||'N/A'}</p>
-                      </div>
+                    <div>
+                      <p className={`text-xs font-bold ${boldText}`}>{ec.emergency_contact_name}</p>
+                      <p className={`text-xs font-semibold ${dark ? 'text-orange-400' : 'text-orange-600'}`}>{ec.emergency_contact_number || '—'}</p>
                     </div>
-                  ))}
-                </div>
-              ):(
-                <div className={`flex flex-col items-center justify-center py-8 rounded-xl border ${dark?'border-slate-700 bg-slate-800/40':'border-slate-100 bg-white'}`}>
-                  <svg className={`w-8 h-8 mb-2 ${dark?'text-slate-600':'text-slate-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                  <p className={`text-xs ${subText}`}>No emergency contacts recorded</p>
-                </div>
-              )}
-            </div>
+                  </div>
+                );
+              })() : <Empty msg="No emergency contact yet." />}
+            </SC>
           </div>
 
           {/* Row 4: Affiliations */}
-          <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
-            <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark ? 'text-orange-400' : 'text-orange-500'}`}><span className="w-4 h-px bg-orange-400" />Affiliations & Organizations</p>
-            {student.affiliations&&student.affiliations.length>0?(
+          <SC title="Affiliations & Organizations">
+            {student.affiliations && student.affiliations.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {student.affiliations.map(aff=>(
-                  <div key={aff.id} className={`flex items-start gap-3 p-3 rounded-xl border ${affCard}`}>
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${affIcon}`}>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                {student.affiliations.map(aff => (
+                  <div key={aff.id} className={`flex items-start gap-3 p-3 rounded-xl border ${dark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${dark ? 'bg-orange-900/40 text-orange-400' : 'bg-orange-50 text-orange-600'}`}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     </div>
                     <div>
-                      <p className={`text-sm font-bold ${boldText}`}>{aff.organization_name}</p>
+                      <p className={`text-xs font-bold ${boldText}`}>{aff.organization_name}</p>
                       <p className={`text-xs ${subText}`}>{aff.position} · {aff.status}</p>
-                      <p className={`text-xs mt-0.5 ${dark?'text-slate-500':'text-slate-400'}`}>Joined: {aff.date_joined}{aff.date_ended?` — Ended: ${aff.date_ended}`:''}</p>
+                      <p className={`text-xs mt-0.5 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Joined: {aff.date_joined ? new Date(aff.date_joined.replace ? aff.date_joined.replace(' ','T') : aff.date_joined).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}{aff.date_ended ? ` — Ended: ${new Date(aff.date_ended.replace ? aff.date_ended.replace(' ','T') : aff.date_ended).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}` : ''}</p>
                     </div>
                   </div>
                 ))}
               </div>
-            ):(
-              <div className={`flex flex-col items-center justify-center py-8 rounded-xl border ${dark?'border-slate-700 bg-slate-800/40':'border-slate-100 bg-white'}`}>
-                <svg className={`w-8 h-8 mb-2 ${dark?'text-slate-600':'text-slate-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                <p className={`text-xs ${subText}`}>No affiliations recorded</p>
-              </div>
-            )}
-          </div>
+            ) : <Empty msg="No affiliations recorded." />}
+          </SC>
 
         </div>
-      )}
+        );
+      })()}
 
       {/* Skills & Certifications Tab */}
       {activeTab === 'skills_certifications' && (
@@ -534,6 +500,119 @@ const StudentProfileTabs = ({ activeTab, student, onEditClick, onDeleteClick }) 
           )}
         </div>
       )}
+
+      {/* Subjects Tab */}
+      {activeTab === 'subjects' && (() => {
+        const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        const DAY_COLORS = {
+          Monday: 'bg-blue-100 text-blue-700', Tuesday: 'bg-green-100 text-green-700',
+          Wednesday: 'bg-yellow-100 text-yellow-700', Thursday: 'bg-purple-100 text-purple-700',
+          Friday: 'bg-pink-100 text-pink-700', Saturday: 'bg-orange-100 text-orange-700',
+        };
+        const fmt = (t) => {
+          if (!t) return '—';
+          const [h, m] = t.split(':');
+          const hr = parseInt(h, 10);
+          return `${hr % 12 || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
+        };
+        // Find schedules for this student's section
+        const studentSection = student.section;
+        const mySchedules = schedules.filter(s =>
+          s.section?.section_name === studentSection ||
+          String(s.section_id) === String(student.section_id)
+        ).sort((a, b) => DAYS.indexOf(a.day_of_week) - DAYS.indexOf(b.day_of_week));
+
+        const totalUnits = mySchedules.reduce((sum, s) => sum + (s.subject?.total_units || 0), 0);
+
+        return (
+          <div className="space-y-5">
+            {/* Header */}
+            <div className={`flex items-center justify-between pb-4 border-b ${divider}`}>
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${dark ? 'bg-brand-900/40 text-brand-400' : 'bg-brand-50 text-brand-600'}`}>
+                  <AcademicCapIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className={`text-base font-bold ${boldText}`}>Enrolled Subjects</h3>
+                  <p className={`text-xs ${subText}`}>
+                    {studentSection ? `Section ${studentSection}` : 'No section assigned'} · {mySchedules.length} subject{mySchedules.length !== 1 ? 's' : ''} · {totalUnits} units
+                  </p>
+                </div>
+              </div>
+              {mySchedules.length > 0 && (
+                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${dark ? 'bg-brand-900/40 text-brand-300' : 'bg-brand-50 text-brand-600'}`}>
+                  {totalUnits} total units
+                </span>
+              )}
+            </div>
+
+            {mySchedules.length === 0 ? (
+              <div className={`flex flex-col items-center justify-center py-14 rounded-2xl border ${dark ? 'bg-slate-800/40 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${dark ? 'bg-slate-700' : 'bg-slate-100'}`}>
+                  <AcademicCapIcon className={`w-8 h-8 ${dark ? 'text-slate-500' : 'text-slate-400'}`} />
+                </div>
+                <h4 className={`text-base font-bold mb-1 ${boldText}`}>No Subjects Found</h4>
+                <p className={`text-sm ${subText}`}>
+                  {studentSection
+                    ? `No schedules assigned to section ${studentSection} yet.`
+                    : 'This student has no section assigned. Assign a section to see subjects.'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {mySchedules.map((s, idx) => (
+                  <div key={s.id}
+                    className={`relative rounded-2xl border overflow-hidden transition-all duration-200 hover:shadow-md ${dark ? 'bg-slate-800/60 border-slate-700 hover:border-slate-600' : 'bg-white border-slate-200 hover:border-slate-300'}`}>
+                    {/* Left accent */}
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${DAY_COLORS[s.day_of_week]?.replace('bg-', 'bg-').split(' ')[0] || 'bg-slate-300'}`} />
+                    <div className="pl-5 pr-5 py-4">
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        {/* Subject info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${dark ? 'bg-brand-900/40 text-brand-300' : 'bg-brand-50 text-brand-600'}`}>
+                              {s.subject?.subject_code}
+                            </span>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${DAY_COLORS[s.day_of_week] || 'bg-slate-100 text-slate-700'}`}>
+                              {s.day_of_week}
+                            </span>
+                          </div>
+                          <h4 className={`font-bold text-sm ${boldText}`}>{s.subject?.descriptive_title}</h4>
+                          <div className={`flex items-center gap-3 mt-1 text-xs ${subText}`}>
+                            <span className="flex items-center gap-1">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              {fmt(s.start_time)} – {fmt(s.end_time)}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                              {s.room}
+                            </span>
+                          </div>
+                        </div>
+                        {/* Faculty + units */}
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-[10px] ${dark ? 'bg-orange-900/40 text-orange-300' : 'bg-orange-100 text-orange-700'}`}>
+                              {s.faculty?.first_name?.[0]}{s.faculty?.last_name?.[0]}
+                            </div>
+                            <div className="text-right">
+                              <p className={`text-xs font-semibold ${boldText}`}>{s.faculty?.first_name} {s.faculty?.last_name}</p>
+                              <p className={`text-[10px] ${dark ? 'text-orange-400' : 'text-orange-600'}`}>{s.faculty?.position}</p>
+                            </div>
+                          </div>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
+                            {s.subject?.total_units} unit{s.subject?.total_units !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Violations Tab */}
       {activeTab === 'violations' && (

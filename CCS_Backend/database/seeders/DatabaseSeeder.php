@@ -46,7 +46,10 @@ class DatabaseSeeder extends Seeder
 
         // ── Real IT & CS courses ───────────────────────────────────
         $courses = [
-            // Information Technology
+            // Program-level courses (used for section assignment)
+            ['course_code' => 'BSIT',   'course_name' => 'Bachelor of Science in Information Technology', 'total_units' => 0],
+            ['course_code' => 'BSCS',   'course_name' => 'Bachelor of Science in Computer Science',       'total_units' => 0],
+            // Information Technology subjects
             ['course_code' => 'IT101',  'course_name' => 'Introduction to Computing',              'total_units' => 3],
             ['course_code' => 'IT102',  'course_name' => 'Computer Programming 1',                 'total_units' => 3],
             ['course_code' => 'IT103',  'course_name' => 'Computer Programming 2',                 'total_units' => 3],
@@ -58,7 +61,7 @@ class DatabaseSeeder extends Seeder
             ['course_code' => 'IT303',  'course_name' => 'Information Assurance and Security',     'total_units' => 3],
             ['course_code' => 'IT401',  'course_name' => 'Capstone Project 1',                     'total_units' => 3],
             ['course_code' => 'IT402',  'course_name' => 'Capstone Project 2',                     'total_units' => 3],
-            // Computer Science
+            // Computer Science subjects
             ['course_code' => 'CS101',  'course_name' => 'Introduction to Computer Science',       'total_units' => 3],
             ['course_code' => 'CS102',  'course_name' => 'Discrete Mathematics',                   'total_units' => 3],
             ['course_code' => 'CS201',  'course_name' => 'Object-Oriented Programming',            'total_units' => 3],
@@ -79,5 +82,6 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->call(SkillSeeder::class);
+        $this->call(CurriculumSeeder::class);
     }
 }

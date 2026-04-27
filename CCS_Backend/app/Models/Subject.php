@@ -17,6 +17,9 @@ class Subject extends Model
         'lec_units',
         'total_units',
         'pre_requisites',
+        'program',
+        'year_level',
+        'semester',
     ];
 
     public function schedules()

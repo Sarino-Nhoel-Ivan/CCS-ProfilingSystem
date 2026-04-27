@@ -139,6 +139,7 @@ export const api = {
   },
   sections: {
     getAll: () => cachedGet('sections', () => fetchApi('/sections')),
+    create: (data) => { cache.bust('sections'); return fetchApi('/sections', { method: 'POST', body: JSON.stringify(data) }); },
   },
   schedules: {
     getAll: () => cachedGet('schedules', () => fetchApi('/schedules')),
@@ -162,5 +163,20 @@ export const api = {
   },
   auth: {
     changePassword: (data) => fetchApi('/auth/change-password', { method: 'POST', body: JSON.stringify(data) }),
+  },
+  notifications: {
+    getAll: () => fetchApi('/notifications'),
+    markRead: (id) => fetchApi(`/notifications/${id}/read`, { method: 'POST' }),
+    markAllRead: () => fetchApi('/notifications/read-all', { method: 'POST' }),
+    delete: (id) => fetchApi(`/notifications/${id}`, { method: 'DELETE' }),
+    clearAll: () => fetchApi('/notifications/clear-all', { method: 'DELETE' }),
+  },
+  tasks: {
+    getByFaculty: (facultyId) => fetchApi(`/tasks?faculty_id=${facultyId}`),
+    getByStudent: (studentId) => fetchApi(`/students/${studentId}/tasks`),
+    create: (studentId, data) => fetchApi(`/students/${studentId}/tasks`, { method: 'POST', body: JSON.stringify(data) }),
+    bulkCreate: (data) => fetchApi('/tasks/bulk', { method: 'POST', body: JSON.stringify(data) }),
+    update: (studentId, taskId, data) => fetchApi(`/students/${studentId}/tasks/${taskId}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (studentId, taskId) => fetchApi(`/students/${studentId}/tasks/${taskId}`, { method: 'DELETE' }),
   },
 };

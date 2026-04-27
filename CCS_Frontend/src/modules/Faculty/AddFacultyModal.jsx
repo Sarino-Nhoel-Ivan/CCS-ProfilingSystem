@@ -10,9 +10,11 @@ const AddFacultyModal = ({ isOpen, onClose, onFacultyAdded }) => {
 
   const defaultForm = {
     first_name: '', middle_name: '', last_name: '',
+    gender: '', date_of_birth: '',
     position: 'Instructor I', employment_status: 'Full-Time',
     hire_date: new Date().toISOString().split('T')[0],
-    email: '', contact_number: '', office_location: '', department_id: '',
+    email: '', contact_number: '', office_location: '',
+    office_hours: '', department_id: '',
   };
   const [formData, setFormData] = useState(defaultForm);
 
@@ -48,16 +50,37 @@ const AddFacultyModal = ({ isOpen, onClose, onFacultyAdded }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  // Phone: digits only, enforce 09 prefix, max 11 chars
+  const handlePhone = (e) => {
+    let val = e.target.value.replace(/\D/g, '');
+    if (val.length > 0 && !val.startsWith('09')) {
+      val = '09' + val.replace(/^0*9?/, '');
+    }
+    val = val.slice(0, 11);
+    setFormData(prev => ({ ...prev, contact_number: val }));
+  };
+
+  const validate = () => {
+    if (!formData.first_name.trim()) return 'First name is required.';
+    if (!formData.last_name.trim())  return 'Last name is required.';
+    if (!formData.email?.trim())     return 'Email address is required.';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim()))
+      return 'Please enter a valid email address (e.g. faculty@pnc.edu.ph).';
+    if (formData.contact_number && formData.contact_number.length > 0) {
+      if (!formData.contact_number.startsWith('09'))
+        return 'Contact number must start with 09.';
+      if (formData.contact_number.length !== 11)
+        return 'Contact number must be exactly 11 digits (e.g. 09XXXXXXXXX).';
+    }
+    if (!formData.department_id) return 'Please select a department.';
+    return null;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
-    if (!formData.email?.trim()) { setError('Email address is required.'); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-      setError('Please enter a valid email address (e.g. faculty@pnc.edu.ph).');
-      return;
-    }
-    if (!formData.department_id) { setError('Please select a department.'); return; }
-
+    const err = validate();
+    if (err) { setError(err); return; }
     setIsSubmitting(true);
     try {
       await api.faculties.create({ ...formData, email: formData.email.trim() });
@@ -132,6 +155,22 @@ const AddFacultyModal = ({ isOpen, onClose, onFacultyAdded }) => {
                     <label className={lbl}>Last Name *</label>
                     <input required type="text" name="last_name" value={formData.last_name} onChange={handleChange} className={inp} />
                   </div>
+                  <div>
+                    <label className={lbl}>Gender</label>
+                    <select name="gender" value={formData.gender} onChange={handleChange} className={sel}>
+                      <option value="">Select...</option>
+                      <option>Male</option>
+                      <option>Female</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={lbl}>Date of Birth</label>
+                    <input type="date" name="date_of_birth" value={formData.date_of_birth} onChange={handleChange} className={inp} />
+                  </div>
+                  <div className={`p-3 rounded-xl border text-xs ${dark ? 'bg-amber-900/20 border-amber-700/40 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-700'}`}>
+                    <p className="font-bold mb-0.5">🔑 Default Password</p>
+                    <p>{formData.date_of_birth ? `Birthdate: ${new Date(formData.date_of_birth + 'T00:00:00').toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}` : 'Set birthdate above, or hire date will be used.'}</p>
+                  </div>
                 </div>
               </div>
 
@@ -175,12 +214,18 @@ const AddFacultyModal = ({ isOpen, onClose, onFacultyAdded }) => {
                     <input required type="email" name="email" value={formData.email} onChange={handleChange} placeholder="e.g. faculty@pnc.edu.ph" className={inp} />
                   </div>
                   <div>
-                    <label className={lbl}>Contact Number</label>
-                    <input type="text" name="contact_number" value={formData.contact_number} onChange={handleChange} className={inp} />
+                    <label className={lbl}>Contact Number <span className={`normal-case font-normal ${dark ? 'text-slate-500' : 'text-slate-400'}`}>(starts with 09)</span></label>
+                    <input type="text" name="contact_number" value={formData.contact_number}
+                      onChange={handlePhone} placeholder="09XXXXXXXXX" maxLength={11} className={inp} />
                   </div>
                   <div>
                     <label className={lbl}>Office Location</label>
                     <input type="text" name="office_location" value={formData.office_location} onChange={handleChange} placeholder="e.g. Room 402, IT Bldg" className={inp} />
+                  </div>
+                  <div className="md:col-span-3">
+                    <label className={lbl}>Consultation Hours</label>
+                    <input type="text" name="office_hours" value={formData.office_hours} onChange={handleChange} placeholder="e.g. Mon–Fri 9:00 AM – 12:00 PM, 1:00 PM – 5:00 PM" className={inp} />
+                    <p className={`text-xs mt-1 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Students will see this to know when to visit the CCS office.</p>
                   </div>
                 </div>
               </div>

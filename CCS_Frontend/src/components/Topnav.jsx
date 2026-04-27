@@ -6,6 +6,31 @@ import {
   MagnifyingGlassIcon, SunIcon, MoonIcon, BellIcon,
 } from '@heroicons/react/24/outline';
 
+// ── Notification helpers ──────────────────────────────────────────────────────
+const NOTIF_ICONS = {
+  student_created:      { emoji: '🎓', bg: 'bg-orange-100 dark:bg-orange-900/40' },
+  student_updated:      { emoji: '✏️',  bg: 'bg-blue-100 dark:bg-blue-900/40' },
+  student_deleted:      { emoji: '🗑️',  bg: 'bg-red-100 dark:bg-red-900/40' },
+  faculty_created:      { emoji: '👨‍🏫', bg: 'bg-green-100 dark:bg-green-900/40' },
+  faculty_updated:      { emoji: '✏️',  bg: 'bg-blue-100 dark:bg-blue-900/40' },
+  faculty_deleted:      { emoji: '🗑️',  bg: 'bg-red-100 dark:bg-red-900/40' },
+  violation_added:      { emoji: '⚠️',  bg: 'bg-yellow-100 dark:bg-yellow-900/40' },
+  event_created:        { emoji: '📅',  bg: 'bg-violet-100 dark:bg-violet-900/40' },
+  event_status_changed: { emoji: '🔄',  bg: 'bg-teal-100 dark:bg-teal-900/40' },
+  event_deleted:        { emoji: '🗑️',  bg: 'bg-red-100 dark:bg-red-900/40' },
+};
+const getNotifIcon = (type) => NOTIF_ICONS[type] || { emoji: '🔔', bg: 'bg-slate-100' };
+
+const getTimeAgo = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr.replace ? dateStr.replace(' ', 'T') : dateStr);
+  const diff = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (diff < 60)   return 'Just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+};
+
 const Topnav = ({ currentModule, darkMode = false, onToggleDark }) => {
   const currentUser = useCurrentUser();
   const navigate = useNavigate();
@@ -15,7 +40,74 @@ const Topnav = ({ currentModule, darkMode = false, onToggleDark }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const searchRef = useRef(null);
 
+  // Notifications
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notifRef = useRef(null);
+
   const closeSearch = () => { setShowDropdown(false); setSearchQuery(''); setSearchResults(null); };
+
+  // ── Notification helpers ──────────────────────────────────────────────────
+  const fetchNotifications = async () => {
+    try {
+      const data = await api.notifications.getAll();
+      setNotifications(data.notifications || []);
+      setUnreadCount(data.unread_count || 0);
+    } catch { /* silent */ }
+  };
+
+  const handleMarkRead = async (id) => {
+    await api.notifications.markRead(id);
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+    setUnreadCount(prev => Math.max(0, prev - 1));
+  };
+
+  const handleMarkAllRead = async () => {
+    await api.notifications.markAllRead();
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    setUnreadCount(0);
+  };
+
+  const handleDeleteNotif = async (id) => {
+    await api.notifications.delete(id);
+    const n = notifications.find(x => x.id === id);
+    setNotifications(prev => prev.filter(x => x.id !== id));
+    if (n && !n.is_read) setUnreadCount(prev => Math.max(0, prev - 1));
+  };
+
+  const handleClearAll = async () => {
+    await api.notifications.clearAll();
+    setNotifications([]);
+    setUnreadCount(0);
+  };
+
+  const handleNotifClick = (notif) => {
+    if (!notif.is_read) handleMarkRead(notif.id);
+    const d = notif.data || {};
+    if (d.student_id) navigate(`/admin/users/${d.student_id}`);
+    else if (d.faculty_id) navigate(`/admin/reports/${d.faculty_id}`);
+    else if (d.event_id) navigate('/admin/events');
+    setShowNotifications(false);
+  };
+
+  // Poll every 30 seconds
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Close notification panel on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const handleResultClick = (type, id) => {
     closeSearch();
@@ -185,10 +277,101 @@ const Topnav = ({ currentModule, darkMode = false, onToggleDark }) => {
         </button>
 
         {/* Notification Bell */}
-        <button className={`relative p-2 transition-colors ${darkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>
-          <span className={`absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 border-2 rounded-full ${darkMode ? 'border-slate-900' : 'border-white'}`}></span>
-          <BellIcon className="w-6 h-6" />
-        </button>
+        <div className="relative" ref={notifRef}>
+          <button
+            onClick={() => { setShowNotifications(v => !v); if (!showNotifications) fetchNotifications(); }}
+            className={`relative p-2 rounded-full transition-all duration-300 ${darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
+          >
+            {unreadCount > 0 && (
+              <span className={`absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 ${darkMode ? 'border-slate-900' : 'border-white'}`}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+            <BellIcon className="w-6 h-6" />
+          </button>
+
+          {/* Notification Dropdown */}
+          {showNotifications && (
+            <div className={`absolute right-0 top-full mt-2 w-96 rounded-2xl shadow-2xl border overflow-hidden z-50 ${darkMode ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200'}`}>
+              {/* Header */}
+              <div className={`flex items-center justify-between px-4 py-3 border-b ${darkMode ? 'bg-slate-800/60 border-slate-700/60' : 'bg-slate-50 border-slate-100'}`}>
+                <div className="flex items-center gap-2">
+                  <BellIcon className={`w-4 h-4 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`} />
+                  <span className={`text-sm font-bold ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>Notifications</span>
+                  {unreadCount > 0 && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500 text-white">{unreadCount} new</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  {unreadCount > 0 && (
+                    <button onClick={handleMarkAllRead}
+                      className={`text-xs font-semibold px-2 py-1 rounded-lg transition-colors ${darkMode ? 'text-brand-400 hover:bg-brand-900/30' : 'text-brand-600 hover:bg-brand-50'}`}>
+                      Mark all read
+                    </button>
+                  )}
+                  {notifications.length > 0 && (
+                    <button onClick={handleClearAll}
+                      className={`text-xs font-semibold px-2 py-1 rounded-lg transition-colors ${darkMode ? 'text-slate-400 hover:bg-slate-700 hover:text-red-400' : 'text-slate-400 hover:bg-red-50 hover:text-red-600'}`}>
+                      Clear all
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* List */}
+              <div className="max-h-[420px] overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? 'text-slate-600' : 'text-slate-300'}`}>
+                    <BellIcon className="w-10 h-10 mb-2" />
+                    <p className={`text-sm font-medium ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>No notifications yet</p>
+                  </div>
+                ) : (
+                  <div className={`divide-y ${darkMode ? 'divide-slate-700/60' : 'divide-slate-100'}`}>
+                    {notifications.map(n => {
+                      const icon = getNotifIcon(n.type);
+                      const timeAgo = getTimeAgo(n.created_at);
+                      return (
+                        <div key={n.id}
+                          onClick={() => handleNotifClick(n)}
+                          className={`flex items-start gap-3 px-4 py-3.5 cursor-pointer transition-colors group ${
+                            !n.is_read
+                              ? (darkMode ? 'bg-brand-900/10 hover:bg-brand-900/20' : 'bg-brand-50/60 hover:bg-brand-50')
+                              : (darkMode ? 'hover:bg-slate-800/60' : 'hover:bg-slate-50')
+                          }`}>
+                          {/* Icon */}
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-base ${icon.bg}`}>
+                            {icon.emoji}
+                          </div>
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className={`text-xs font-bold leading-tight ${!n.is_read ? (darkMode ? 'text-slate-100' : 'text-slate-800') : (darkMode ? 'text-slate-300' : 'text-slate-600')}`}>
+                                {n.title}
+                              </p>
+                              {!n.is_read && <span className="w-2 h-2 rounded-full bg-brand-500 shrink-0 mt-0.5" />}
+                            </div>
+                            <p className={`text-xs mt-0.5 leading-relaxed line-clamp-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                              {n.message}
+                            </p>
+                            <p className={`text-[10px] mt-1 font-medium ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>{timeAgo}</p>
+                          </div>
+                          {/* Delete btn */}
+                          <button
+                            onClick={e => { e.stopPropagation(); handleDeleteNotif(n.id); }}
+                            className={`opacity-0 group-hover:opacity-100 p-1 rounded-lg transition-all shrink-0 ${darkMode ? 'text-slate-500 hover:text-red-400 hover:bg-red-900/20' : 'text-slate-300 hover:text-red-500 hover:bg-red-50'}`}>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
 
 

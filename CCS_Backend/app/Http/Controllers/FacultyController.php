@@ -25,6 +25,8 @@ class FacultyController extends Controller
             'middle_name'       => 'nullable|string|max:255',
             'last_name'         => 'required|string|max:255',
             'suffix'            => 'nullable|string|max:50',
+            'gender'            => 'nullable|string|max:50',
+            'date_of_birth'     => 'nullable|date',
             'position'          => 'required|string|max:255',
             'employment_status' => 'required|string|max:255',
             'hire_date'         => 'required|date',
@@ -38,9 +40,15 @@ class FacultyController extends Controller
         $faculty = Faculty::create($validated);
         $faculty->load('department');
 
-        // Create the User account with a temporary password (hire date in mm/dd/yyyy)
-        $hireDate     = \Carbon\Carbon::parse($validated['hire_date']);
-        $tempPassword = $hireDate->format('m/d/Y');
+        // Default password = date_of_birth in MM/DD/YYYY format if provided,
+        // otherwise fall back to hire_date.
+        if (!empty($validated['date_of_birth'])) {
+            $tempPassword = \Carbon\Carbon::parse($validated['date_of_birth'])->format('m/d/Y');
+            $passwordNote = 'date of birth';
+        } else {
+            $tempPassword = \Carbon\Carbon::parse($validated['hire_date'])->format('m/d/Y');
+            $passwordNote = 'hire date';
+        }
 
         DB::table('users')->insertOrIgnore([
             'name'                 => trim($validated['first_name'] . ' ' . $validated['last_name']),
@@ -57,26 +65,58 @@ class FacultyController extends Controller
         try {
             $fullName = trim($validated['first_name'] . ' ' . $validated['last_name']);
             $apiKey   = config('services.brevo.key', env('BREVO_API_KEY'));
-            Http::withHeaders([
-                'api-key'      => $apiKey,
-                'Content-Type' => 'application/json',
-            ])->post('https://api.brevo.com/v3/smtp/email', [
-                'sender' => [
-                    'name'  => config('mail.from.name'),
-                    'email' => config('mail.from.address'),
-                ],
-                'to'      => [['email' => $validated['email'], 'name' => $fullName]],
-                'subject' => 'Your CCS Profiling System Faculty Account Has Been Created',
-                'htmlContent' => $this->buildWelcomeEmail($fullName, $validated['email'], $tempPassword),
-            ]);
+            $loginUrl = rtrim(env('FRONTEND_URL', 'https://ccs-profiling-system-iota.vercel.app'), '/') . '/faculty/login';
+            $htmlContent = $this->buildWelcomeEmail($fullName, $validated['email'], $tempPassword, $passwordNote);
+
+            $sent = false;
+
+            // Try Brevo HTTP API first (if API key is configured)
+            if (!empty($apiKey)) {
+                $response = \Illuminate\Support\Facades\Http::withHeaders([
+                    'api-key'      => $apiKey,
+                    'Content-Type' => 'application/json',
+                ])->post('https://api.brevo.com/v3/smtp/email', [
+                    'sender' => [
+                        'name'  => config('mail.from.name'),
+                        'email' => config('mail.from.address'),
+                    ],
+                    'to'      => [['email' => $validated['email'], 'name' => $fullName]],
+                    'subject' => 'Your CCS Profiling System Faculty Account Has Been Created',
+                    'htmlContent' => $htmlContent,
+                ]);
+                if ($response->successful()) {
+                    $sent = true;
+                    \Log::info('Faculty welcome email sent via Brevo API to: ' . $validated['email']);
+                } else {
+                    \Log::error('Brevo API faculty email failed [' . $response->status() . ']: ' . $response->body());
+                }
+            }
+
+            // Fallback: use Laravel Mail (SMTP) if API key is missing or API call failed
+            if (!$sent) {
+                \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($validated, $fullName, $htmlContent) {
+                    $message->to($validated['email'], $fullName)
+                        ->subject('Your CCS Profiling System Faculty Account Has Been Created')
+                        ->html($htmlContent);
+                });
+                \Log::info('Faculty welcome email sent via SMTP to: ' . $validated['email'] . ' | From: ' . config('mail.from.address') . ' | Host: ' . config('mail.mailers.smtp.host'));
+            }
         } catch (\Throwable $e) {
-            \Log::error('Faculty welcome email error: ' . $e->getMessage());
+            // Log the full error — check Railway logs to diagnose email issues
+            \Log::error('Faculty welcome email FAILED for ' . ($validated['email'] ?? 'unknown') . ': ' . $e->getMessage() . ' | ' . get_class($e));
         }
+
+        \App\Http\Controllers\NotificationController::push(
+            'faculty_created',
+            'New Faculty Registered',
+            "{$validated['first_name']} {$validated['last_name']} has been added as faculty ({$validated['position']}).",
+            ['faculty_id' => $faculty->id]
+        );
 
         return response()->json($faculty, 201);
     }
 
-    private function buildWelcomeEmail(string $name, string $email, string $tempPassword): string
+    private function buildWelcomeEmail(string $name, string $email, string $tempPassword, string $passwordNote = 'hire date'): string
     {
         $loginUrl = rtrim(env('FRONTEND_URL', 'https://ccs-profiling-system-iota.vercel.app'), '/') . '/faculty/login';
         return <<<HTML
@@ -108,7 +148,7 @@ class FacultyController extends Controller
       </div>
 
       <div style="background:#fef3c7;border:1.5px solid #fcd34d;border-radius:10px;padding:14px 18px;margin-bottom:24px;">
-        <p style="margin:0;font-size:13px;color:#92400e;line-height:1.5;">⚠️ <strong>Important:</strong> Your temporary password is your hire date in <strong>mm/dd/yyyy</strong> format. You will be required to change it upon your first login.</p>
+        <p style="margin:0;font-size:13px;color:#92400e;line-height:1.5;">⚠️ <strong>Important:</strong> Your temporary password is your <strong>{$passwordNote}</strong> in <strong>mm/dd/yyyy</strong> format. You will be required to change it upon your first login.</p>
       </div>
 
       <p style="color:#475569;font-size:13px;line-height:1.6;margin:0 0 24px;">If you have any concerns, please contact the CCS administration office.</p>
@@ -182,6 +222,12 @@ HTML;
         ]);
 
         $faculty->update($validated);
+        \App\Http\Controllers\NotificationController::push(
+            'faculty_updated',
+            'Faculty Profile Updated',
+            "{$faculty->first_name} {$faculty->last_name}'s profile was updated.",
+            ['faculty_id' => $faculty->id]
+        );
         return response()->json($faculty->fresh()->load('department'));
     }
 
@@ -190,7 +236,14 @@ HTML;
         if ($faculty->profile_photo) {
             Storage::disk('public')->delete($faculty->profile_photo);
         }
+        $name = "{$faculty->first_name} {$faculty->last_name}";
         $faculty->delete();
+        \App\Http\Controllers\NotificationController::push(
+            'faculty_deleted',
+            'Faculty Record Deleted',
+            "Faculty member {$name} has been removed from the system.",
+            []
+        );
         return response()->json(['message' => 'Faculty deleted successfully.']);
     }
 

@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, createContext, useContext, useRef } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { api } from '../../utils/api';
+import { api, fetchApi, cache } from '../../utils/api';
 /* Pin / PinOff replaced with inline SVGs — lucide-react is not installed */
 const PinIcon    = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -17,19 +17,15 @@ const ThemeCtx = createContext(true);
 const useTheme = () => useContext(ThemeCtx);
 
 const NAV_ITEMS = [
-  { id: 'dashboard', label: 'Dashboard',   icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-  { id: 'profile',   label: 'My Profile',  icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
-  { id: 'subjects',  label: 'My Subjects', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
-  { id: 'schedule',  label: 'My Schedule', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
-  { id: 'students',  label: 'My Students', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
+  { id: 'dashboard', label: 'Dashboard',    icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+  { id: 'profile',   label: 'My Profile',   icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+  { id: 'subjects',  label: 'My Subjects',  icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
+  { id: 'schedule',  label: 'My Schedule',  icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
+  { id: 'students',  label: 'My Students',  icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
+  { id: 'tasks',     label: 'Assign Tasks', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
 ];
 
-const ANNOUNCEMENTS = [
-  { id: 1, title: 'Mid-term Grades Submission Deadline', date: 'Mar 22, 2026', tag: 'Deadline', color: 'from-red-500 to-pink-500',    desc: 'Please submit all mid-term grades through the faculty portal before March 22, 2026.' },
-  { id: 2, title: 'Faculty Meeting — March 16, 2026',    date: 'Mar 16, 2026', tag: 'Meeting',  color: 'from-blue-500 to-purple-500', desc: 'Mandatory faculty meeting at 2:00 PM in the CCS Conference Room. Attendance is required.' },
-  { id: 3, title: 'New Section Added to Your Schedule',  date: 'Mar 10, 2026', tag: 'Update',   color: 'from-emerald-500 to-teal-500',desc: 'Section BSIT-3A has been added to your schedule for IT 311 starting March 17.' },
-  { id: 4, title: 'IT Week 2026 — Faculty Coordinators', date: 'Mar 8, 2026',  tag: 'Event',    color: 'from-brand-500 to-amber-500', desc: 'Faculty coordinators for IT Week 2026 are requested to submit their event proposals by March 15.' },
-];
+const ANNOUNCEMENTS = [];  // replaced by live events below
 
 /* ── helpers ── */
 const fmt = (d) => { try { return d ? new Date(d).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}) : '—'; } catch { return d||'—'; } };
@@ -130,55 +126,123 @@ const NavLink = ({item,active,sidebarExpanded,onSelect}) => {
 };
 
 /* ════ DASHBOARD PANEL ════ */
-const DashboardPanel = ({user,facultyName,initials,subjectsCount,studentsCount,schedulesCount}) => {
+const DashboardPanel = ({user,faculty,facultyName,initials,subjectsCount,studentsCount,schedulesCount,eventsCount}) => {
   const dark=useTheme();
+  const [imgErr,setImgErr]=useState(false);
+  const [events,setEvents]=useState([]);
+  const [eventsLoading,setEventsLoading]=useState(true);
+
+  useEffect(()=>{
+    fetchApi('/events').then(data=>{
+      // Sort by date descending, show upcoming first
+      const sorted=[...data].sort((a,b)=>new Date(b.eventDate)-new Date(a.eventDate));
+      setEvents(sorted);
+    }).catch(()=>{}).finally(()=>setEventsLoading(false));
+  },[]);
+
+  const fmtEventDate=(raw)=>{
+    if(!raw) return '—';
+    const d=new Date(raw.includes(' ')?raw.replace(' ','T'):raw);
+    if(isNaN(d.getTime())) return raw;
+    return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  };
+
+  const EVENT_TYPE_COLORS={
+    Academic:        'from-indigo-500 to-blue-500',
+    Sports:          'from-orange-500 to-amber-500',
+    Cultural:        'from-purple-500 to-pink-500',
+    CommunityService:'from-teal-500 to-emerald-500',
+    Other:           'from-slate-500 to-slate-400',
+  };
+  const STATUS_COLORS={
+    Upcoming: 'from-blue-500 to-blue-600',
+    Ongoing:  'from-orange-500 to-orange-600',
+    Completed:'from-green-500 to-green-600',
+    Cancelled:'from-red-500 to-red-600',
+  };
+
+  const photoSrc=faculty?.profile_photo
+    ? (faculty.profile_photo.startsWith('http')
+        ? faculty.profile_photo
+        : `${import.meta.env.VITE_STORAGE_URL||'http://localhost:8000/storage'}/${faculty.profile_photo}?v=${faculty.updated_at??Date.now()}`)
+    : null;
+
   const stats=[
-    {label:'Subjects Handled',val:subjectsCount,icon:'📚',dc:'from-blue-500/20 to-purple-500/10 border-blue-500/20',lc:'bg-blue-50 border-blue-100'},
-    {label:'Total Students',  val:studentsCount, icon:'👥',dc:'from-brand-500/20 to-amber-500/10 border-brand-500/20',lc:'bg-orange-50 border-orange-100'},
-    {label:'Schedules',       val:schedulesCount,icon:'🗂️',dc:'from-emerald-500/20 to-teal-500/10 border-emerald-500/20',lc:'bg-emerald-50 border-emerald-100'},
-    {label:'Upcoming Events', val:'2',           icon:'📅',dc:'from-rose-500/20 to-pink-500/10 border-rose-500/20',lc:'bg-rose-50 border-rose-100'},
+    {label:'Subjects Handled',val:subjectsCount,accent:'border-l-blue-500',  iconBg:dark?'bg-blue-900/40 text-blue-400':'bg-blue-50 text-blue-500',    icon:'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'},
+    {label:'Total Students',  val:studentsCount, accent:'border-l-orange-500',iconBg:dark?'bg-orange-900/40 text-orange-400':'bg-orange-50 text-orange-500',icon:'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z'},
+    {label:'Schedules',       val:schedulesCount,accent:'border-l-emerald-500',iconBg:dark?'bg-emerald-900/40 text-emerald-400':'bg-emerald-50 text-emerald-500',icon:'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'},
+    {label:'Upcoming Events', val:eventsCount,   accent:'border-l-rose-500',  iconBg:dark?'bg-rose-900/40 text-rose-400':'bg-rose-50 text-rose-500',      icon:'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'},
   ];
+
   return (
     <div className="space-y-6">
-      <div className={`relative overflow-hidden rounded-2xl border p-6 ${dark?'bg-gradient-to-br from-blue-600/20 via-purple-600/10 to-transparent border-blue-500/20':'bg-gradient-to-br from-blue-50 to-purple-50 border-blue-100'}`}>
-        <div className="absolute right-0 top-0 w-48 h-48 bg-blue-500/10 rounded-full -translate-y-1/4 translate-x-1/4 blur-2xl pointer-events-none"/>
-        <div className="relative flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white text-xl font-bold shadow-lg shrink-0">{initials}</div>
+      {/* Welcome card with real profile photo */}
+      <div className={`relative overflow-hidden rounded-2xl border p-6 ${dark?'bg-gradient-to-br from-orange-600/10 via-slate-900 to-slate-900 border-orange-500/20':'bg-gradient-to-br from-orange-50 to-white border-orange-100'}`}>
+        <div className="absolute right-0 top-0 w-56 h-56 bg-orange-500/5 rounded-full -translate-y-1/4 translate-x-1/4 blur-3xl pointer-events-none"/>
+        <div className="relative flex items-center gap-5">
+          <div className="w-16 h-16 rounded-full shrink-0 overflow-hidden ring-2 ring-orange-500/40 shadow-lg">
+            {photoSrc && !imgErr
+              ? <img src={photoSrc} alt={facultyName} className="w-full h-full object-cover object-top" onError={()=>setImgErr(true)}/>
+              : <div className={`w-full h-full flex items-center justify-center text-xl font-bold ${dark?'bg-orange-900/50 text-orange-300':'bg-orange-100 text-orange-600'}`}>{initials}</div>
+            }
+          </div>
           <div>
-            <p className={`text-sm ${dark?'text-slate-400':'text-slate-500'}`}>Welcome back,</p>
-            <h2 className={`text-2xl font-bold ${dark?'text-white':'text-slate-800'}`}>{facultyName||user?.name} 👋</h2>
-            <p className={`text-sm mt-0.5 ${dark?'text-slate-400':'text-slate-500'}`}>CCS Faculty Member · Profile Hub</p>
+            <p className={`text-xs font-semibold uppercase tracking-wider ${dark?'text-orange-400':'text-orange-500'}`}>Welcome back</p>
+            <h2 className={`text-2xl font-bold mt-0.5 ${dark?'text-white':'text-slate-800'}`}>{facultyName||user?.name} 👋</h2>
+            <p className={`text-sm mt-1 ${dark?'text-slate-400':'text-slate-500'}`}>CCS Faculty Member · Profile Hub</p>
           </div>
         </div>
       </div>
+
+      {/* Stat cards — live data */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {stats.map(s=>(
-          <div key={s.label} className={`rounded-2xl border p-4 ${dark?`bg-gradient-to-br ${s.dc}`:s.lc}`}>
-            <div className="text-2xl mb-1">{s.icon}</div>
-            <div className={`text-2xl font-bold ${dark?'text-white':'text-slate-800'}`}>{s.val}</div>
-            <div className={`text-xs mt-0.5 ${dark?'text-slate-400':'text-slate-500'}`}>{s.label}</div>
+          <div key={s.label} className={`p-5 rounded-2xl border-l-4 border shadow-sm flex items-center gap-4 ${s.accent} ${dark?'bg-slate-900 border-slate-700/60':'bg-white border-slate-200'}`}>
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${s.iconBg}`}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={s.icon}/></svg>
+            </div>
+            <div>
+              <p className={`text-xs font-semibold uppercase tracking-wider ${dark?'text-slate-400':'text-slate-500'}`}>{s.label}</p>
+              <p className={`text-2xl font-bold mt-0.5 ${dark?'text-slate-100':'text-slate-800'}`}>{s.val}</p>
+            </div>
           </div>
         ))}
       </div>
+
+      {/* Events / Announcements — live from API */}
       <div>
-        <h3 className={`text-xs font-bold uppercase tracking-wider mb-4 ${dark?'text-slate-400':'text-slate-500'}`}>📢 Announcements</h3>
-        <div className="space-y-3">
-          {ANNOUNCEMENTS.map(a=>(
-            <div key={a.id} className={`flex gap-4 p-4 rounded-2xl border transition-all ${dark?'bg-slate-900 border-slate-700/60 hover:border-slate-600':'bg-white border-slate-200 hover:border-slate-300 shadow-sm'}`}>
-              <div className={`w-2 h-2 rounded-full mt-2 shrink-0 bg-gradient-to-b ${a.color}`}/>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-                  <p className={`text-sm font-semibold ${dark?'text-slate-200':'text-slate-700'}`}>{a.title}</p>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r ${a.color} text-white`}>{a.tag}</span>
-                    <span className={`text-xs ${dark?'text-slate-500':'text-slate-400'}`}>{a.date}</span>
+        <h3 className={`text-xs font-bold uppercase tracking-wider mb-4 ${dark?'text-slate-400':'text-slate-500'}`}>📢 Upcoming Events</h3>
+        {eventsLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className={`w-6 h-6 border-4 rounded-full animate-spin border-t-brand-500 ${dark?'border-slate-700':'border-slate-200'}`}/>
+          </div>
+        ) : events.length === 0 ? (
+          <div className={`p-6 rounded-2xl border text-center ${dark?'bg-slate-900 border-slate-700/60 text-slate-500':'bg-white border-slate-200 text-slate-400'}`}>
+            <p className="text-sm">No events scheduled yet.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {events.map(a=>{
+              const typeColor=EVENT_TYPE_COLORS[a.eventType]||EVENT_TYPE_COLORS.Other;
+              const statusColor=STATUS_COLORS[a.status]||STATUS_COLORS.Upcoming;
+              return (
+                <div key={a.id} className={`flex gap-4 p-4 rounded-2xl border transition-all ${dark?'bg-slate-900 border-slate-700/60 hover:border-slate-600':'bg-white border-slate-200 hover:border-slate-300 shadow-sm'}`}>
+                  <div className={`w-2 h-2 rounded-full mt-2 shrink-0 bg-gradient-to-b ${typeColor}`}/>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                      <p className={`text-sm font-semibold ${dark?'text-slate-200':'text-slate-700'}`}>{a.eventName}</p>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r ${statusColor} text-white`}>{a.status}</span>
+                        <span className={`text-xs ${dark?'text-slate-500':'text-slate-400'}`}>{fmtEventDate(a.eventDate)}</span>
+                      </div>
+                    </div>
+                    <p className={`text-xs leading-relaxed ${dark?'text-slate-400':'text-slate-500'}`}>{a.description||a.location||'No description provided.'}</p>
                   </div>
                 </div>
-                <p className={`text-xs leading-relaxed ${dark?'text-slate-400':'text-slate-500'}`}>{a.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -468,19 +532,29 @@ const ListEditorModal = ({title,items,fields,onClose,onSave}) => {
 /* ════ PROFILE PANEL ════ */
 const ProfilePanel = ({faculty,loading,err,onReload}) => {
   const dark=useTheme();
-  const [modal,setModal]=useState(null);
+  const [modal,setModal]=useState(null); // 'basic' | 'consultation'
   const [photoUploading,setPhotoUploading]=useState(false);
   const [photoErr,setPhotoErr]=useState(null);
   const [localPhotoUrl,setLocalPhotoUrl]=useState(null);
-  const [depts,setDepts]=useState([]);
+  // Consultation hours inline edit
+  const [consultEdit,setConsultEdit]=useState(false);
+  const [consultVal,setConsultVal]=useState('');
+  const [consultSaving,setConsultSaving]=useState(false);
+  const [consultErr,setConsultErr]=useState(null);
 
-  useEffect(()=>{api.departments.getAll().then(setDepts).catch(()=>{});},[]);
-  // Clear local blob preview once the reloaded faculty data arrives
   useEffect(()=>{ setLocalPhotoUrl(null); },[faculty?.profile_photo]);
+  useEffect(()=>{ if(faculty) setConsultVal(faculty.office_hours||''); },[faculty?.office_hours]);
 
-  const refresh=async()=>{
-    setModal(null);
-    await onReload();
+  const refresh=async()=>{ setModal(null); await onReload(); };
+
+  const saveConsultation=async()=>{
+    setConsultSaving(true);setConsultErr(null);
+    try{
+      await api.faculties.update(faculty.id,{office_hours:consultVal});
+      await onReload();
+      setConsultEdit(false);
+    }catch(ex){setConsultErr(ex.message||'Failed to save.');}
+    finally{setConsultSaving(false);}
   };
 
   const handlePhoto=async(e)=>{
@@ -503,119 +577,163 @@ const ProfilePanel = ({faculty,loading,err,onReload}) => {
   const f=faculty;
   const fullName=[f.first_name,f.middle_name?f.middle_name[0]+'.':null,f.last_name].filter(Boolean).join(' ');
   const initials=`${f.first_name?.[0]??''}${f.last_name?.[0]??''}`.toUpperCase();
-  const photoUrl = f.profile_photo
-    ? (f.profile_photo.startsWith('http')
-        ? f.profile_photo
-        : `${import.meta.env.VITE_STORAGE_URL || 'http://localhost:8000/storage'}/${f.profile_photo}?v=${f.updated_at ?? Date.now()}`)
-    : null;
+  const photoUrl=f.profile_photo
+    ?(f.profile_photo.startsWith('http')?f.profile_photo:`${import.meta.env.VITE_STORAGE_URL||'http://localhost:8000/storage'}/${f.profile_photo}?v=${f.updated_at??Date.now()}`)
+    :null;
 
-  // StudentProfileTabs-style tokens
-  const wrap     = dark?'bg-slate-900 border-slate-700/60':'bg-white border-slate-100';
-  const boldText = dark?'text-slate-100':'text-slate-800';
-  const subText  = dark?'text-slate-400':'text-slate-500';
-  const divider  = dark?'border-slate-700/60':'border-slate-100';
-  const valueRow = dark?'text-slate-200':'text-slate-800';
-  const editBtn  = dark?'text-slate-300 bg-slate-700 hover:bg-slate-600 hover:text-slate-100':'text-slate-600 bg-slate-100 hover:bg-slate-200 hover:text-slate-900';
-  const cardBg   = dark?'bg-slate-800/40 border-slate-700/60':'bg-slate-50/60 border-slate-100';
+  const boldText=dark?'text-slate-100':'text-slate-800';
+  const subText =dark?'text-slate-400':'text-slate-500';
+  const divider =dark?'border-slate-700/60':'border-slate-100';
+  const editBtn =dark?'text-slate-300 bg-slate-700 hover:bg-slate-600':'text-slate-600 bg-slate-100 hover:bg-slate-200';
 
-  const SecHead=({label})=>(
-    <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-4 ${dark?'text-orange-400':'text-orange-500'}`}>
-      <span className="w-4 h-px bg-orange-400"/>{label}
-    </p>
+  /* SectionCard — matches admin/student POV */
+  const SC=({title,children})=>(
+    <div className={`rounded-2xl border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:border-orange-400/60 hover:shadow-orange-500/20 ${dark?'bg-slate-900 border-slate-700/60 hover:bg-slate-800':'bg-white border-slate-200 shadow-sm hover:bg-orange-50/40'}`}>
+      <div className={`flex items-center justify-between px-5 py-3.5 border-b ${dark?'border-slate-700/60 bg-slate-900':'border-slate-100 bg-slate-50'}`}>
+        <h4 className={`text-xs font-bold uppercase tracking-widest ${dark?'text-orange-400':'text-orange-500'}`}>{title}</h4>
+      </div>
+      <div className="p-5">{children}</div>
+    </div>
   );
-  const DataRow=({label,value,highlight})=>(
-    <div className={`flex items-center justify-between py-2.5 border-b last:border-0 ${dark?'border-slate-700/60':'border-slate-100'}`}>
-      <span className={`text-xs font-semibold ${dark?'text-slate-500':'text-slate-400'}`}>{label}</span>
-      <span className={`text-sm font-semibold ${highlight?dark?'text-orange-400':'text-orange-600':valueRow}`}>{value||'N/A'}</span>
+
+  /* Row — label left, value right */
+  const R=({label,value,highlight})=>(
+    <div className="flex justify-between items-start gap-4 py-1">
+      <span className={`text-xs shrink-0 w-44 ${dark?'text-slate-500':'text-slate-400'}`}>{label}</span>
+      <span className={`text-xs font-medium text-right break-words ${highlight?dark?'text-orange-400':'text-orange-600':dark?'text-slate-200':'text-slate-700'}`}>{value||'—'}</span>
     </div>
   );
 
   return (
-    <div className={`p-6 rounded-2xl shadow-sm border min-h-[500px] transition-colors duration-300 ${wrap}`}>
+    <div className="space-y-5">
       {modal==='basic'&&<BasicInfoModal faculty={f} onClose={()=>setModal(null)} onSaved={refresh}/>}
 
-      {/* Header — StudentProfileTabs style */}
-      <div className={`flex items-center space-x-6 mb-8 pb-6 border-b ${divider}`}>
-        {/* Circular photo */}
-        <div className="relative group w-20 h-20 rounded-full shrink-0 overflow-hidden bg-gradient-to-tr from-blue-500 to-purple-500">
-          {/* Photo layer */}
-          {(localPhotoUrl||photoUrl)&&<img src={localPhotoUrl||photoUrl} alt="Profile" className="absolute inset-0 w-full h-full object-cover object-top z-10"/>}
-          {/* Initials fallback layer */}
-          <div className="absolute inset-0 flex items-center justify-center font-bold text-2xl text-white">
-            {initials}
+      {/* Header card — matches admin/student style */}
+      <div className={`rounded-2xl border p-6 ${dark?'bg-slate-900 border-slate-700/60':'bg-white border-slate-200 shadow-sm'}`}>
+        <div className={`flex items-center gap-6 pb-6 border-b ${divider}`}>
+          {/* Profile photo */}
+          <div className="relative group w-20 h-20 rounded-full shrink-0 overflow-hidden">
+            {(localPhotoUrl||photoUrl)
+              ?<img src={localPhotoUrl||photoUrl} alt="Profile" className="w-full h-full object-cover object-top"/>
+              :<div className={`w-full h-full flex items-center justify-center font-bold text-2xl ${dark?'bg-orange-900/40 text-orange-300':'bg-orange-100 text-orange-600'}`}>{initials}</div>
+            }
+            {!photoUploading&&(
+              <><label htmlFor="faculty-photo" className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              </label>
+              <input id="faculty-photo" type="file" accept="image/*" className="hidden" onChange={handlePhoto}/></>
+            )}
+            {photoUploading&&<div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center"><div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"/></div>}
           </div>
-          {/* Upload overlay */}
-          {!photoUploading&&(
-            <><label htmlFor="faculty-photo" className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-20"><svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg></label><input id="faculty-photo" type="file" accept="image/*" className="hidden" onChange={handlePhoto}/></>
-          )}
-          {photoUploading&&<div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center z-20"><div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"/></div>}
-        </div>
 
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex justify-between items-start">
-            <h2 className={`text-2xl font-bold ${boldText}`}>{fullName||'—'}</h2>
-            {/* Edit only — no delete */}
-            <button onClick={()=>setModal('basic')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center shrink-0 ${editBtn}`}>
-              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-              Edit
-            </button>
-          </div>
-          {photoErr&&<p className="text-xs text-red-400 mt-1">{photoErr}</p>}
-          <div className={`flex flex-wrap items-center gap-4 mt-2 text-sm ${subText}`}>
-            {f.employee_id&&(
-              <span className="flex items-center gap-1">
-                <svg className={`w-4 h-4 ${dark?'text-slate-500':'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"/></svg>
-                Faculty ID: {f.employee_id}
-              </span>
-            )}
-            {(f.department?.department_name||f.position)&&(
-              <span className="flex items-center gap-1">
-                <svg className={`w-4 h-4 ${dark?'text-slate-500':'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-                {[f.department?.department_name,f.position].filter(Boolean).join(' · ')}
-              </span>
-            )}
-            {f.employment_status&&(
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                f.employment_status==='Full-Time'
-                  ? dark?'bg-green-900/40 text-green-300 border border-green-700':'bg-green-100 text-green-800 border border-green-200'
-                  : dark?'bg-amber-900/40 text-amber-300 border border-amber-700':'bg-amber-100 text-amber-800 border border-amber-200'
-              }`}>{f.employment_status}</span>
-            )}
+          {/* Name + meta */}
+          <div className="flex-1 min-w-0">
+            <div className="flex justify-between items-start">
+              <h2 className={`text-2xl font-bold ${boldText}`}>{fullName||'—'}</h2>
+              <button onClick={()=>setModal('basic')} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center shrink-0 ${editBtn}`}>
+                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                Edit
+              </button>
+            </div>
+            {photoErr&&<p className="text-xs text-red-400 mt-1">{photoErr}</p>}
+            <div className={`flex flex-wrap items-center gap-3 mt-2 text-sm ${subText}`}>
+              {(f.department?.department_name||f.position)&&(
+                <span className="flex items-center gap-1">
+                  <svg className={`w-4 h-4 ${dark?'text-slate-500':'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                  {[f.department?.department_name,f.position].filter(Boolean).join(' · ')}
+                </span>
+              )}
+              {f.employment_status&&(
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                  f.employment_status==='Full-Time'
+                    ?dark?'bg-green-900/40 text-green-300 border border-green-700':'bg-green-100 text-green-800 border border-green-200'
+                    :dark?'bg-amber-900/40 text-amber-300 border border-amber-700':'bg-amber-100 text-amber-800 border border-amber-200'
+                }`}>{f.employment_status}</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Section cards — reorganized layout */}
-      <div className="space-y-5">
-        {/* Row 1: Personal Info + Contact & Location side by side */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Personal Information */}
-          <div className={`rounded-2xl border p-5 ${cardBg}`}>
-            <SecHead label="Personal Information"/>
-            <DataRow label="First Name"  value={f.first_name}/>
-            <DataRow label="Middle Name" value={f.middle_name}/>
-            <DataRow label="Last Name"   value={f.last_name}/>
+      {/* Row 1: Personal Info + Contact & Location */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <SC title="Personal Information">
+          <div className="space-y-1">
+            <R label="First Name"  value={f.first_name}/>
+            <R label="Middle Name" value={f.middle_name}/>
+            <R label="Last Name"   value={f.last_name}/>
           </div>
-
-          {/* Contact & Location */}
-          <div className={`rounded-2xl border p-5 ${cardBg}`}>
-            <SecHead label="Contact & Location"/>
-            <DataRow label="Email Address"   value={f.email} highlight/>
-            <DataRow label="Contact Number"  value={f.contact_number}/>
-            <DataRow label="Office Location" value={f.office_location}/>
+        </SC>
+        <SC title="Contact & Location">
+          <div className="space-y-1">
+            <R label="Email Address"   value={f.email} highlight/>
+            <R label="Contact Number"  value={f.contact_number}/>
+            <R label="Office Location" value={f.office_location}/>
           </div>
-        </div>
+        </SC>
+      </div>
 
-        {/* Row 2: Employment Details — full width */}
-        <div className={`rounded-2xl border p-5 ${cardBg}`}>
-          <SecHead label="Employment Details"/>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
-            <DataRow label="Position"          value={f.position}/>
-            <DataRow label="Department"        value={f.department?.department_name}/>
-            <DataRow label="Employment Status" value={f.employment_status}/>
-            <DataRow label="Hire Date"         value={f.hire_date?new Date(f.hire_date).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):null}/>
+      {/* Row 2: Employment Details */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <SC title="Employment Details">
+          <div className="space-y-1">
+            <R label="Position"          value={f.position}/>
+            <R label="Employment Status" value={f.employment_status}/>
+          </div>
+        </SC>
+        <SC title="Department & Hire">
+          <div className="space-y-1">
+            <R label="Department" value={f.department?.department_name}/>
+            <R label="Hire Date"  value={f.hire_date?new Date(f.hire_date).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):null}/>
+          </div>
+        </SC>
+      </div>
+
+      {/* Consultation Hours — editable by faculty */}
+      <div className={`rounded-2xl border p-5 ${dark?'bg-amber-900/20 border-amber-700/40':'bg-amber-50 border-amber-200'}`}>
+        <div className="flex items-start gap-3">
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${dark?'bg-amber-900/40 text-amber-400':'bg-amber-100 text-amber-600'}`}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <p className={`text-[10px] font-bold uppercase tracking-widest ${dark?'text-amber-400':'text-amber-600'}`}>Consultation Hours</p>
+              {!consultEdit && (
+                <button onClick={()=>setConsultEdit(true)}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${dark?'bg-amber-900/40 text-amber-300 hover:bg-amber-900/60':'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                  Edit
+                </button>
+              )}
+            </div>
+            {consultEdit ? (
+              <div className="space-y-2">
+                <input value={consultVal} onChange={e=>setConsultVal(e.target.value)}
+                  placeholder="e.g. Mon–Fri 9:00 AM – 12:00 PM, 1:00 PM – 5:00 PM"
+                  className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition-colors ${dark?'bg-slate-800 border-amber-700/60 text-slate-100 placeholder-slate-500 focus:border-amber-400':'bg-white border-amber-300 text-slate-800 placeholder-slate-400 focus:border-amber-500'}`}/>
+                {consultErr && <p className="text-xs text-red-400">{consultErr}</p>}
+                <div className="flex gap-2">
+                  <button onClick={saveConsultation} disabled={consultSaving}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors disabled:opacity-50">
+                    {consultSaving?<div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"/>:null}
+                    Save
+                  </button>
+                  <button onClick={()=>{setConsultEdit(false);setConsultVal(f.office_hours||'');setConsultErr(null);}}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${dark?'bg-slate-700 text-slate-300 hover:bg-slate-600':'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className={`text-sm font-semibold ${dark?'text-amber-200':'text-amber-900'}`}>
+                  {f.office_hours || 'Not set yet. Click Edit to add your consultation hours.'}
+                </p>
+                <p className={`text-xs mt-1 ${dark?'text-amber-500':'text-amber-600'}`}>
+                  Students will see this to know when to visit the CCS office.
+                </p>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -661,9 +779,17 @@ const SubjectDetailModal = ({subject,students,schedules,onClose}) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {enrolledStudents.map(s=>{
                 const initials=`${s.first_name?.[0]??''}${s.last_name?.[0]??''}`.toUpperCase();
+                const photoSrc=s.profile_photo
+                  ? (s.profile_photo.startsWith('http') ? s.profile_photo : `${import.meta.env.VITE_STORAGE_URL||'http://localhost:8000/storage'}/${s.profile_photo}`)
+                  : null;
                 return (
                   <div key={s.id} className={`flex items-center gap-3 p-3 rounded-xl border ${dark?'bg-slate-900 border-slate-700/60':'bg-slate-50 border-slate-200'}`}>
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${dark?'bg-brand-900/50 text-brand-300':'bg-brand-100 text-brand-600'}`}>{initials}</div>
+                    <div className={`w-8 h-8 rounded-lg overflow-hidden shrink-0 ${dark?'bg-brand-900/50':'bg-brand-100'}`}>
+                      {photoSrc
+                        ? <img src={photoSrc} alt={initials} className="w-full h-full object-cover" onError={e=>{e.currentTarget.style.display='none';e.currentTarget.nextSibling.style.display='flex';}}/>
+                        : null}
+                      <div className={`w-full h-full flex items-center justify-center text-xs font-bold ${photoSrc?'hidden':'flex'} ${dark?'text-brand-300':'text-brand-600'}`}>{initials}</div>
+                    </div>
                     <div className="min-w-0">
                       <p className={`text-xs font-semibold truncate ${dark?'text-slate-100':'text-slate-800'}`}>{s.first_name} {s.last_name}</p>
                       <p className={`text-[10px] ${dark?'text-slate-500':'text-slate-400'}`}>{s.student_number} · {s.section}</p>
@@ -679,7 +805,7 @@ const SubjectDetailModal = ({subject,students,schedules,onClose}) => {
   );
 };
 
-const SubjectsPanel = ({facultyId}) => {
+const SubjectsPanel = ({facultyId, isActive}) => {
   const dark=useTheme();
   const [schedules,setSchedules]=useState([]);
   const [students,setStudents]=useState([]);
@@ -687,20 +813,33 @@ const SubjectsPanel = ({facultyId}) => {
   const [err,setErr]=useState(null);
   const [search,setSearch]=useState('');
   const [selected,setSelected]=useState(null);
+  const hasLoaded=useRef(false);
 
-  const load=useCallback(async()=>{
-    setLoading(true);setErr(null);
+  const load=useCallback(async(silent=false)=>{
+    if(!silent){setLoading(true);}
+    setErr(null);
     try{
-      const [allSch,allStu]=await Promise.all([api.schedules.getAll(),api.students.getAll()]);
-      const mine=allSch.filter(s=>s.faculty_id===facultyId);
+      // Always bust schedule + students cache so admin edits reflect immediately
+      cache.bust('schedules');
+      cache.bust('students');
+      const [allSch,allStu]=await Promise.all([fetchApi('/schedules'),fetchApi('/students')]);
+      cache.set('schedules',allSch);
+      cache.set('students',allStu);
+      const mine=allSch.filter(s=>Number(s.faculty_id)===Number(facultyId));
       setSchedules(mine);
       const mySec=new Set(mine.map(s=>s.section?.section_name).filter(Boolean));
       setStudents(allStu.filter(s=>s.section&&mySec.has(s.section)));
     }catch{setErr('Could not load subjects.');}
-    finally{setLoading(false);}
+    finally{if(!silent){setLoading(false);}}
   },[facultyId]);
 
-  useEffect(()=>{load();},[load]);
+  // Initial load
+  useEffect(()=>{load(false);hasLoaded.current=true;},[load]);
+
+  // Silent refresh whenever this tab becomes active (picks up admin edits)
+  useEffect(()=>{
+    if(isActive&&hasLoaded.current){load(true);}
+  },[isActive]);// eslint-disable-line react-hooks/exhaustive-deps
 
   if(loading) return <Spinner/>;
   if(err) return <div className="p-4 rounded-xl bg-red-900/20 border border-red-800/40 text-red-400 text-sm text-center">{err}</div>;
@@ -794,96 +933,162 @@ const ScheduleModal = ({record,facultyId,onClose,onSaved}) => {
   );
 };
 
-const SchedulePanel = ({facultyId}) => {
+const SchedulePanel = ({facultyId, isActive}) => {
   const dark=useTheme();
   const [schedules,setSchedules]=useState([]);
   const [students,setStudents]=useState([]);
   const [loading,setLoading]=useState(true);
   const [err,setErr]=useState(null);
-  const [modal,setModal]=useState(null);
-  const [deleting,setDeleting]=useState(null);
-  const [confirmDel,setConfirmDel]=useState(null);
+  const hasLoaded=useRef(false);
 
-  const load=useCallback(async()=>{
-    setLoading(true);setErr(null);
+  const load=useCallback(async(silent=false)=>{
+    if(!silent){setLoading(true);}
+    setErr(null);
     try{
-      const [allSch,allStu]=await Promise.all([api.schedules.getAll(),api.students.getAll()]);
-      const mine=allSch.filter(s=>s.faculty_id===facultyId);
+      // Always bust the schedule + students cache so admin edits reflect immediately
+      cache.bust('schedules');
+      cache.bust('students');
+      const [allSch,allStu]=await Promise.all([fetchApi('/schedules'),fetchApi('/students')]);
+      cache.set('schedules',allSch);
+      cache.set('students',allStu);
+      const mine=allSch.filter(s=>Number(s.faculty_id)===Number(facultyId));
       setSchedules(mine);
       const mySec=new Set(mine.map(s=>s.section?.section_name).filter(Boolean));
       setStudents(allStu.filter(s=>s.section&&mySec.has(s.section)));
     }catch{setErr('Could not load schedule.');}
-    finally{setLoading(false);}
+    finally{if(!silent){setLoading(false);}}
   },[facultyId]);
 
-  useEffect(()=>{load();},[load]);
+  // Initial load
+  useEffect(()=>{load(false);hasLoaded.current=true;},[load]);
 
-  const del=async(id)=>{
-    setDeleting(id);setConfirmDel(null);
-    try{await api.schedules.delete(id);await load();}
-    catch{alert('Failed to delete.');}
-    finally{setDeleting(null);}
-  };
+  // Silent refresh whenever this tab becomes active (picks up admin edits)
+  useEffect(()=>{
+    if(isActive&&hasLoaded.current){load(true);}
+  },[isActive]);// eslint-disable-line react-hooks/exhaustive-deps
 
-  const byDay=DAYS.reduce((acc,d)=>{acc[d]=schedules.filter(s=>s.day_of_week===d);return acc;},{});
+  // ── Calendar grid ──────────────────────────────────────────────────────────
+  // Time slots: 06:00 to 21:00 in 30-min increments
+  const TIME_SLOTS = [];
+  for (let h = 6; h < 21; h++) {
+    TIME_SLOTS.push(`${String(h).padStart(2,'0')}:00`);
+    TIME_SLOTS.push(`${String(h).padStart(2,'0')}:30`);
+  }
+  const CAL_DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const SLOT_H = 28; // px per 30-min slot
+
+  const toMinutes = (t) => { if(!t) return 0; const [h,m]=t.split(':'); return parseInt(h)*60+parseInt(m); };
+
+  // Color palette per subject (cycle through)
+  const COLORS = [
+    'bg-red-600 text-white','bg-blue-600 text-white','bg-emerald-600 text-white',
+    'bg-violet-600 text-white','bg-amber-600 text-white','bg-pink-600 text-white',
+    'bg-teal-600 text-white','bg-orange-600 text-white',
+  ];
+  const subjectColors = {};
+  let colorIdx = 0;
+  schedules.forEach(s => {
+    if (s.subject_id && !subjectColors[s.subject_id]) {
+      subjectColors[s.subject_id] = COLORS[colorIdx % COLORS.length];
+      colorIdx++;
+    }
+  });
 
   if(loading) return <Spinner/>;
   if(err) return <div className="p-4 rounded-xl bg-red-900/20 border border-red-800/40 text-red-400 text-sm text-center">{err}</div>;
 
+  if(schedules.length===0) return (
+    <div className={`rounded-2xl border p-12 flex flex-col items-center justify-center text-center ${dark?'bg-slate-900/60 border-slate-700/50':'bg-white border-slate-200'}`}>
+      <span className="text-5xl mb-3">📅</span>
+      <p className={`text-sm font-semibold ${dark?'text-slate-300':'text-slate-600'}`}>No schedule assigned yet.</p>
+      <p className={`text-xs mt-1 ${dark?'text-slate-500':'text-slate-400'}`}>Your schedule will appear here once the admin assigns it.</p>
+    </div>
+  );
+
   return (
-    <div className="space-y-5">
-      {modal&&<ScheduleModal record={modal==='add'?null:modal} facultyId={facultyId} onClose={()=>setModal(null)} onSaved={()=>{setModal(null);load();}}/>}
-      {/* Confirm delete dialog */}
-      {confirmDel&&(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className={`absolute inset-0 backdrop-blur-sm ${dark?'bg-slate-950':'bg-slate-900'}`} onClick={()=>setConfirmDel(null)}/>
-          <div className={`relative w-full max-w-sm border rounded-2xl shadow-2xl p-6 ${dark?'bg-slate-900 border-slate-700/60':'bg-white border-slate-200'}`}>
-            <p className={`text-sm font-semibold mb-1 ${dark?'text-slate-100':'text-slate-800'}`}>Delete Schedule?</p>
-            <p className={`text-xs mb-5 ${dark?'text-slate-400':'text-slate-500'}`}>This will remove the schedule entry for <span className="font-semibold">{confirmDel.subject?.descriptive_title}</span> on {confirmDel.day_of_week}.</p>
-            <div className="flex justify-end gap-3"><BtnGhost onClick={()=>setConfirmDel(null)}>Cancel</BtnGhost><button onClick={()=>del(confirmDel.id)} disabled={deleting===confirmDel.id} className="px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-all disabled:opacity-50 flex items-center gap-2">{deleting===confirmDel.id&&<div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>}Delete</button></div>
+    <div className="space-y-4">
+      <div className={`text-xs font-semibold ${dark?'text-slate-400':'text-slate-500'}`}>
+        {schedules.length} class{schedules.length!==1?'es':''} scheduled
+      </div>
+
+      {/* Calendar grid */}
+      <div className={`rounded-2xl border overflow-hidden ${dark?'bg-slate-900 border-slate-700/60':'bg-white border-slate-200 shadow-sm'}`}>
+        <div className="overflow-x-auto">
+          <div style={{minWidth:'700px'}}>
+            {/* Header row */}
+            <div className={`grid border-b ${dark?'bg-slate-800 border-slate-700/60':'bg-slate-50 border-slate-200'}`}
+              style={{gridTemplateColumns:`80px repeat(${CAL_DAYS.length}, 1fr)`}}>
+              <div className={`px-3 py-3 text-xs font-bold uppercase tracking-wider text-center ${dark?'text-slate-500':'text-slate-400'}`}>TIME</div>
+              {CAL_DAYS.map(day=>(
+                <div key={day} className={`px-2 py-3 text-xs font-bold uppercase tracking-wider text-center border-l ${dark?'text-slate-300 border-slate-700/60':'text-slate-600 border-slate-200'}`}>{day}</div>
+              ))}
+            </div>
+
+            {/* Time grid */}
+            <div className="relative" style={{gridTemplateColumns:`80px repeat(${CAL_DAYS.length}, 1fr)`}}>
+              {/* Time labels + horizontal lines */}
+              {TIME_SLOTS.map((slot,i)=>(
+                <div key={slot} className={`grid border-b ${dark?'border-slate-800':'border-slate-100'}`}
+                  style={{gridTemplateColumns:`80px repeat(${CAL_DAYS.length}, 1fr)`,height:`${SLOT_H}px`}}>
+                  <div className={`px-3 flex items-center justify-end text-[10px] font-mono ${dark?'text-slate-600':'text-slate-400'}`}>
+                    {slot.endsWith(':00') ? slot : ''}
+                  </div>
+                  {CAL_DAYS.map(day=>(
+                    <div key={day} className={`border-l ${dark?'border-slate-800':'border-slate-100'}`}/>
+                  ))}
+                </div>
+              ))}
+
+              {/* Schedule blocks — absolutely positioned */}
+              {schedules.map(s=>{
+                const dayIdx = CAL_DAYS.indexOf(s.day_of_week);
+                if(dayIdx<0||!s.start_time||!s.end_time) return null;
+                const startMin = toMinutes(s.start_time);
+                const endMin   = toMinutes(s.end_time);
+                const gridStart = 6*60; // 06:00
+                const topPx  = ((startMin - gridStart) / 30) * SLOT_H;
+                const heightPx = ((endMin - startMin) / 30) * SLOT_H;
+                const secName = s.section?.section_name || '';
+                const studentCount = students.filter(st=>st.section===secName).length;
+                const colorCls = subjectColors[s.subject_id] || COLORS[0];
+                // Column width: each day column is 1fr of (total - 80px)
+                const colWidth = `calc((100% - 80px) / ${CAL_DAYS.length})`;
+                const leftPx = `calc(80px + ${dayIdx} * ${colWidth})`;
+
+                return (
+                  <div key={s.id}
+                    className={`absolute rounded-lg px-2 py-1.5 overflow-hidden shadow-md cursor-default ${colorCls}`}
+                    style={{
+                      top:`${topPx}px`,
+                      left:leftPx,
+                      width:`calc(${colWidth} - 4px)`,
+                      height:`${heightPx - 2}px`,
+                      marginLeft:'2px',
+                    }}>
+                    <p className="text-[11px] font-bold leading-tight truncate">{s.subject?.subject_code} · {secName}</p>
+                    {heightPx > 40 && <p className="text-[10px] opacity-80 truncate">{s.room}</p>}
+                    {heightPx > 56 && <p className="text-[10px] opacity-80 truncate">{fmtTime(s.start_time)}–{fmtTime(s.end_time)}</p>}
+                    {heightPx > 72 && studentCount > 0 && <p className="text-[10px] opacity-70">{studentCount} student{studentCount!==1?'s':''}</p>}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
-      )}
-      <div className="flex justify-end"><AddBtn onClick={()=>setModal('add')} label="Add Schedule"/></div>
-      {schedules.length===0?(
-        <div className={`rounded-2xl border p-12 flex flex-col items-center justify-center text-center ${dark?'bg-slate-900/60 border-slate-700/50':'bg-white border-slate-200'}`}>
-          <span className="text-5xl mb-3">📅</span>
-          <p className={`text-sm font-semibold ${dark?'text-slate-300':'text-slate-600'}`}>No schedule entries yet.</p>
-        </div>
-      ):(
-        <div className="space-y-4">
-          {DAYS.map(day=>byDay[day].length===0?null:(
-            <div key={day}>
-              <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${dark?'text-slate-400':'text-slate-500'}`}>{day}</p>
-              <div className="space-y-2">
-                {byDay[day].map(s=>{
-                  const secName=s.section?.section_name;
-                  const studentCount=secName?students.filter(st=>st.section===secName).length:0;
-                  return (
-                    <div key={s.id} className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${dark?'bg-slate-900 border-slate-700/60 hover:border-slate-600':'bg-white border-slate-200 hover:border-slate-300 shadow-sm'}`}>
-                      <div className={`text-center shrink-0 w-20 px-2 py-1.5 rounded-xl ${dark?'bg-slate-700/50':'bg-slate-100'}`}>
-                        <p className={`text-xs font-bold ${dark?'text-slate-200':'text-slate-700'}`}>{fmtTime(s.start_time)}</p>
-                        <p className={`text-[10px] ${dark?'text-slate-500':'text-slate-400'}`}>{fmtTime(s.end_time)}</p>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-semibold ${dark?'text-slate-100':'text-slate-800'}`}>{s.subject?.descriptive_title??'—'}</p>
-                        <p className={`text-xs ${dark?'text-slate-400':'text-slate-500'}`}>{s.subject?.subject_code} · {secName??'—'} · {s.room}</p>
-                        {studentCount>0&&<p className={`text-[10px] mt-0.5 ${dark?'text-emerald-400':'text-emerald-600'}`}>{studentCount} student{studentCount!==1?'s':''}</p>}
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <BtnEdit onClick={()=>setModal(s)}/>
-                        <BtnDanger onClick={()=>setConfirmDel(s)} loading={deleting===s.id}>
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        </BtnDanger>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-2">
+        {Object.entries(subjectColors).map(([subjectId, colorCls])=>{
+          const s = schedules.find(sc=>String(sc.subject_id)===String(subjectId));
+          if(!s) return null;
+          return (
+            <div key={subjectId} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${colorCls}`}>
+              {s.subject?.subject_code} — {s.subject?.descriptive_title}
             </div>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -947,6 +1152,9 @@ const StudentDetailModal = ({student:initialStudent,facultyName,onClose}) => {
   const s=student;
   const fullName=[s.first_name,s.middle_name,s.last_name,s.suffix].filter(Boolean).join(' ');
   const initials=`${s.first_name?.[0]??''}${s.last_name?.[0]??''}`.toUpperCase();
+  const photoSrc=s.profile_photo
+    ? (s.profile_photo.startsWith('http') ? s.profile_photo : `${import.meta.env.VITE_STORAGE_URL||'http://localhost:8000/storage'}/${s.profile_photo}`)
+    : null;
 
   const TABS=[{id:'info',label:'Info'},{id:'violations',label:`Violations (${s.violations?.length??0})`},{id:'academic',label:'Academic'},{id:'medical',label:'Medical'}];
 
@@ -967,7 +1175,13 @@ const StudentDetailModal = ({student:initialStudent,facultyName,onClose}) => {
       <div className="space-y-5">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-bold shrink-0 ${dark?'bg-brand-900/50 text-brand-300':'bg-brand-100 text-brand-600'}`}>{initials}</div>
+          <div className={`w-14 h-14 rounded-2xl overflow-hidden shrink-0 ${dark?'bg-brand-900/50':'bg-brand-100'}`}>
+            {photoSrc
+              ? <img src={photoSrc} alt={initials} className="w-full h-full object-cover"
+                  onError={e=>{e.currentTarget.style.display='none';e.currentTarget.nextSibling.style.display='flex';}}/>
+              : null}
+            <div className={`w-full h-full flex items-center justify-center text-lg font-bold ${photoSrc?'hidden':'flex'} ${dark?'text-brand-300':'text-brand-600'}`}>{initials}</div>
+          </div>
           <div>
             <h2 className={`text-lg font-bold ${dark?'text-slate-100':'text-slate-800'}`}>{fullName}</h2>
             {s.student_number&&<p className={`text-xs ${dark?'text-slate-400':'text-slate-500'}`}>Student No. {s.student_number}</p>}
@@ -1047,13 +1261,13 @@ const StudentDetailModal = ({student:initialStudent,facultyName,onClose}) => {
         {/* Tab: Academic */}
         {tab==='academic'&&(
           <div className="space-y-3">
-            <SectionCard title="Academic Background" icon="📖">
+            <SectionCard title="Academic Background">
               <Row label="LRN" value={val(s.lrn)}/><Row label="Last School Attended" value={val(s.last_school_attended)}/><Row label="Last Year Attended" value={val(s.last_year_attended)}/><Row label="Honors Received" value={val(s.honors_received)}/>
             </SectionCard>
-            {s.academicHistories?.length>0&&(
-              <SectionCard title="Academic History" icon="📋">
+            {(s.academic_histories??s.academicHistories)?.length>0&&(
+              <SectionCard title="Academic History">
                 <div className="space-y-2">
-                  {s.academicHistories.map((h,i)=>(
+                  {(s.academic_histories??s.academicHistories).map((h,i)=>(
                     <div key={i} className={`p-3 rounded-xl border ${dark?'bg-slate-900 border-slate-700/60':'bg-slate-50 border-slate-200'}`}>
                       <Row label="School Year" value={val(h.school_year)}/><Row label="Year Level" value={val(h.year_level)}/><Row label="GWA" value={val(h.gwa)}/><Row label="Status" value={val(h.status)}/>
                     </div>
@@ -1062,7 +1276,7 @@ const StudentDetailModal = ({student:initialStudent,facultyName,onClose}) => {
               </SectionCard>
             )}
             {s.skills?.length>0&&(
-              <SectionCard title="Skills" icon="🛠️">
+              <SectionCard title="Skills">
                 <div className="flex flex-wrap gap-2">
                   {s.skills.map((sk,i)=><span key={i} className={`text-xs px-3 py-1 rounded-full font-medium ${dark?'bg-purple-900/40 text-purple-300':'bg-purple-100 text-purple-700'}`}>{sk.skill_name}</span>)}
                 </div>
@@ -1072,21 +1286,418 @@ const StudentDetailModal = ({student:initialStudent,facultyName,onClose}) => {
         )}
 
         {/* Tab: Medical */}
-        {tab==='medical'&&(
+        {tab==='medical'&&(()=>{
+          const medRecs=s.medical_histories??s.medicalHistories??[];
+          return (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <SectionCard title="Medical Record">
+                {medRecs.length>0?medRecs.map((m,i)=>(
+                  <div key={i} className="space-y-1">
+                    <Row label="Blood Type" value={val(m.bloodtype)}/>
+                    <Row label="Conditions / Allergies" value={val(m.existing_conditions||'None reported')}/>
+                  </div>
+                )):<p className={`text-xs text-center py-4 ${dark?'text-slate-500':'text-slate-400'}`}>No medical record yet.</p>}
+              </SectionCard>
+              <SectionCard title="Emergency Contact">
+                {medRecs.length>0&&medRecs[0].emergency_contact_name?(
+                  <div className={`flex items-center gap-3 p-3 rounded-xl border ${dark?'bg-slate-800 border-slate-700':'bg-slate-50 border-slate-100'}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${dark?'bg-slate-700 text-slate-400':'bg-slate-200 text-slate-500'}`}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                    </div>
+                    <div>
+                      <p className={`text-xs font-bold ${dark?'text-slate-100':'text-slate-800'}`}>{medRecs[0].emergency_contact_name}</p>
+                      <p className={`text-xs font-semibold ${dark?'text-orange-400':'text-orange-600'}`}>{medRecs[0].emergency_contact_number||'—'}</p>
+                    </div>
+                  </div>
+                ):<p className={`text-xs text-center py-4 ${dark?'text-slate-500':'text-slate-400'}`}>No emergency contact yet.</p>}
+              </SectionCard>
+            </div>
+          );
+        })()}
+      </div>
+    </FModal>
+  );
+};
+
+const StudentsPanel = ({facultyId,facultyName,isActive}) => {
+  const dark=useTheme();
+  const [students,setStudents]=useState([]);
+  const [schedules,setSchedules]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [err,setErr]=useState(null);
+  const [search,setSearch]=useState('');
+  const [selected,setSelected]=useState(null);
+  const [loadingDetail,setLoadingDetail]=useState(false);
+  const [activeYear,setActiveYear]=useState('All');
+  const [activeSubject,setActiveSubject]=useState('All');
+  const hasLoaded=useRef(false);
+
+  const load=useCallback(async(silent=false)=>{
+    if(!silent){setLoading(true);}
+    setErr(null);
+    try{
+      // Bust caches so admin edits always reflect immediately
+      cache.bust('students');
+      cache.bust('schedules');
+      const [allStu,allSch]=await Promise.all([fetchApi('/students'),fetchApi('/schedules')]);
+      cache.set('students',allStu);
+      cache.set('schedules',allSch);
+      const mySchedules=allSch.filter(s=>Number(s.faculty_id)===Number(facultyId));
+      const mySecNames=new Set(mySchedules.map(s=>s.section?.section_name).filter(Boolean));
+      const list=mySecNames.size>0?allStu.filter(s=>s.section&&mySecNames.has(s.section)):allStu;
+      setStudents(list);
+      setSchedules(mySchedules);
+    }catch{setErr('Could not load students.');}
+    finally{if(!silent){setLoading(false);}}
+  },[facultyId]);
+
+  // Initial load
+  useEffect(()=>{load(false);hasLoaded.current=true;},[load]);
+
+  // Silent refresh whenever this tab becomes active (picks up admin edits)
+  useEffect(()=>{
+    if(isActive&&hasLoaded.current){load(true);}
+  },[isActive]);// eslint-disable-line react-hooks/exhaustive-deps
+
+  const openStudent=useCallback(async(s)=>{
+    setLoadingDetail(true);
+    try{const full=await api.students.get(s.id);setSelected(full);}
+    catch{setSelected(s);}
+    finally{setLoadingDetail(false);}
+  },[]);
+
+  // Build subject list from schedules
+  const mySubjects = useMemo(()=>{
+    const map={};
+    schedules.forEach(s=>{
+      if(s.subject&&!map[s.subject_id]) map[s.subject_id]={...s.subject,sections:[]};
+      if(s.subject&&s.section) map[s.subject_id].sections.push(s.section.section_name);
+    });
+    return Object.values(map);
+  },[schedules]);
+
+  const yearLevels = useMemo(()=>['All',...[...new Set(students.map(s=>s.year_level).filter(Boolean))].sort()],[students]);
+
+  const filtered = useMemo(()=>students.filter(s=>{
+    const matchSearch=!search||`${s.first_name} ${s.last_name}`.toLowerCase().includes(search.toLowerCase())||(s.student_number?.includes(search));
+    const matchYear=activeYear==='All'||s.year_level===activeYear;
+    const matchSubject=activeSubject==='All'||(() => {
+      const subj=mySubjects.find(sub=>String(sub.id)===activeSubject);
+      return subj?.sections?.includes(s.section);
+    })();
+    return matchSearch&&matchYear&&matchSubject;
+  }),[students,search,activeYear,activeSubject,mySubjects]);
+
+  const enrolled=filtered.filter(s=>s.enrollment_status==='Enrolled').length;
+
+  if(loading) return <Spinner/>;
+  if(err) return <div className="p-4 rounded-xl bg-red-900/20 border border-red-800/40 text-red-400 text-sm text-center">{err}</div>;
+
+  return (
+    <div className="space-y-5">
+      {loadingDetail&&(
+        <div className="fixed inset-0 z-40 flex items-center justify-center" style={{background:'rgba(0,0,0,0.3)',backdropFilter:'blur(4px)'}}>
+          <div className={`w-8 h-8 border-4 rounded-full animate-spin border-t-orange-500 ${dark?'border-slate-700':'border-slate-200'}`}/>
+        </div>
+      )}
+      {selected&&<StudentDetailModal student={selected} facultyName={facultyName} onClose={()=>setSelected(null)}/>}
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          {label:'Total Students',value:filtered.length,iconBg:dark?'bg-orange-900/40 text-orange-400':'bg-orange-50 text-orange-500',accent:'border-l-orange-500'},
+          {label:'Enrolled',value:enrolled,iconBg:dark?'bg-green-900/40 text-green-400':'bg-green-50 text-green-500',accent:'border-l-green-500'},
+          {label:'Not Enrolled',value:filtered.length-enrolled,iconBg:dark?'bg-slate-800 text-slate-500':'bg-slate-100 text-slate-400',accent:'border-l-slate-400'},
+        ].map(({label,value,iconBg,accent})=>(
+          <div key={label} className={`p-4 rounded-2xl border-l-4 border shadow-sm flex items-center gap-3 ${accent} ${dark?'bg-slate-900 border-slate-700/60':'bg-white border-slate-200'}`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${iconBg}`}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </div>
+            <div>
+              <p className={`text-xs font-semibold uppercase tracking-wider ${dark?'text-slate-400':'text-slate-500'}`}>{label}</p>
+              <p className={`text-2xl font-bold ${dark?'text-slate-100':'text-slate-800'}`}>{value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2 items-center">
+        {/* Search */}
+        <div className="relative flex-1 min-w-[180px]">
+          <svg className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${dark?'text-slate-500':'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <input className={`${mkInp(dark)} pl-9`} placeholder="Search students..." value={search} onChange={e=>setSearch(e.target.value)}/>
+        </div>
+        {/* Year filter */}
+        <div className={`flex rounded-xl border overflow-hidden ${dark?'border-slate-700':'border-slate-200'}`}>
+          {yearLevels.map(y=>(
+            <button key={y} onClick={()=>setActiveYear(y)}
+              className={`px-3 py-2 text-xs font-semibold transition-colors ${activeYear===y?dark?'bg-orange-500/20 text-orange-400':'bg-orange-50 text-orange-500':dark?'text-slate-500 hover:text-slate-300':'text-slate-400 hover:text-slate-600'}`}>
+              {y==='All'?'All Years':y}
+            </button>
+          ))}
+        </div>
+        {/* Subject filter */}
+        {mySubjects.length>0&&(
+          <select value={activeSubject} onChange={e=>setActiveSubject(e.target.value)}
+            className={`${mkInp(dark)} appearance-none w-auto`}>
+            <option value="All">All Subjects</option>
+            {mySubjects.map(s=><option key={s.id} value={s.id}>{s.subject_code} — {s.descriptive_title}</option>)}
+          </select>
+        )}
+      </div>
+
+      <p className={`text-xs ${dark?'text-slate-500':'text-slate-400'}`}>{filtered.length} student{filtered.length!==1?'s':''} found</p>
+
+      {filtered.length===0?(
+        <div className={`rounded-2xl border p-12 flex flex-col items-center justify-center text-center ${dark?'bg-slate-900/60 border-slate-700/50':'bg-white border-slate-200'}`}>
+          <span className="text-5xl mb-3">👥</span>
+          <p className={`text-sm font-semibold ${dark?'text-slate-300':'text-slate-600'}`}>{search||activeYear!=='All'||activeSubject!=='All'?'No students match your filters.':'No students found in your sections.'}</p>
+        </div>
+      ):(
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map(s=>{
+            const initials=`${s.first_name?.[0]??''}${s.last_name?.[0]??''}`.toUpperCase();
+            const photoSrc=s.profile_photo?(s.profile_photo.startsWith('http')?s.profile_photo:`${import.meta.env.VITE_STORAGE_URL||'http://localhost:8000/storage'}/${s.profile_photo}`):null;
+            const violCount=s.violations?.length??0;
+            // Which subjects does this student take (via their section)?
+            const studentSubjects=mySubjects.filter(sub=>sub.sections?.includes(s.section));
+            return (
+              <button key={s.id} onClick={()=>openStudent(s)}
+                className={`text-left rounded-2xl border cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-xl overflow-hidden group relative ${dark?'bg-slate-800 border-slate-700 hover:border-orange-500/50 hover:shadow-orange-500/10':'bg-white border-slate-200 hover:border-orange-400/60 hover:shadow-orange-500/10'}`}>
+                <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl ${s.enrollment_status==='Enrolled'?'bg-gradient-to-b from-orange-400 to-orange-500':'bg-gradient-to-b from-slate-300 to-slate-400'}`}/>
+                <div className="pl-4 pr-5 pt-5 pb-5">
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-11 h-11 rounded-full shrink-0 overflow-hidden ring-2 ring-white/10">
+                      {photoSrc?<img src={photoSrc} alt={initials} className="w-full h-full object-cover" onError={e=>{e.currentTarget.style.display='none';e.currentTarget.nextSibling.style.display='flex';}}/>:null}
+                      <div className={`w-full h-full flex items-center justify-center text-sm font-bold ${dark?'bg-orange-900/40 text-orange-300':'bg-orange-100 text-orange-600'}`} style={{display:photoSrc?'none':'flex'}}>{initials}</div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-bold truncate ${dark?'text-slate-100':'text-slate-800'}`}>{s.first_name} {s.last_name}</p>
+                      {s.student_number&&<p className={`text-xs font-mono ${dark?'text-slate-500':'text-slate-400'}`}>{s.student_number}</p>}
+                    </div>
+                    <svg className={`w-4 h-4 shrink-0 mt-0.5 transition-transform group-hover:translate-x-0.5 ${dark?'text-slate-600':'text-slate-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
+                  </div>
+                  <div className={`flex flex-wrap gap-1.5 pt-3 border-t ${dark?'border-slate-700':'border-slate-100'}`}>
+                    {s.section&&<span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${dark?'bg-emerald-900/40 text-emerald-300':'bg-emerald-100 text-emerald-700'}`}>{s.section}</span>}
+                    {s.year_level&&<span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${dark?'bg-blue-900/40 text-blue-300':'bg-blue-100 text-blue-700'}`}>{s.year_level}</span>}
+                    {s.enrollment_status&&<span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${s.enrollment_status==='Enrolled'?dark?'bg-green-900/40 text-green-300':'bg-green-100 text-green-700':dark?'bg-slate-700 text-slate-300':'bg-slate-100 text-slate-600'}`}>{s.enrollment_status}</span>}
+                    {violCount>0&&<span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${dark?'bg-red-900/40 text-red-300':'bg-red-100 text-red-700'}`}>{violCount} violation{violCount!==1?'s':''}</span>}
+                  </div>
+                  {studentSubjects.length>0&&(
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {studentSubjects.slice(0,3).map(sub=>(
+                        <span key={sub.id} className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${dark?'bg-brand-900/40 text-brand-300':'bg-brand-50 text-brand-600'}`}>{sub.subject_code}</span>
+                      ))}
+                      {studentSubjects.length>3&&<span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${dark?'bg-slate-700 text-slate-400':'bg-slate-100 text-slate-500'}`}>+{studentSubjects.length-3}</span>}
+                    </div>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ── Shared task store — works across tabs via BroadcastChannel + localStorage ── */
+const LS_KEY = 'faculty_tasks_local';
+const taskChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('ccs_tasks') : null;
+
+const lsTasks = {
+  getAll: () => { try { return JSON.parse(localStorage.getItem(LS_KEY)||'[]'); } catch { return []; } },
+  save: (tasks) => {
+    localStorage.setItem(LS_KEY, JSON.stringify(tasks));
+    // Broadcast to all tabs (including incognito on same origin)
+    if(taskChannel) taskChannel.postMessage({ type: 'tasks_updated', tasks });
+  },
+  add: (task) => { const all=[...lsTasks.getAll(), task]; lsTasks.save(all); return task; },
+  update: (id, data) => { const all=lsTasks.getAll().map(t=>t.id===id?{...t,...data}:t); lsTasks.save(all); },
+  delete: (id) => { lsTasks.save(lsTasks.getAll().filter(t=>t.id!==id)); },
+};
+
+const AssignTaskModal = ({students, facultyId, facultyName, task, onClose, onSaved}) => {
+  const dark=useTheme();
+
+  // mode: 'individual' | 'section'  (only available when creating, not editing)
+  const [mode, setMode] = useState('individual');
+
+  const empty={student_id:'',subject:'',title:'',description:'',due_date:'',priority:'Medium'};
+  const [form,setForm]=useState(task
+    ?{student_id:task.student_id,subject:task.subject,title:task.title,description:task.description??'',due_date:task.due_date?task.due_date.split('T')[0]:'',priority:task.priority}
+    :empty);
+  const [selectedSection, setSelectedSection] = useState('');
+  const [saving,setSaving]=useState(false);
+  const [err,setErr]=useState(null);
+  const [successMsg, setSuccessMsg] = useState(null);
+  const set=(k)=>(e)=>setForm(f=>({...f,[k]:e.target.value}));
+  const inp=mkInp(dark); const lbl=mkLbl(dark);
+
+  // Derive unique sections from the faculty's students
+  const sections = [...new Set(students.map(s => s.section).filter(Boolean))].sort();
+  // Students in the selected section (for preview)
+  const sectionStudents = selectedSection ? students.filter(s => s.section === selectedSection) : [];
+
+  const save=async()=>{
+    setErr(null); setSuccessMsg(null);
+
+    if (mode === 'section') {
+      // ── Section-wide assignment ──────────────────────────────
+      if (!selectedSection) { setErr('Please select a section.'); return; }
+      if (!form.title || !form.subject) { setErr('Subject and title are required.'); return; }
+      setSaving(true);
+      try {
+        const payload = { ...form, section: selectedSection, faculty_id: facultyId };
+        let count = 0;
+        try {
+          // Try the bulk API endpoint first
+          const res = await api.tasks.bulkCreate(payload);
+          count = res.count ?? sectionStudents.length;
+        } catch {
+          // Fallback: create individually for each student in the section
+          for (const student of sectionStudents) {
+            try {
+              await api.tasks.create(student.id, { ...form, faculty_id: facultyId });
+            } catch {
+              lsTasks.add({
+                ...form, faculty_id: facultyId,
+                id: Date.now() + student.id,
+                done: false,
+                student_id: student.id,
+                student: { id: student.id, first_name: student.first_name, last_name: student.last_name, student_number: student.student_number, section: student.section, profile_photo: student.profile_photo },
+                created_at: new Date().toISOString(),
+              });
+            }
+          }
+          count = sectionStudents.length;
+        }
+        onSaved();
+      } catch(ex) { setErr(ex.message || 'Failed to assign tasks.'); }
+      finally { setSaving(false); }
+
+    } else {
+      // ── Individual assignment ────────────────────────────────
+      if(!form.student_id||!form.title||!form.subject){setErr('Student, subject and title are required.');return;}
+      setSaving(true);
+      try{
+        const payload={...form,faculty_id:facultyId};
+        if(task){
+          try{ await api.tasks.update(form.student_id,task.id,payload); }
+          catch{ lsTasks.update(task.id,payload); }
+        } else {
+          try{ await api.tasks.create(form.student_id,payload); }
+          catch{
+            const student=students.find(s=>String(s.id)===String(form.student_id));
+            lsTasks.add({
+              ...payload,
+              id: Date.now(),
+              done: false,
+              student_id: Number(form.student_id),
+              student: student ? {id:student.id,first_name:student.first_name,last_name:student.last_name,student_number:student.student_number,section:student.section,profile_photo:student.profile_photo} : null,
+              created_at: new Date().toISOString(),
+            });
+          }
+        }
+        onSaved();
+      }catch(ex){setErr(ex.message||'Failed to save.');}
+      finally{setSaving(false);}
+    }
+  };
+
+  return (
+    <FModal title={task ? 'Edit Task' : 'Assign New Task'} onClose={onClose}
+      footer={<><BtnGhost onClick={onClose}>Cancel</BtnGhost><BtnPrimary loading={saving} onClick={save}>
+        {mode === 'section' ? `Assign to Section` : 'Save Task'}
+      </BtnPrimary></>}>
+      <ErrMsg msg={err}/>
+
+      {/* Mode toggle — only shown when creating a new task */}
+      {!task && (
+        <div className={`flex rounded-xl border overflow-hidden mb-4 ${dark ? 'border-slate-700' : 'border-slate-200'}`}>
+          {[
+            { id: 'individual', label: '👤 Individual Student' },
+            { id: 'section',    label: '👥 Entire Section' },
+          ].map(m => (
+            <button key={m.id} onClick={() => { setMode(m.id); setErr(null); }}
+              className={`flex-1 py-2.5 text-xs font-bold transition-colors ${
+                mode === m.id
+                  ? dark ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-50 text-orange-600'
+                  : dark ? 'text-slate-500 hover:text-slate-300 hover:bg-slate-800' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+              }`}>
+              {m.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {/* Student picker (individual) or Section picker */}
+        {mode === 'individual' ? (
           <div>
-            {!s.medicalHistories?.length?(
-              <div className={`rounded-2xl border p-10 text-center ${dark?'bg-slate-900/60 border-slate-700/50':'bg-white border-slate-200'}`}>
-                <p className={`text-sm ${dark?'text-slate-400':'text-slate-500'}`}>No medical records on file.</p>
-              </div>
-            ):(
-              <div className="space-y-3">
-                {s.medicalHistories.map((m,i)=>(
-                  <SectionCard key={i} title="Medical Record" icon="🏥">
-                    <Row label="Blood Type" value={val(m.bloodtype)}/><Row label="Existing Conditions" value={val(m.existing_conditions)}/><Row label="Emergency Contact" value={val(m.emergency_contact_name)}/><Row label="Emergency Number" value={val(m.emergency_contact_number)}/>
-                  </SectionCard>
-                ))}
+            <label className={lbl}>Student *</label>
+            <select className={`${inp} appearance-none`} value={form.student_id} onChange={set('student_id')} disabled={!!task}>
+              <option value="">Select student...</option>
+              {students.map(s=><option key={s.id} value={s.id}>{s.first_name} {s.last_name} — {s.section||'No section'}</option>)}
+            </select>
+          </div>
+        ) : (
+          <div>
+            <label className={lbl}>Section *</label>
+            <select className={`${inp} appearance-none`} value={selectedSection} onChange={e => setSelectedSection(e.target.value)}>
+              <option value="">Select section...</option>
+              {sections.map(sec => <option key={sec} value={sec}>{sec}</option>)}
+            </select>
+            {/* Section student preview */}
+            {selectedSection && (
+              <div className={`mt-2 p-3 rounded-xl border ${dark ? 'bg-slate-800/60 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  {sectionStudents.length} student{sectionStudents.length !== 1 ? 's' : ''} in {selectedSection}
+                </p>
+                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                  {sectionStudents.length === 0 ? (
+                    <p className={`text-xs italic ${dark ? 'text-slate-500' : 'text-slate-400'}`}>No students found in this section.</p>
+                  ) : sectionStudents.map(s => {
+                    const photoSrc = s.profile_photo
+                      ? (s.profile_photo.startsWith('http') ? s.profile_photo : `${import.meta.env.VITE_STORAGE_URL||'http://localhost:8000/storage'}/${s.profile_photo}`)
+                      : null;
+                    const initials = `${s.first_name?.[0]??''}${s.last_name?.[0]??''}`.toUpperCase();
+                    return (
+                      <div key={s.id} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-semibold ${dark ? 'bg-slate-700 text-slate-300' : 'bg-white border border-slate-200 text-slate-600'}`}>
+                        <div className="w-4 h-4 rounded-full overflow-hidden shrink-0">
+                          {photoSrc
+                            ? <img src={photoSrc} alt={initials} className="w-full h-full object-cover"/>
+                            : <div className={`w-full h-full flex items-center justify-center text-[8px] font-bold ${dark ? 'bg-orange-900/40 text-orange-300' : 'bg-orange-100 text-orange-600'}`}>{initials}</div>}
+                        </div>
+                        {s.first_name} {s.last_name}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-3">
+          <div><label className={lbl}>Subject *</label><input className={inp} value={form.subject} onChange={set('subject')} placeholder="e.g. IT 121"/></div>
+          <div>
+            <label className={lbl}>Priority</label>
+            <select className={`${inp} appearance-none`} value={form.priority} onChange={set('priority')}>
+              {['Low','Medium','High'].map(p=><option key={p}>{p}</option>)}
+            </select>
+          </div>
+        </div>
+        <div><label className={lbl}>Task Title *</label><input className={inp} value={form.title} onChange={set('title')} placeholder="e.g. Programming Lab Exercise 3"/></div>
+        <div><label className={lbl}>Description</label><textarea className={`${inp} resize-none`} rows={3} value={form.description} onChange={set('description')} placeholder="Optional details..."/></div>
+        <div><label className={lbl}>Due Date</label><input type="date" className={inp} value={form.due_date} onChange={set('due_date')}/></div>
+
+        {/* Section info banner */}
+        {mode === 'section' && selectedSection && sectionStudents.length > 0 && (
+          <div className={`flex items-start gap-2.5 p-3 rounded-xl border text-xs ${dark ? 'bg-blue-900/20 border-blue-500/30 text-blue-300' : 'bg-blue-50 border-blue-200 text-blue-700'}`}>
+            <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            This task will be assigned to all <strong>{sectionStudents.length} student{sectionStudents.length !== 1 ? 's' : ''}</strong> in section <strong>{selectedSection}</strong>.
           </div>
         )}
       </div>
@@ -1094,77 +1705,164 @@ const StudentDetailModal = ({student:initialStudent,facultyName,onClose}) => {
   );
 };
 
-const StudentsPanel = ({facultyId,facultyName}) => {
+const FacultyTasksPanel = ({facultyId,facultyName,isActive}) => {
   const dark=useTheme();
-  const [schedules,setSchedules]=useState([]);
+  const [tasks,setTasks]=useState([]);
   const [students,setStudents]=useState([]);
   const [loading,setLoading]=useState(true);
-  const [err,setErr]=useState(null);
+  const [modal,setModal]=useState(null); // null | 'add' | task object
   const [search,setSearch]=useState('');
-  const [selected,setSelected]=useState(null);
-  const [sectionFilter,setSectionFilter]=useState('');
+  const [filterStatus,setFilterStatus]=useState('All'); // All | Pending | Done
+  const [deleting,setDeleting]=useState(null);
+  const hasLoaded=useRef(false);
 
-  const load=useCallback(async()=>{
-    setLoading(true);setErr(null);
+  const load=useCallback(async(silent=false)=>{
+    if(!silent){setLoading(true);}
     try{
-      const [allSch,allStu]=await Promise.all([api.schedules.getAll(),api.students.getAll()]);
-      const mine=allSch.filter(s=>s.faculty_id===facultyId);
-      setSchedules(mine);
-      const mySec=new Set(mine.map(s=>s.section?.section_name).filter(Boolean));
-      setStudents(allStu.filter(s=>s.section&&mySec.has(s.section)));
-    }catch{setErr('Could not load students.');}
-    finally{setLoading(false);}
+      const [apiTasks,s]=await Promise.all([
+        api.tasks.getByFaculty(facultyId).catch(()=>[]),
+        fetchApi('/students').catch(()=>[]),
+      ]);
+      // Merge API tasks with any locally stored tasks (dedup by id)
+      const local=lsTasks.getAll().filter(t=>String(t.faculty_id)===String(facultyId));
+      const apiIds=new Set((Array.isArray(apiTasks)?apiTasks:[]).map(t=>t.id));
+      const merged=[...(Array.isArray(apiTasks)?apiTasks:[]),...local.filter(t=>!apiIds.has(t.id))];
+      setTasks(merged);
+      setStudents(Array.isArray(s)?s:[]);
+    }catch{
+      // Full fallback to localStorage
+      setTasks(lsTasks.getAll().filter(t=>String(t.faculty_id)===String(facultyId)));
+      setStudents([]);
+    }finally{if(!silent){setLoading(false);}}
   },[facultyId]);
 
-  useEffect(()=>{load();},[load]);
+  // Initial load
+  useEffect(()=>{load(false);hasLoaded.current=true;},[load]);
 
-  const sections=[...new Set(schedules.map(s=>s.section?.section_name).filter(Boolean))];
-  const filtered=students.filter(s=>{
-    const name=`${s.first_name} ${s.last_name}`.toLowerCase();
-    const matchSearch=name.includes(search.toLowerCase())||(s.student_number?.includes(search));
-    const matchSection=!sectionFilter||s.section===sectionFilter;
-    return matchSearch&&matchSection;
+  // Silent refresh whenever this tab becomes active
+  useEffect(()=>{
+    if(isActive&&hasLoaded.current){load(true);}
+  },[isActive]);// eslint-disable-line react-hooks/exhaustive-deps
+
+  const deleteTask=async(task)=>{
+    if(!window.confirm('Delete this task?')) return;
+    setDeleting(task.id);
+    try{
+      try{ await api.tasks.delete(task.student_id,task.id); }
+      catch{ /* API not ready yet */ }
+      lsTasks.delete(task.id); // always remove from local too
+      await load();
+    }catch{alert('Failed to delete.');}
+    finally{setDeleting(null);}
+  };
+
+  const filtered=tasks.filter(t=>{
+    const matchSearch=t.title.toLowerCase().includes(search.toLowerCase())
+      ||(t.student?.first_name+' '+t.student?.last_name).toLowerCase().includes(search.toLowerCase())
+      ||t.subject.toLowerCase().includes(search.toLowerCase());
+    const matchStatus=filterStatus==='All'||(filterStatus==='Done'?t.done:!t.done);
+    return matchSearch&&matchStatus;
   });
 
+  const pending=tasks.filter(t=>!t.done).length;
+  const done=tasks.filter(t=>t.done).length;
+
+  const priorityColor=(p)=>{
+    if(p==='High') return dark?'bg-red-900/40 text-red-300 border-red-700':'bg-red-100 text-red-700 border-red-200';
+    if(p==='Medium') return dark?'bg-amber-900/40 text-amber-300 border-amber-700':'bg-amber-100 text-amber-700 border-amber-200';
+    return dark?'bg-slate-700 text-slate-300 border-slate-600':'bg-slate-100 text-slate-600 border-slate-200';
+  };
+
   if(loading) return <Spinner/>;
-  if(err) return <div className="p-4 rounded-xl bg-red-900/20 border border-red-800/40 text-red-400 text-sm text-center">{err}</div>;
 
   return (
     <div className="space-y-5">
-      {selected&&<StudentDetailModal student={selected} facultyName={facultyName} onClose={()=>setSelected(null)}/>}
-      <div className="flex flex-col sm:flex-row gap-3">
+      {modal&&<AssignTaskModal students={students} facultyId={facultyId} facultyName={facultyName} task={modal==='add'?null:modal} onClose={()=>setModal(null)} onSaved={()=>{setModal(null);load();}}/>}
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          {label:'Total Tasks',value:tasks.length,accent:'border-l-orange-500',iconBg:dark?'bg-orange-900/40 text-orange-400':'bg-orange-50 text-orange-500'},
+          {label:'Pending',value:pending,accent:'border-l-red-500',iconBg:dark?'bg-red-900/40 text-red-400':'bg-red-50 text-red-500'},
+          {label:'Completed',value:done,accent:'border-l-emerald-500',iconBg:dark?'bg-emerald-900/40 text-emerald-400':'bg-emerald-50 text-emerald-500'},
+        ].map(({label,value,accent,iconBg})=>(
+          <div key={label} className={`p-4 rounded-2xl border-l-4 border shadow-sm flex items-center gap-3 ${accent} ${dark?'bg-slate-900 border-slate-700/60':'bg-white border-slate-200'}`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${iconBg}`}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+            </div>
+            <div>
+              <p className={`text-xs font-semibold uppercase tracking-wider ${dark?'text-slate-400':'text-slate-500'}`}>{label}</p>
+              <p className={`text-2xl font-bold ${dark?'text-slate-100':'text-slate-800'}`}>{value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
         <div className="relative flex-1">
           <svg className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${dark?'text-slate-500':'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-          <input className={`${mkInp(dark)} pl-9`} placeholder="Search by name or student number..." value={search} onChange={e=>setSearch(e.target.value)}/>
+          <input className={`${mkInp(dark)} pl-9`} placeholder="Search by task, student or subject..." value={search} onChange={e=>setSearch(e.target.value)}/>
         </div>
-        {sections.length>0&&<select className={`${mkInp(dark)} appearance-none w-full sm:w-48`} value={sectionFilter} onChange={e=>setSectionFilter(e.target.value)}><option value="">All Sections</option>{sections.map(sec=><option key={sec}>{sec}</option>)}</select>}
+        <div className={`flex rounded-xl border overflow-hidden shrink-0 ${dark?'border-slate-700':'border-slate-200'}`}>
+          {['All','Pending','Done'].map(s=>(
+            <button key={s} onClick={()=>setFilterStatus(s)} className={`px-3 py-2 text-xs font-semibold transition-colors ${filterStatus===s?dark?'bg-orange-500/20 text-orange-400':'bg-orange-50 text-orange-500':dark?'text-slate-500 hover:text-slate-300':'text-slate-400 hover:text-slate-600'}`}>{s}</button>
+          ))}
+        </div>
+        <button onClick={()=>setModal('add')} className="flex items-center gap-1.5 px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs rounded-xl transition-colors shadow-lg shadow-orange-500/30 shrink-0">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4"/></svg>
+          Assign Task
+        </button>
       </div>
-      <p className={`text-xs ${dark?'text-slate-500':'text-slate-400'}`}>{filtered.length} student{filtered.length!==1?'s':''} found</p>
+
+      {/* Task list */}
       {filtered.length===0?(
         <div className={`rounded-2xl border p-12 flex flex-col items-center justify-center text-center ${dark?'bg-slate-900/60 border-slate-700/50':'bg-white border-slate-200'}`}>
-          <span className="text-5xl mb-3">👥</span>
-          <p className={`text-sm font-semibold ${dark?'text-slate-300':'text-slate-600'}`}>{search||sectionFilter?'No students match your filters.':'No students found in your sections.'}</p>
+          <svg className={`w-10 h-10 mb-3 ${dark?'text-slate-600':'text-slate-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <p className={`text-sm font-semibold ${dark?'text-slate-300':'text-slate-600'}`}>{search||filterStatus!=='All'?'No tasks match your filters.':'No tasks assigned yet. Click "Assign Task" to get started.'}</p>
         </div>
       ):(
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map(s=>{
-            const initials=`${s.first_name?.[0]??''}${s.last_name?.[0]??''}`.toUpperCase();
-            const violCount=s.violations?.length??0;
+        <div className="space-y-3">
+          {filtered.map(t=>{
+            const studentName=t.student?`${t.student.first_name} ${t.student.last_name}`:'Unknown';
+            const photoSrc=t.student?.profile_photo?(t.student.profile_photo.startsWith('http')?t.student.profile_photo:`${import.meta.env.VITE_STORAGE_URL||'http://localhost:8000/storage'}/${t.student.profile_photo}`):null;
+            const initials=t.student?`${t.student.first_name?.[0]??''}${t.student.last_name?.[0]??''}`.toUpperCase():'?';
             return (
-              <button key={s.id} onClick={()=>setSelected(s)} className={`text-left p-4 rounded-2xl border transition-all ${dark?'bg-slate-900 border-slate-700/60 hover:border-brand-500/50 hover:bg-slate-800':'bg-white border-slate-200 hover:border-brand-300 hover:shadow-md shadow-sm'}`}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 ${dark?'bg-brand-900/50 text-brand-300':'bg-brand-100 text-brand-600'}`}>{initials}</div>
-                  <div className="min-w-0">
-                    <p className={`text-sm font-semibold truncate ${dark?'text-slate-100':'text-slate-800'}`}>{s.first_name} {s.last_name}</p>
-                    {s.student_number&&<p className={`text-xs ${dark?'text-slate-500':'text-slate-400'}`}>{s.student_number}</p>}
+              <div key={t.id} className={`p-4 rounded-2xl border transition-all ${t.done?dark?'opacity-60 bg-slate-900 border-slate-700/40':'opacity-60 bg-white border-slate-100':dark?'bg-slate-900 border-slate-700/60':'bg-white border-slate-200 shadow-sm'}`}>
+                <div className="flex items-start gap-4">
+                  {/* Student avatar */}
+                  <div className="w-9 h-9 rounded-full shrink-0 overflow-hidden">
+                    {photoSrc?<img src={photoSrc} alt={initials} className="w-full h-full object-cover"/>
+                      :<div className={`w-full h-full flex items-center justify-center text-xs font-bold ${dark?'bg-orange-900/40 text-orange-300':'bg-orange-100 text-orange-600'}`}>{initials}</div>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className={`text-sm font-bold ${t.done?dark?'line-through text-slate-500':'line-through text-slate-400':dark?'text-slate-100':'text-slate-800'}`}>{t.title}</p>
+                        <p className={`text-xs mt-0.5 ${dark?'text-slate-400':'text-slate-500'}`}>{studentName} · <span className={`font-semibold ${dark?'text-orange-400':'text-orange-600'}`}>{t.subject}</span></p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${priorityColor(t.priority)}`}>{t.priority}</span>
+                        {t.done
+                          ?<span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${dark?'bg-emerald-900/40 text-emerald-300':'bg-emerald-100 text-emerald-700'}`}>Done</span>
+                          :<span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${dark?'bg-red-900/40 text-red-300':'bg-red-100 text-red-700'}`}>Pending</span>
+                        }
+                      </div>
+                    </div>
+                    {t.description&&<p className={`text-xs mt-1.5 ${dark?'text-slate-400':'text-slate-500'}`}>{t.description}</p>}
+                    <div className="flex items-center justify-between mt-2">
+                      <p className={`text-xs ${dark?'text-slate-500':'text-slate-400'}`}>{t.due_date?`Due: ${fmt(t.due_date)}`:'No due date'}</p>
+                      <div className="flex gap-1">
+                        <BtnEdit onClick={()=>setModal(t)} label="Edit"/>
+                        <BtnDanger onClick={()=>deleteTask(t)} loading={deleting===t.id}>
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                          Delete
+                        </BtnDanger>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {s.section&&<span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${dark?'bg-emerald-900/40 text-emerald-300':'bg-emerald-100 text-emerald-700'}`}>{s.section}</span>}
-                  {s.year_level&&<span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${dark?'bg-blue-900/40 text-blue-300':'bg-blue-100 text-blue-700'}`}>{s.year_level}</span>}
-                  {violCount>0&&<span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${dark?'bg-red-900/40 text-red-300':'bg-red-100 text-red-700'}`}>{violCount} violation{violCount!==1?'s':''}</span>}
-                </div>
-              </button>
+              </div>
             );
           })}
         </div>
@@ -1264,6 +1962,87 @@ const FacultyDashboard = ({user,onLogout}) => {
   const [subjectsCount,setSubjectsCount]=useState('—');
   const [studentsCount,setStudentsCount]=useState('—');
   const [schedulesCount,setSchedulesCount]=useState('—');
+  const [eventsCount,setEventsCount]=useState('—');
+
+  // ── Notifications ─────────────────────────────────────────────────────────
+  const [notifications,setNotifications]=useState([]);
+  const [unreadCount,setUnreadCount]=useState(0);
+  const [showNotif,setShowNotif]=useState(false);
+  const notifRef=useRef(null);
+
+  // Faculty sees: task completions, new events, student updates, violations
+  const FACULTY_NOTIF_TYPES=['task_completed','event_created','student_created','student_updated','violation_added'];
+  const NOTIF_ICONS_F={
+    task_completed: {emoji:'✅',bg:dark?'bg-emerald-900/40':'bg-emerald-100'},
+    event_created:  {emoji:'📅',bg:dark?'bg-violet-900/40':'bg-violet-100'},
+    student_created:{emoji:'🎓',bg:dark?'bg-orange-900/40':'bg-orange-100'},
+    student_updated:{emoji:'✏️', bg:dark?'bg-blue-900/40':'bg-blue-100'},
+    violation_added:{emoji:'⚠️', bg:dark?'bg-yellow-900/40':'bg-yellow-100'},
+  };
+  const getFNotifIcon=(type)=>NOTIF_ICONS_F[type]||{emoji:'🔔',bg:dark?'bg-slate-700':'bg-slate-100'};
+  const getFTimeAgo=(d)=>{if(!d)return'';const diff=Math.floor((Date.now()-new Date(d.includes(' ')?d.replace(' ','T'):d).getTime())/1000);if(diff<60)return'Just now';if(diff<3600)return`${Math.floor(diff/60)}m ago`;if(diff<86400)return`${Math.floor(diff/3600)}h ago`;return`${Math.floor(diff/86400)}d ago`;};
+
+  const fetchNotifications=useCallback(async()=>{
+    try{
+      const data=await api.notifications.getAll();
+      const filtered=(data.notifications||[]).filter(n=>FACULTY_NOTIF_TYPES.includes(n.type));
+      setNotifications(filtered);
+      setUnreadCount(filtered.filter(n=>!n.is_read).length);
+    }catch{}
+  },[]);// eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleFNotifMarkRead=async(id)=>{
+    await api.notifications.markRead(id).catch(()=>{});
+    setNotifications(prev=>prev.map(n=>n.id===id?{...n,is_read:true}:n));
+    setUnreadCount(prev=>Math.max(0,prev-1));
+  };
+
+  const handleFNotifMarkAllRead=async()=>{
+    await api.notifications.markAllRead().catch(()=>{});
+    setNotifications(prev=>prev.map(n=>({...n,is_read:true})));
+    setUnreadCount(0);
+  };
+
+  const handleFNotifDelete=async(id)=>{
+    await api.notifications.delete(id).catch(()=>{});
+    const n=notifications.find(x=>x.id===id);
+    setNotifications(prev=>prev.filter(x=>x.id!==id));
+    if(n&&!n.is_read) setUnreadCount(prev=>Math.max(0,prev-1));
+  };
+
+  const handleFNotifClearAll=async()=>{
+    await api.notifications.clearAll().catch(()=>{});
+    setNotifications([]);
+    setUnreadCount(0);
+  };
+
+  const handleFNotifClick=(notif)=>{
+    if(!notif.is_read) handleFNotifMarkRead(notif.id);
+    const d=notif.data||{};
+    // Navigate to the relevant section inside the faculty dashboard
+    if(notif.type==='event_created'||d.event_id){
+      navigateTo('dashboard'); // events are shown on the dashboard
+    } else if(notif.type==='task_completed'||d.task_id){
+      navigateTo('tasks');
+    } else if(notif.type==='student_created'||notif.type==='student_updated'||d.student_id){
+      navigateTo('students');
+    } else if(notif.type==='violation_added'){
+      navigateTo('students');
+    }
+    setShowNotif(false);
+  };
+
+  useEffect(()=>{
+    fetchNotifications();
+    const interval=setInterval(fetchNotifications,30000);
+    return()=>clearInterval(interval);
+  },[fetchNotifications]);
+
+  useEffect(()=>{
+    const handler=(e)=>{if(notifRef.current&&!notifRef.current.contains(e.target))setShowNotif(false);};
+    document.addEventListener('mousedown',handler);
+    return()=>document.removeEventListener('mousedown',handler);
+  },[]);
 
   const toggleTheme=()=>setDark(d=>{const next=!d;localStorage.setItem('fd_theme',next?'dark':'light');return next;});
 
@@ -1279,15 +2058,20 @@ const FacultyDashboard = ({user,onLogout}) => {
 
   useEffect(()=>{
     if(!user?.faculty_id) return;
-    api.schedules.getAll().then(all=>{
-      const mine=all.filter(s=>s.faculty_id===user.faculty_id);
+    // Schedules & subjects for this faculty
+    fetchApi('/schedules').then(all=>{
+      const mine=all.filter(s=>Number(s.faculty_id)===Number(user.faculty_id));
       setSchedulesCount(mine.length);
       setSubjectsCount(new Set(mine.map(s=>s.subject_id).filter(Boolean)).size);
-    }).catch(()=>{});
-    Promise.all([api.students.getAll(),api.schedules.getAll()]).then(([allStu,allSch])=>{
-      const mySec=new Set(allSch.filter(s=>s.faculty_id===user.faculty_id).map(s=>s.section?.section_name).filter(Boolean));
-      setStudentsCount(allStu.filter(s=>s.section&&mySec.has(s.section)).length);
-    }).catch(()=>{});
+    }).catch(()=>{setSchedulesCount(0);setSubjectsCount(0);});
+    // Students — all students (same as admin sees)
+    fetchApi('/students').then(all=>{
+      setStudentsCount(all.length);
+    }).catch(()=>{setStudentsCount(0);});
+    // Events count
+    fetchApi('/events').then(all=>{
+      setEventsCount(all.length);
+    }).catch(()=>{setEventsCount(0);});
   },[user?.faculty_id]);
 
   const sidebarExpanded=sidebarPinned||sidebarHovered;
@@ -1296,14 +2080,17 @@ const FacultyDashboard = ({user,onLogout}) => {
   const facultyName=faculty?[faculty.first_name,faculty.last_name].filter(Boolean).join(' '):user?.name;
 
   const renderPanel=()=>{
-    switch(active){
-      case 'dashboard': return <DashboardPanel user={user} facultyName={facultyName} initials={initials} subjectsCount={subjectsCount} studentsCount={studentsCount} schedulesCount={schedulesCount}/>;
-      case 'profile':   return <ProfilePanel faculty={faculty} loading={loadingProfile} err={profileErr} onReload={loadFaculty}/>;
-      case 'subjects':  return <SubjectsPanel facultyId={user?.faculty_id}/>;
-      case 'schedule':  return <SchedulePanel facultyId={user?.faculty_id}/>;
-      case 'students':  return <StudentsPanel facultyId={user?.faculty_id} facultyName={facultyName}/>;
-      default:          return null;
-    }
+    const fid=user?.faculty_id;
+    return (
+      <>
+        <div style={{display:active==='dashboard'?undefined:'none'}}><DashboardPanel user={user} faculty={faculty} facultyName={facultyName} initials={initials} subjectsCount={subjectsCount} studentsCount={studentsCount} schedulesCount={schedulesCount} eventsCount={eventsCount}/></div>
+        <div style={{display:active==='profile'?undefined:'none'}}><ProfilePanel faculty={faculty} loading={loadingProfile} err={profileErr} onReload={loadFaculty}/></div>
+        <div style={{display:active==='subjects'?undefined:'none'}}><SubjectsPanel facultyId={fid} isActive={active==='subjects'}/></div>
+        <div style={{display:active==='schedule'?undefined:'none'}}><SchedulePanel facultyId={fid} isActive={active==='schedule'}/></div>
+        <div style={{display:active==='students'?undefined:'none'}}><StudentsPanel facultyId={fid} facultyName={facultyName} isActive={active==='students'}/></div>
+        <div style={{display:active==='tasks'?undefined:'none'}}><FacultyTasksPanel facultyId={fid} facultyName={facultyName} isActive={active==='tasks'}/></div>
+      </>
+    );
   };
 
   return (
@@ -1383,10 +2170,97 @@ const FacultyDashboard = ({user,onLogout}) => {
                   : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>}
               </button>
               {/* Notification bell */}
-              <button className={`relative p-2 rounded-xl border transition-all ${dark?'bg-slate-800/60 border-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-slate-200':'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'}`}>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"/>
-              </button>
+              <div className="relative" ref={notifRef}>
+                <button onClick={()=>{setShowNotif(v=>!v);if(!showNotif)fetchNotifications();}}
+                  className={`relative p-2 rounded-full transition-all duration-300 ${dark?'text-slate-400 hover:text-slate-200 hover:bg-slate-700':'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}>
+                  {unreadCount>0&&(
+                    <span className={`absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 ${dark?'border-slate-900':'border-white'}`}>
+                      {unreadCount>99?'99+':unreadCount}
+                    </span>
+                  )}
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                </button>
+
+                {/* Notification Dropdown */}
+                {showNotif&&(
+                  <div className={`absolute right-0 top-full mt-2 w-96 rounded-2xl shadow-2xl border overflow-hidden z-50 ${dark?'bg-slate-900 border-slate-700/60':'bg-white border-slate-200'}`}>
+                    {/* Header */}
+                    <div className={`flex items-center justify-between px-4 py-3 border-b ${dark?'bg-slate-800/60 border-slate-700/60':'bg-slate-50 border-slate-100'}`}>
+                      <div className="flex items-center gap-2">
+                        <svg className={`w-4 h-4 ${dark?'text-slate-400':'text-slate-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                        <span className={`text-sm font-bold ${dark?'text-slate-100':'text-slate-800'}`}>Notifications</span>
+                        {unreadCount>0&&(
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500 text-white">{unreadCount} new</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {unreadCount>0&&(
+                          <button onClick={handleFNotifMarkAllRead}
+                            className={`text-xs font-semibold px-2 py-1 rounded-lg transition-colors ${dark?'text-brand-400 hover:bg-brand-900/30':'text-brand-600 hover:bg-brand-50'}`}>
+                            Mark all read
+                          </button>
+                        )}
+                        {notifications.length>0&&(
+                          <button onClick={handleFNotifClearAll}
+                            className={`text-xs font-semibold px-2 py-1 rounded-lg transition-colors ${dark?'text-slate-400 hover:bg-slate-700 hover:text-red-400':'text-slate-400 hover:bg-red-50 hover:text-red-600'}`}>
+                            Clear all
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* List */}
+                    <div className="max-h-[420px] overflow-y-auto">
+                      {notifications.length===0?(
+                        <div className={`flex flex-col items-center justify-center py-12 ${dark?'text-slate-600':'text-slate-300'}`}>
+                          <svg className="w-10 h-10 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                          <p className={`text-sm font-medium ${dark?'text-slate-500':'text-slate-400'}`}>No notifications yet</p>
+                        </div>
+                      ):(
+                        <div className={`divide-y ${dark?'divide-slate-700/60':'divide-slate-100'}`}>
+                          {notifications.map(n=>{
+                            const icon=getFNotifIcon(n.type);
+                            const timeAgo=getFTimeAgo(n.created_at);
+                            return (
+                              <div key={n.id}
+                                onClick={()=>handleFNotifClick(n)}
+                                className={`flex items-start gap-3 px-4 py-3.5 cursor-pointer transition-colors group ${
+                                  !n.is_read
+                                    ?(dark?'bg-brand-900/10 hover:bg-brand-900/20':'bg-brand-50/60 hover:bg-brand-50')
+                                    :(dark?'hover:bg-slate-800/60':'hover:bg-slate-50')
+                                }`}>
+                                {/* Icon */}
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-base ${icon.bg}`}>
+                                  {icon.emoji}
+                                </div>
+                                {/* Content */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className={`text-xs font-bold leading-tight ${!n.is_read?(dark?'text-slate-100':'text-slate-800'):(dark?'text-slate-300':'text-slate-600')}`}>
+                                      {n.title}
+                                    </p>
+                                    {!n.is_read&&<span className="w-2 h-2 rounded-full bg-brand-500 shrink-0 mt-0.5"/>}
+                                  </div>
+                                  <p className={`text-xs mt-0.5 leading-relaxed line-clamp-2 ${dark?'text-slate-400':'text-slate-500'}`}>
+                                    {n.message}
+                                  </p>
+                                  <p className={`text-[10px] mt-1 font-medium ${dark?'text-slate-600':'text-slate-400'}`}>{timeAgo}</p>
+                                </div>
+                                {/* Delete btn */}
+                                <button
+                                  onClick={e=>{e.stopPropagation();handleFNotifDelete(n.id);}}
+                                  className={`opacity-0 group-hover:opacity-100 p-1 rounded-lg transition-all shrink-0 ${dark?'text-slate-500 hover:text-red-400 hover:bg-red-900/20':'text-slate-300 hover:text-red-500 hover:bg-red-50'}`}>
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </header>
           <div className={`flex-1 overflow-y-auto p-6 ${dark?'bg-slate-950':'bg-slate-50'}`}>

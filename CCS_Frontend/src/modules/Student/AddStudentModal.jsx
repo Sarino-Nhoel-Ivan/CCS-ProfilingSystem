@@ -5,8 +5,11 @@ import { useDarkMode } from '../../context/DarkModeContext';
 const YEAR_PREFIX = { '1st Year': '1', '2nd Year': '2', '3rd Year': '3', '4th Year': '4' };
 const PROGRAM_CODE = { 'Information Technology': 'IT', 'Computer Science': 'CS' };
 const SECTIONS = ['A', 'B', 'C', 'D', 'E'];
+
+// All year levels get sections A–D (plus E if needed). "None" is always the first option.
 const getSectionOptions = (program, yearLevel) => {
-  const yr = YEAR_PREFIX[yearLevel]; const code = PROGRAM_CODE[program];
+  const yr = YEAR_PREFIX[yearLevel];
+  const code = PROGRAM_CODE[program];
   if (!yr || !code) return [];
   return SECTIONS.map(s => `${yr}${code}-${s}`);
 };
@@ -73,12 +76,58 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
   const [violations,   setViolations]   = useState([emptyViolation()]);
 
   useEffect(() => {
-    if (isOpen) api.skills.getAll().then(setAvailableSkills).catch(() => {});
+    if (isOpen) {
+      api.skills.getAll().then(setAvailableSkills).catch(() => {});
+      // Reset form state every time the modal opens
+      setError(null);
+      setFieldErrors({});
+      setSkillsText('');
+      setAffiliations([emptyAffil()]);
+      setActivities([emptyActivity()]);
+      setAcadHistories([emptyAcadHist()]);
+      setViolations([emptyViolation()]);
+      setForm({
+        student_number: '', first_name: '', last_name: '',
+        email: '', contact_number: '', birth_date: '',
+        gender: '', city: '',
+        program: '', year_level: '1st Year', section: '',
+        enrollment_status: 'Enrolled', student_type: 'Regular',
+        date_enrolled: new Date().toISOString().split('T')[0],
+        nationality: 'Filipino', civil_status: 'Single',
+        gender_val: '',
+      });
+    }
   }, [isOpen]);
 
   const ch = (e) => {
+    const { name, value } = e.target;
+    setForm(p => {
+      const next = { ...p, [name]: value };
+      // Clear section when program changes (sections are program-specific)
+      if (name === 'program') next.section = '';
+      return next;
+    });
+    if (fieldErrors[name]) setFieldErrors(p => { const n = { ...p }; delete n[name]; return n; });
+  };
+
+  // Phone: enforce 09 prefix, digits only, max 11 chars
+  const handlePhone = (e) => {
     const { name } = e.target;
-    setForm(p => ({ ...p, [name]: e.target.value }));
+    let val = e.target.value.replace(/\D/g, ''); // digits only
+    if (val.length > 0 && !val.startsWith('09')) {
+      // Force 09 prefix
+      val = '09' + val.replace(/^0+9?/, '');
+    }
+    val = val.slice(0, 11);
+    setForm(p => ({ ...p, [name]: val }));
+    if (fieldErrors[name]) setFieldErrors(p => { const n = { ...p }; delete n[name]; return n; });
+  };
+
+  // Number-only input (for student ID, GPA, etc.)
+  const handleNumberOnly = (e) => {
+    const { name } = e.target;
+    const val = e.target.value.replace(/\D/g, '');
+    setForm(p => ({ ...p, [name]: val }));
     if (fieldErrors[name]) setFieldErrors(p => { const n = { ...p }; delete n[name]; return n; });
   };
 
@@ -153,42 +202,57 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
 
       const sid = student.id;
 
+      // 2–5 are optional — errors here must NOT block the success flow
+      // (student is already saved; these are supplementary records)
+
       // 2. Skills — match by name
-      const skillNames = skillsText.split(',').map(s => s.trim()).filter(Boolean);
-      if (skillNames.length > 0) {
-        const matched = availableSkills.filter(s => skillNames.some(n => s.skill_name.toLowerCase() === n.toLowerCase()));
-        if (matched.length > 0) {
-          await api.students.syncSkills(sid, matched.map(s => ({ skill_id: s.id, skill_level: '', certification: false })));
+      try {
+        const skillNames = skillsText.split(',').map(s => s.trim()).filter(Boolean);
+        if (skillNames.length > 0) {
+          const matched = availableSkills.filter(s => skillNames.some(n => s.skill_name.toLowerCase() === n.toLowerCase()));
+          if (matched.length > 0) {
+            await api.students.syncSkills(sid, matched.map(s => ({ skill_id: s.id, skill_level: '', certification: false })));
+          }
         }
-      }
+      } catch (e) { console.warn('Skills sync skipped:', e.message); }
 
       // 3. Affiliations
-      for (const a of affiliations.filter(a => a.organization)) {
-        await api.students.addAffiliation(sid, {
-          organization_name: a.organization, position: a.role || 'Member',
-          date_joined: a.year ? `${a.year}-01-01` : new Date().toISOString().split('T')[0],
-          status: 'Active',
-        });
-      }
+      try {
+        for (const a of affiliations.filter(a => a.organization)) {
+          await api.students.addAffiliation(sid, {
+            organization_name: a.organization, position: a.role || 'Member',
+            date_joined: a.year ? `${a.year}-01-01` : new Date().toISOString().split('T')[0],
+            status: 'Active',
+          });
+        }
+      } catch (e) { console.warn('Affiliations skipped:', e.message); }
 
-      // 4. Academic histories
-      for (const h of acadHistories.filter(h => h.school || h.year)) {
-        await api.students.addAcademicHistory(sid, {
-          school_year: h.year || '', semester: '1st Semester',
-          gpa: h.gpa || null, academic_standing: 'Good Standing',
-          total_units: 0, completed_units: 0,
-        });
-      }
+      // 4. Academic histories (school_year is required — only submit rows that have a year)
+      try {
+        for (const h of acadHistories.filter(h => h.year)) {
+          await api.students.addAcademicHistory(sid, {
+            school_name: h.school || null,
+            school_year: h.year,
+            semester: '1st Semester',
+            gpa: h.gpa || null,
+            academic_standing: 'Good Standing',
+            total_units: 0,
+            completed_units: 0,
+          });
+        }
+      } catch (e) { console.warn('Academic history skipped:', e.message); }
 
       // 5. Violations
-      for (const v of violations.filter(v => v.offense)) {
-        await api.students.addViolation(sid, {
-          violation_type: v.offense, description: v.sanction || '',
-          date_reported: v.date || new Date().toISOString().split('T')[0],
-          reported_by: 'Administration',
-          severity_level: 'Low', status: 'Pending',
-        });
-      }
+      try {
+        for (const v of violations.filter(v => v.offense)) {
+          await api.students.addViolation(sid, {
+            violation_type: v.offense, description: v.sanction || '',
+            date_reported: v.date || new Date().toISOString().split('T')[0],
+            reported_by: 'Administration',
+            severity_level: 'Low', status: 'Pending',
+          });
+        }
+      } catch (e) { console.warn('Violations skipped:', e.message); }
 
       onStudentAdded(); onClose();
     } catch (err) {
@@ -239,7 +303,7 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
               <SectionTitle label="Personal Information" />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div><label className={lbl}>Student ID *</label>
-                  <input required name="student_number" value={form.student_number} onChange={ch} placeholder="e.g. 2201509"
+                  <input required name="student_number" value={form.student_number} onChange={handleNumberOnly} placeholder="e.g. 2201509"
                     ref={el => fieldRefs.current.student_number = el}
                     className={inpErr('student_number')} />
                   <ErrMsg field="student_number" /></div>
@@ -260,8 +324,10 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
                     ref={el => fieldRefs.current.email = el}
                     className={inpErr('email')} />
                   <ErrMsg field="email" /></div>
-                <div><label className={lbl}>Phone</label>
-                  <input name="contact_number" value={form.contact_number} onChange={ch}
+                <div>
+                  <label className={lbl}>Phone <span className={`normal-case font-normal ${dark ? 'text-slate-500' : 'text-slate-400'}`}>(starts with 09)</span></label>
+                  <input name="contact_number" value={form.contact_number} onChange={handlePhone}
+                    placeholder="09XXXXXXXXX" maxLength={11}
                     ref={el => fieldRefs.current.contact_number = el}
                     className={inpErr('contact_number')} />
                   <ErrMsg field="contact_number" /></div>
@@ -306,9 +372,10 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
                   <ErrMsg field="year_level" /></div>
                 <div><label className={lbl}>Section</label>
                   <select name="section" value={form.section} onChange={ch} className={sel}>
-                    <option value="">Select Section</option>
+                    <option value="">None</option>
                     {getSectionOptions(form.program, form.year_level).map(s => <option key={s}>{s}</option>)}
-                  </select></div>
+                  </select>
+                </div>
               </div>
             </div>
 

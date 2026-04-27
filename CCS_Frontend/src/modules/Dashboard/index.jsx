@@ -41,14 +41,35 @@ const AdminDashboard = ({ students = [], faculties = [], events = [], loading: l
   const enrolled       = students.filter(s => s.enrollment_status === 'Enrolled').length;
   const notEnrolled    = students.filter(s => s.enrollment_status !== 'Enrolled').length;
   const violations     = students.reduce((acc, s) => acc + (s.violations?.length || 0), 0);
-  const upcomingEvents = events.filter(e => e.status === 'Upcoming').slice(0, 5);
+  // All upcoming events (unsliced) for the stat card count
+  const allUpcoming    = events.filter(e => e.status === 'Upcoming' || e.status === 'Ongoing');
+  const upcomingEvents = allUpcoming.slice(0, 5);
   const recentStudents = [...students].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 6);
+
+  // Parse eventDate safely — the API returns "YYYY-MM-DD HH:mm:ss" without a timezone
+  // suffix. Appending 'T' and 'Z' would force UTC and shift the date. Instead we
+  // normalise to "YYYY-MM-DDTHH:mm:ss" so every browser treats it as LOCAL time,
+  // which matches what the admin entered.
+  const parseEventDate = (raw) => {
+    if (!raw) return new Date(NaN);
+    // Already ISO with offset → parse as-is
+    if (raw.includes('+') || raw.endsWith('Z')) return new Date(raw);
+    // "YYYY-MM-DD HH:mm:ss" → replace space with T so it's a valid ISO local string
+    return new Date(raw.replace(' ', 'T'));
+  };
 
   const yearBreakdown = ['1st Year','2nd Year','3rd Year','4th Year'].map(y => ({
     label: y, count: students.filter(s => s.year_level === y).length,
   }));
   const maxYear = Math.max(...yearBreakdown.map(y => y.count), 1);
   const totalStudents = students.length || 1;
+
+  // Faculty analytics
+  const facultyByStatus = ['Full-Time','Part-Time','Adjunct','Contract'].map(s => ({
+    label: s, count: faculties.filter(f => f.employment_status === s).length,
+  })).filter(s => s.count > 0);
+  const maxFacultyStatus = Math.max(...facultyByStatus.map(s => s.count), 1);
+  const totalFaculty = faculties.length || 1;
 
   const RingChart = ({ pct, color = '#f97316', trackColor }) => {
     const r = 15.9;
@@ -141,7 +162,7 @@ const AdminDashboard = ({ students = [], faculties = [], events = [], loading: l
         <StatCard icon={ExclamationTriangleIcon} label="Violations"     value={violations}      sub="Across all students"
           gradient="bg-red-500"    iconBg={dark ? 'bg-red-900/40 text-red-400'      : 'bg-red-50 text-red-500'}
           glowColor="hover:border-red-400/60 hover:shadow-red-400/30" dark={dark} />
-        <StatCard icon={StarIcon}                label="Events"         value={events.length}   sub={`${upcomingEvents.length} upcoming · ${events.filter(e=>e.status==='Ongoing').length} ongoing`}
+        <StatCard icon={StarIcon}                label="Events"         value={events.length}   sub={`${allUpcoming.length} upcoming · ${events.filter(e=>e.status==='Ongoing').length} ongoing`}
           gradient="bg-violet-500" iconBg={dark ? 'bg-violet-900/40 text-violet-400': 'bg-violet-50 text-violet-500'}
           glowColor="hover:border-violet-400/60 hover:shadow-violet-400/30" dark={dark} />
         <StatCard icon={NoSymbolIcon}            label="Not Enrolled"   value={notEnrolled}     sub="Inactive students"
@@ -208,6 +229,41 @@ const AdminDashboard = ({ students = [], faculties = [], events = [], loading: l
         </div>
       </div>
 
+      {/* ── Faculty Analytics Row ── */}
+      <div className="grid grid-cols-1 gap-6">
+
+        {/* Faculty by Employment Status */}
+        <div className={`p-6 rounded-2xl border shadow-sm transition-colors duration-300 ${card}`}>
+          <div className="flex items-center gap-2 mb-6">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${dark ? 'bg-orange-900/40 text-orange-400' : 'bg-orange-50 text-orange-500'}`}>
+              <UsersIcon className="w-4 h-4" />
+            </div>
+            <h2 className={`text-sm font-bold ${boldText}`}>Faculty by Employment Status</h2>
+          </div>
+          {facultyByStatus.length === 0
+            ? <p className={`text-sm italic ${subText}`}>No faculty data.</p>
+            : <div className="space-y-4">
+                {facultyByStatus.map(({ label, count }) => {
+                  const pct = Math.round((count / totalFaculty) * 100);
+                  const color = label === 'Full-Time' ? '#22c55e' : label === 'Part-Time' ? '#eab308' : label === 'Adjunct' ? '#3b82f6' : '#94a3b8';
+                  const barColor = label === 'Full-Time' ? 'from-green-400 to-green-500' : label === 'Part-Time' ? 'from-yellow-400 to-yellow-500' : label === 'Adjunct' ? 'from-blue-400 to-blue-500' : 'from-slate-400 to-slate-500';
+                  return (
+                    <div key={label} className="flex items-center gap-3">
+                      <span className={`text-xs font-semibold w-20 shrink-0 ${subText}`}>{label}</span>
+                      <div className={`flex-1 h-2.5 rounded-full overflow-hidden ${dark ? 'bg-slate-800' : 'bg-slate-100'}`}>
+                        <div className={`h-full rounded-full bg-gradient-to-r ${barColor} transition-all duration-700`}
+                          style={{ width: `${(count / maxFacultyStatus) * 100}%` }} />
+                      </div>
+                      <span className={`text-xs font-bold w-5 text-right ${boldText}`}>{count}</span>
+                      <RingChart pct={pct} color={color} trackColor={dark ? '#1e293b' : '#f1f5f9'} />
+                    </div>
+                  );
+                })}
+              </div>
+          }
+        </div>
+      </div>
+
       {/* ── Bottom Row ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
@@ -248,7 +304,7 @@ const AdminDashboard = ({ students = [], faculties = [], events = [], loading: l
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${dark ? 'bg-violet-900/40 text-violet-400' : 'bg-violet-50 text-violet-500'}`}>
               <BellAlertIcon className="w-4 h-4" />
             </div>
-            <h2 className={`text-sm font-bold ${boldText}`}>Upcoming Events</h2>
+            <h2 className={`text-sm font-bold ${boldText}`}>Active Events</h2>
             <span className={`ml-auto text-xs font-semibold px-2 py-0.5 rounded-full ${dark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>{upcomingEvents.length}</span>
           </div>
           {upcomingEvents.length === 0
@@ -258,15 +314,18 @@ const AdminDashboard = ({ students = [], faculties = [], events = [], loading: l
               </div>
             : <div className={`divide-y ${divider}`}>
                 {upcomingEvents.map(e => {
-                  const d = new Date(e.eventDate);
+                  const d = parseEventDate(e.eventDate);
+                  const isValid = !isNaN(d.getTime());
+                  const monthStr = isValid ? d.toLocaleString('default', { month: 'short' }) : '—';
+                  const dayStr   = isValid ? d.getDate() : '—';
+                  const timeStr  = isValid ? d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
+                  const dateStr  = isValid ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date';
                   return (
                     <div key={e.id} className={`flex items-start gap-4 px-6 py-4 transition-colors ${rowHover}`}>
                       {/* Date chip */}
                       <div className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center shrink-0 text-center border ${dark ? 'bg-slate-800 border-slate-700 text-orange-400' : 'bg-orange-50 border-orange-100 text-orange-600'}`}>
-                        <span className="text-[9px] font-bold uppercase leading-none">
-                          {d.toLocaleString('default', { month: 'short' })}
-                        </span>
-                        <span className="text-base font-extrabold leading-tight">{d.getDate()}</span>
+                        <span className="text-[9px] font-bold uppercase leading-none">{monthStr}</span>
+                        <span className="text-base font-extrabold leading-tight">{dayStr}</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm font-semibold truncate ${boldText}`}>{e.eventName}</p>
@@ -275,9 +334,15 @@ const AdminDashboard = ({ students = [], faculties = [], events = [], loading: l
                           <span className="truncate">{e.location || 'No location'}</span>
                         </div>
                       </div>
-                      <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${dark ? 'bg-violet-900/40 text-violet-300' : 'bg-violet-50 text-violet-600'}`}>
-                        <ClockIcon className="w-3 h-3" />
-                        {d.toLocaleDateString()}
+                      <div className={`flex flex-col items-end gap-0.5 shrink-0`}>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${dark ? 'bg-violet-900/40 text-violet-300' : 'bg-violet-50 text-violet-600'}`}>
+                          {dateStr}
+                        </span>
+                        {timeStr && (
+                          <span className={`flex items-center gap-1 text-[10px] font-medium ${subText}`}>
+                            <ClockIcon className="w-3 h-3" />{timeStr}
+                          </span>
+                        )}
                       </div>
                     </div>
                   );

@@ -9,7 +9,10 @@ const EditSubjectModal = ({ isOpen, onClose, onSuccess, initialData }) => {
     descriptive_title: '',
     lec_units: 3,
     lab_units: 0,
-    pre_requisites: ''
+    pre_requisites: '',
+    program: 'BSIT',
+    year_level: '1st Year',
+    semester: '1st Semester',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -21,7 +24,10 @@ const EditSubjectModal = ({ isOpen, onClose, onSuccess, initialData }) => {
         descriptive_title: initialData.descriptive_title || '',
         lec_units: initialData.lec_units || 0,
         lab_units: initialData.lab_units || 0,
-        pre_requisites: initialData.pre_requisites || ''
+        pre_requisites: initialData.pre_requisites || '',
+        program: initialData.program || 'BSIT',
+        year_level: initialData.year_level || '1st Year',
+        semester: initialData.semester || '1st Semester',
       });
     }
   }, [isOpen, initialData]);

@@ -10,9 +10,11 @@ const EditFacultyModal = ({ isOpen, onClose, onFacultyUpdated, faculty }) => {
 
   const [formData, setFormData] = useState({
     first_name: '', middle_name: '', last_name: '',
+    gender: '', date_of_birth: '',
     position: 'Instructor I', employment_status: 'Full-Time',
     hire_date: new Date().toISOString().split('T')[0],
-    email: '', contact_number: '', office_location: '', department_id: '',
+    email: '', contact_number: '', office_location: '',
+    office_hours: '', department_id: '',
   });
 
   const modalBg  = dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200';
@@ -35,12 +37,15 @@ const EditFacultyModal = ({ isOpen, onClose, onFacultyUpdated, faculty }) => {
         first_name: faculty.first_name || '',
         middle_name: faculty.middle_name || '',
         last_name: faculty.last_name || '',
+        gender: faculty.gender || '',
+        date_of_birth: faculty.date_of_birth ? faculty.date_of_birth.split('T')[0] : '',
         position: faculty.position || 'Instructor I',
         employment_status: faculty.employment_status || 'Full-Time',
         hire_date: faculty.hire_date ? faculty.hire_date.split('T')[0] : new Date().toISOString().split('T')[0],
         email: faculty.email || '',
         contact_number: faculty.contact_number || '',
         office_location: faculty.office_location || '',
+        office_hours: faculty.office_hours || '',
         department_id: faculty.department_id || '',
       });
       api.departments.getAll().then(setDepartments).catch(() => {});
@@ -52,10 +57,38 @@ const EditFacultyModal = ({ isOpen, onClose, onFacultyUpdated, faculty }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  // Phone: digits only, enforce 09 prefix, max 11 chars
+  const handlePhone = (e) => {
+    let val = e.target.value.replace(/\D/g, '');
+    if (val.length > 0 && !val.startsWith('09')) {
+      val = '09' + val.replace(/^0*9?/, '');
+    }
+    val = val.slice(0, 11);
+    setFormData(prev => ({ ...prev, contact_number: val }));
+  };
+
+  const validate = () => {
+    if (!formData.first_name.trim()) return 'First name is required.';
+    if (!formData.last_name.trim())  return 'Last name is required.';
+    if (!formData.email?.trim())     return 'Email address is required.';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim()))
+      return 'Please enter a valid email address.';
+    if (formData.contact_number && formData.contact_number.length > 0) {
+      if (!formData.contact_number.startsWith('09'))
+        return 'Contact number must start with 09.';
+      if (formData.contact_number.length !== 11)
+        return 'Contact number must be exactly 11 digits (e.g. 09XXXXXXXXX).';
+    }
+    if (!formData.department_id) return 'Please select a department.';
+    return null;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
+    const err = validate();
+    if (err) { setError(err); setIsSubmitting(false); return; }
     try {
       await api.faculties.update(faculty.id, formData);
       onFacultyUpdated();
@@ -127,6 +160,18 @@ const EditFacultyModal = ({ isOpen, onClose, onFacultyUpdated, faculty }) => {
                     <label className={lbl}>Last Name *</label>
                     <input required type="text" name="last_name" value={formData.last_name} onChange={handleChange} className={inp} />
                   </div>
+                  <div>
+                    <label className={lbl}>Gender</label>
+                    <select name="gender" value={formData.gender} onChange={handleChange} className={sel}>
+                      <option value="">Select...</option>
+                      <option>Male</option>
+                      <option>Female</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={lbl}>Date of Birth</label>
+                    <input type="date" name="date_of_birth" value={formData.date_of_birth} onChange={handleChange} className={inp} />
+                  </div>
                 </div>
               </div>
 
@@ -170,12 +215,19 @@ const EditFacultyModal = ({ isOpen, onClose, onFacultyUpdated, faculty }) => {
                     <input required type="email" name="email" value={formData.email} onChange={handleChange} className={inp} />
                   </div>
                   <div>
-                    <label className={lbl}>Contact Number</label>
-                    <input type="text" name="contact_number" value={formData.contact_number} onChange={handleChange} className={inp} />
+                    <label className={lbl}>Contact Number <span className={`normal-case font-normal ${dark ? 'text-slate-500' : 'text-slate-400'}`}>(starts with 09)</span></label>
+                    <input type="text" name="contact_number" value={formData.contact_number}
+                      onChange={handlePhone} placeholder="09XXXXXXXXX" maxLength={11} className={inp} />
                   </div>
                   <div>
                     <label className={lbl}>Office Location</label>
                     <input type="text" name="office_location" value={formData.office_location} onChange={handleChange} placeholder="e.g. Room 402" className={inp} />
+                  </div>
+                  <div className="md:col-span-3">
+                    <label className={lbl}>Consultation Hours <span className={`normal-case font-normal ${dark ? 'text-slate-500' : 'text-slate-400'}`}>(editable by faculty only)</span></label>
+                    <div className={`w-full px-3.5 py-2.5 rounded-xl border text-sm ${dark ? 'bg-slate-800/40 border-slate-700 text-slate-500' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
+                      {formData.office_hours || 'Not set — faculty can update this from their dashboard.'}
+                    </div>
                   </div>
                 </div>
               </div>

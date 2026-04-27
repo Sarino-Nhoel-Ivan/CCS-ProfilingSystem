@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../utils/api';
 import { STORAGE_URL } from '../../utils/config';
@@ -13,6 +13,7 @@ import AddStudentModal from './AddStudentModal';
 import EditStudentModal from './EditStudentModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
 import StudentProfileTabs from './StudentProfileTabs';
+import ExportModal from './ExportModal';
 import { useDarkMode } from '../../context/DarkModeContext';
 
 const Avatar = ({ student, size = 'md' }) => {
@@ -31,18 +32,18 @@ const Avatar = ({ student, size = 'md' }) => {
   );
 };
 
-const StudentCard = ({ student: s, onSelect, dark }) => {
+const StudentCard = ({ student: s, onSelect, onEdit, onDelete, checked, onCheck, dark }) => {
   const boldText  = dark ? 'text-slate-100' : 'text-slate-800';
   const labelText = dark ? 'text-slate-400' : 'text-slate-500';
   return (
-    <div onClick={() => onSelect(s.id)}
+    <div
       className={`group relative rounded-2xl border cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-xl overflow-hidden
         ${dark
           ? 'bg-slate-800 border-slate-700 hover:border-orange-500/50 hover:shadow-orange-500/10'
           : 'bg-white border-slate-200 hover:border-orange-400/60 hover:shadow-orange-500/10'}`}>
       {/* Left accent bar */}
       <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl ${s.enrollment_status === 'Enrolled' ? 'bg-gradient-to-b from-orange-400 to-orange-500' : 'bg-gradient-to-b from-slate-300 to-slate-400'}`} />
-      <div className="pl-4 pr-5 pt-5 pb-5">
+      <div className="pl-4 pr-5 pt-5 pb-4" onClick={() => onSelect(s.id)}>
         <div className="flex items-start gap-3 mb-4">
           <div className="relative shrink-0">
             <Avatar student={s} size="lg" />
@@ -74,13 +75,29 @@ const StudentCard = ({ student: s, onSelect, dark }) => {
             </span>
           </div>
         </div>
-        <div className="mt-3 flex justify-end">
-          {s.enrollment_status === 'Enrolled'
-            ? <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-green-500/15 text-green-500">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />Enrolled
-              </span>
-            : <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>{s.enrollment_status}</span>}
+      </div>
+      {/* Card footer — always-visible actions */}
+      <div className={`flex items-center justify-between px-4 pb-4 pt-2 border-t ${dark ? 'border-slate-700/60' : 'border-slate-100'}`} onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-1">
+          {/* Edit */}
+          <button onClick={e => { e.stopPropagation(); onEdit(s); }}
+            className={`p-1.5 rounded-lg transition-colors ${dark ? 'text-slate-400 hover:text-orange-400 hover:bg-orange-500/10' : 'text-slate-400 hover:text-orange-600 hover:bg-orange-50'}`}>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+          </button>
+          {/* Delete */}
+          <button onClick={e => { e.stopPropagation(); onDelete(s.id); }}
+            className={`p-1.5 rounded-lg transition-colors ${dark ? 'text-slate-400 hover:text-red-400 hover:bg-red-500/10' : 'text-slate-400 hover:text-red-600 hover:bg-red-50'}`}>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+          </button>
+          {/* Checkbox beside delete */}
+          <input type="checkbox" checked={checked} onChange={e => { e.stopPropagation(); onCheck(s.id, e); }} onClick={e => e.stopPropagation()}
+            className="w-4 h-4 rounded accent-orange-500 cursor-pointer ml-0.5" />
         </div>
+        {s.enrollment_status === 'Enrolled'
+          ? <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-green-500/15 text-green-500">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />Enrolled
+            </span>
+          : <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>{s.enrollment_status}</span>}
       </div>
     </div>
   );
@@ -96,6 +113,11 @@ const StudentModule = ({ students: propStudents = [], skills: propSkills = [], c
   const availableSkills = propSkills;
   const availableCourses = propCourses;
   const isLoading       = propLoading;
+  const [schedules, setSchedules] = useState([]);
+
+  useEffect(() => {
+    api.schedules.getAll().then(setSchedules).catch(() => {});
+  }, []);
   const stats = {
     total:      students.length,
     enrolled:   students.filter(s => s.enrollment_status === 'Enrolled').length,
@@ -105,6 +127,7 @@ const StudentModule = ({ students: propStudents = [], skills: propSkills = [], c
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [listSearch, setListSearch] = useState('');
@@ -115,6 +138,33 @@ const StudentModule = ({ students: propStudents = [], skills: propSkills = [], c
   const [filterCourse, setFilterCourse] = useState('');
   const [filterAffil, setFilterAffil] = useState('');
   const [filterYear, setFilterYear] = useState('');
+  const [visibleCount, setVisibleCount] = useState(50);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 50;
+  const PAGE_LOAD_SIZE = 50; // items loaded per scroll trigger
+  const MAX_PER_PAGE = 100; // max items shown before requiring Next page click
+  const sentinelRef = useRef(null);
+
+  // IntersectionObserver — auto-load more items when sentinel enters viewport
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount(v => v + PAGE_LOAD_SIZE);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  });
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+  // Reset pagination whenever filters or search change
+  useEffect(() => { setVisibleCount(50); setCurrentPage(1); }, [listSearch, listFilter, filterSkill, filterCourse, filterAffil, filterYear, viewMode]);
 
   const card      = dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-100';
   const tabBar    = dark ? 'bg-slate-800/50 border-slate-700/60' : 'bg-slate-50/50 border-slate-100';
@@ -164,11 +214,52 @@ const StudentModule = ({ students: propStudents = [], skills: propSkills = [], c
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Delete ${selectedIds.size} selected student${selectedIds.size > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    setIsBulkDeleting(true);
+    try {
+      await Promise.all([...selectedIds].map(id => api.students.delete(id)));
+      await reloadStudents();
+      setSelectedIds(new Set());
+      if (selectedStudent && selectedIds.has(selectedStudent.id)) {
+        setSelectedStudent(null);
+        setActiveTab('overview');
+      }
+    } catch (error) {
+      console.error('Bulk delete failed:', error);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const toggleSelect = (id, e) => {
+    e.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (ids) => {
+    setSelectedIds(prev => {
+      const allSelected = ids.every(id => prev.has(id));
+      if (allSelected) {
+        const next = new Set(prev);
+        ids.forEach(id => next.delete(id));
+        return next;
+      }
+      return new Set([...prev, ...ids]);
+    });
+  };
+
   const tabs = [
     { id: 'overview',              label: 'Overview' },
     { id: 'personal_details',      label: 'Personal Details' },
     { id: 'skills_certifications', label: 'Skills & Certifications' },
     { id: 'academic_history',      label: 'Academic History' },
+    { id: 'subjects',              label: 'Subjects' },
     { id: 'violations',            label: 'Violations' },
   ];
 
@@ -209,7 +300,7 @@ const StudentModule = ({ students: propStudents = [], skills: propSkills = [], c
               </div>
             </div>
             <button
-              onClick={() => window.open('http://localhost:8000/api/students/export/csv', '_blank')}
+              onClick={() => setIsExportModalOpen(true)}
               className={`flex items-center gap-1.5 px-3 py-2 font-semibold text-xs rounded-xl transition-colors border ${dark ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'}`}>
               <ArrowUpTrayIcon className="w-3.5 h-3.5" />Export
             </button>
@@ -246,7 +337,7 @@ const StudentModule = ({ students: propStudents = [], skills: propSkills = [], c
 
         {/* Tabs */}
         <div className={`flex border-b px-6 pt-2 transition-colors duration-300 ${tabBar}`}>
-          {tabs.filter(tab => selectedStudent || tab.id === 'overview' || tab.id === 'personal_details').map((tab) => (
+          {tabs.filter(tab => selectedStudent || tab.id === 'overview').map((tab) => (
             <button key={tab.id}
               onClick={() => {
                 if (tab.id === 'overview') { setSelectedStudent(null); navigate('/admin/users', { replace: true }); }
@@ -392,83 +483,246 @@ const StudentModule = ({ students: propStudents = [], skills: propSkills = [], c
                     </div>
                   );
 
+                  const totalPages = Math.ceil(filtered.length / MAX_PER_PAGE);
+                  const safePage   = Math.min(currentPage, Math.max(1, totalPages));
+                  // Items for this page group (up to MAX_PER_PAGE)
+                  const pageStart  = (safePage - 1) * MAX_PER_PAGE;
+                  const pageItems  = filtered.slice(pageStart, pageStart + MAX_PER_PAGE);
+                  // Within this page, show only visibleCount items (grows via scroll)
+                  const safeVisible = Math.min(visibleCount, pageItems.length);
+                  const page        = pageItems.slice(0, safeVisible);
+                  const canLoadMore = safeVisible < pageItems.length;
+
+                  // Pagination controls (between page groups)
+                  const PageNav = () => totalPages > 1 ? (
+                    <div className={`flex items-center justify-between pt-4 mt-2 border-t ${dark ? 'border-slate-700/60' : 'border-slate-100'}`}>
+                      <p className={`text-xs ${labelText}`}>
+                        Page {safePage} of {totalPages} · {filtered.length} total
+                      </p>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => { setCurrentPage(1); setVisibleCount(PAGE_LOAD_SIZE); }} disabled={safePage === 1}
+                          className={`px-2 py-1.5 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-40 ${dark ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>«</button>
+                        <button onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); setVisibleCount(PAGE_LOAD_SIZE); }} disabled={safePage === 1}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-40 ${dark ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>‹ Prev</button>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                          .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 2)
+                          .reduce((acc, p, idx, arr) => { if (idx > 0 && p - arr[idx-1] > 1) acc.push('…'); acc.push(p); return acc; }, [])
+                          .map((p, i) => p === '…'
+                            ? <span key={`e${i}`} className={`px-2 text-xs ${labelText}`}>…</span>
+                            : <button key={p} onClick={() => { setCurrentPage(p); setVisibleCount(PAGE_LOAD_SIZE); }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${p === safePage ? 'bg-orange-500 border-orange-500 text-white' : dark ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>{p}</button>
+                          )}
+                        <button onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); setVisibleCount(PAGE_LOAD_SIZE); }} disabled={safePage === totalPages}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-40 ${dark ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>Next ›</button>
+                        <button onClick={() => { setCurrentPage(totalPages); setVisibleCount(PAGE_LOAD_SIZE); }} disabled={safePage === totalPages}
+                          className={`px-2 py-1.5 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-40 ${dark ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>»</button>
+                      </div>
+                    </div>
+                  ) : null;
+
+                  // Sentinel div — IntersectionObserver triggers loading more items
+                  const Sentinel = () => canLoadMore ? (
+                    <div ref={sentinelRef} className="h-8 flex items-center justify-center">
+                      <div className={`w-5 h-5 border-2 rounded-full animate-spin ${dark ? 'border-slate-700 border-t-orange-400' : 'border-slate-200 border-t-orange-500'}`} />
+                    </div>
+                  ) : null;
+
+                  const LoadMore = () => <><PageNav /></>;
+                  // eslint-disable-next-line react-hooks/exhaustive-deps
+
+                  // ── Bulk action bar (shared across all views) ──
+                  const BulkBar = () => selectedIds.size > 0 ? (
+                    <div className={`flex items-center justify-between px-3 py-2 mb-3 rounded-xl border ${dark ? 'bg-red-900/20 border-red-800/40' : 'bg-red-50 border-red-200'}`}>
+                      <span className={`text-xs font-semibold ${dark ? 'text-red-300' : 'text-red-700'}`}>
+                        {selectedIds.size} student{selectedIds.size > 1 ? 's' : ''} selected
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setSelectedIds(new Set())}
+                          className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors ${dark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'}`}>
+                          Clear
+                        </button>
+                        <button onClick={handleBulkDelete} disabled={isBulkDeleting}
+                          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-50">
+                          {isBulkDeleting
+                            ? <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />Deleting...</>
+                            : <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>Delete Selected</>}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null;
+
                   // Cards view
                   if (viewMode === 'cards') return (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {filtered.map(s => <StudentCard key={s.id} student={s} onSelect={handleStudentClick} dark={dark} />)}
+                    <div>
+                      <BulkBar />
+                      {/* Select All row */}
+                      <div className={`flex items-center justify-between mb-3 pb-2 border-b ${dark ? 'border-slate-700/60' : 'border-slate-100'}`}>
+                        <span className={`text-xs font-medium ${labelText}`}>{filtered.length} student{filtered.length !== 1 ? 's' : ''}</span>
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <span className={`text-xs font-semibold ${labelText}`}>Select All</span>
+                          <input type="checkbox"
+                            checked={page.length > 0 && page.every(s => selectedIds.has(s.id))}
+                            onChange={() => toggleSelectAll(page.map(s => s.id))}
+                            className="w-4 h-4 rounded accent-orange-500 cursor-pointer" />
+                        </label>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {page.map(s => (
+                          <StudentCard key={s.id} student={s} dark={dark}
+                            onSelect={handleStudentClick}
+                            onEdit={async (st) => { await handleStudentClick(st.id); setIsEditModalOpen(true); }}
+                            onDelete={handleDeleteStudent}
+                            checked={selectedIds.has(s.id)}
+                            onCheck={toggleSelect}
+                          />
+                        ))}
+                      </div>
+                      <Sentinel />
+                      <LoadMore />
                     </div>
                   );
 
                   // Table view
                   if (viewMode === 'table') return (
-                    <div className={`overflow-x-auto rounded-xl border ${dark ? 'border-slate-700' : 'border-slate-100'}`}>
-                      <table className="w-full text-sm">
-                        <thead className={`text-xs uppercase tracking-wider ${dark ? 'bg-slate-800 text-slate-500' : 'bg-slate-50 text-slate-400'}`}>
-                          <tr>
-                            <th className="px-4 py-3 text-left font-bold">Student</th>
-                            <th className="px-4 py-3 text-left font-bold hidden sm:table-cell">Number</th>
-                            <th className="px-4 py-3 text-left font-bold hidden md:table-cell">Program</th>
-                            <th className="px-4 py-3 text-left font-bold hidden md:table-cell">Year</th>
-                            <th className="px-4 py-3 text-left font-bold hidden lg:table-cell">Type</th>
-                            <th className="px-4 py-3 text-center font-bold">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className={`divide-y ${divider}`}>
-                          {filtered.map(s => (
-                            <tr key={s.id} onClick={() => handleStudentClick(s.id)}
-                              className={`cursor-pointer transition-colors ${rowHover}`}>
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-2.5">
-                                  <Avatar student={s} size="sm" />
-                                  <span className={`font-semibold ${boldText}`}>{s.first_name} {s.last_name}</span>
+                    <div>
+                      <BulkBar />
+                      <div className={`overflow-x-auto rounded-xl border ${dark ? 'border-slate-700' : 'border-slate-100'}`}>
+                        <table className="w-full text-sm">
+                          <thead className={`text-xs uppercase tracking-wider ${dark ? 'bg-slate-800 text-slate-500' : 'bg-slate-50 text-slate-400'}`}>
+                            <tr>
+                              <th className="px-4 py-3 text-left font-bold">Student</th>
+                              <th className="px-4 py-3 text-left font-bold hidden sm:table-cell">Number</th>
+                              <th className="px-4 py-3 text-left font-bold hidden md:table-cell">Program</th>
+                              <th className="px-4 py-3 text-left font-bold hidden md:table-cell">Year</th>
+                              <th className="px-4 py-3 text-left font-bold hidden lg:table-cell">Type</th>
+                              <th className="px-4 py-3 text-center font-bold">Status</th>
+                              <th className="px-4 py-3 text-center font-bold">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  Actions
+                                  <input type="checkbox"
+                                    checked={page.length > 0 && page.every(s => selectedIds.has(s.id))}
+                                    onChange={() => toggleSelectAll(page.map(s => s.id))}
+                                    title="Select all"
+                                    className="w-3.5 h-3.5 rounded accent-orange-500 cursor-pointer" />
                                 </div>
-                              </td>
-                              <td className={`px-4 py-3 hidden sm:table-cell font-mono text-xs ${labelText}`}>{s.student_number || `#${s.id}`}</td>
-                              <td className={`px-4 py-3 hidden md:table-cell text-xs ${labelText}`}>{s.program || '—'}</td>
-                              <td className={`px-4 py-3 hidden md:table-cell text-xs ${labelText}`}>{s.year_level || '—'}</td>
-                              <td className={`px-4 py-3 hidden lg:table-cell text-xs ${labelText}`}>{s.student_type || '—'}</td>
-                              <td className="px-4 py-3 text-center">
-                                {s.enrollment_status === 'Enrolled'
-                                  ? <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-green-500/15 text-green-400">Enrolled</span>
-                                  : <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-200 text-slate-600'}`}>{s.enrollment_status}</span>}
-                              </td>
+                              </th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody className={`divide-y ${divider}`}>
+                            {page.map(s => (
+                              <tr key={s.id} onClick={() => handleStudentClick(s.id)}
+                                className={`cursor-pointer transition-colors ${rowHover}`}>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2.5">
+                                    <Avatar student={s} size="sm" />
+                                    <span className={`font-semibold ${boldText}`}>{s.first_name} {s.last_name}</span>
+                                  </div>
+                                </td>
+                                <td className={`px-4 py-3 hidden sm:table-cell font-mono text-xs ${labelText}`}>{s.student_number || `#${s.id}`}</td>
+                                <td className={`px-4 py-3 hidden md:table-cell text-xs ${labelText}`}>{s.program || '—'}</td>
+                                <td className={`px-4 py-3 hidden md:table-cell text-xs ${labelText}`}>{s.year_level || '—'}</td>
+                                <td className={`px-4 py-3 hidden lg:table-cell text-xs ${labelText}`}>{s.student_type || '—'}</td>
+                                <td className="px-4 py-3 text-center">
+                                  {s.enrollment_status === 'Enrolled'
+                                    ? <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-green-500/15 text-green-400">Enrolled</span>
+                                    : <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-200 text-slate-600'}`}>{s.enrollment_status}</span>}
+                                </td>
+                                <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
+                                  <div className="flex items-center justify-center gap-1">
+                                    <button onClick={async (e) => { e.stopPropagation(); await handleStudentClick(s.id); setIsEditModalOpen(true); }}
+                                      className={`p-1.5 rounded-lg transition-colors ${dark ? 'text-slate-400 hover:text-orange-400 hover:bg-orange-500/10' : 'text-slate-400 hover:text-orange-600 hover:bg-orange-50'}`}>
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                    </button>
+                                    <button onClick={e => { e.stopPropagation(); handleDeleteStudent(s.id); }}
+                                      className={`p-1.5 rounded-lg transition-colors ${dark ? 'text-slate-400 hover:text-red-400 hover:bg-red-500/10' : 'text-slate-400 hover:text-red-600 hover:bg-red-50'}`}>
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
+                                    <input type="checkbox" checked={selectedIds.has(s.id)}
+                                      onChange={e => toggleSelect(s.id, e)} onClick={e => e.stopPropagation()}
+                                      className="w-4 h-4 rounded accent-orange-500 cursor-pointer" />
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <Sentinel />
+                      <LoadMore />
                     </div>
                   );
 
                   // List view (default)
                   return (
-                    <div className={`divide-y ${divider}`}>
-                      {filtered.map(s => (
-                        <div key={s.id} onClick={() => handleStudentClick(s.id)}
-                          className={`py-3.5 flex items-center justify-between group cursor-pointer -mx-2 px-2 rounded-xl transition-colors ${rowHover}`}>
-                          <div className="flex items-center gap-3">
-                            <Avatar student={s} />
-                            <div>
-                              <p className={`text-sm font-semibold group-hover:text-orange-500 transition-colors ${boldText}`}>
-                                {s.first_name} {s.middle_name ? s.middle_name[0] + '. ' : ''}{s.last_name}
-                              </p>
-                              <div className={`flex items-center gap-3 mt-0.5 text-xs ${labelText}`}>
-                                <span className="flex items-center gap-1"><AcademicCapIcon className="w-3 h-3" />{s.program || 'N/A'}</span>
-                                <span className="flex items-center gap-1"><CalendarDaysIcon className="w-3 h-3" />{s.year_level || 'N/A'}</span>
-                                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>{s.student_type || 'N/A'}</span>
-                                <span className="flex items-center gap-1 font-mono"><IdentificationIcon className="w-3 h-3" />{s.student_number || s.id}</span>
+                    <div>
+                      <BulkBar />
+                      <div className={`divide-y ${divider}`}>
+                        {/* Select All header */}
+                        {page.length > 0 && (
+                          <div className={`py-2 flex items-center justify-between -mx-2 px-2`}>
+                            <span className={`text-xs font-medium ${labelText}`}>{filtered.length} student{filtered.length !== 1 ? 's' : ''}</span>
+                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                              <span className={`text-xs font-semibold ${labelText}`}>Select All</span>
+                              <input type="checkbox"
+                                checked={page.every(s => selectedIds.has(s.id))}
+                                onChange={() => toggleSelectAll(page.map(s => s.id))}
+                                className="w-4 h-4 rounded accent-orange-500 cursor-pointer shrink-0" />
+                            </label>
+                          </div>
+                        )}
+                        {page.map(s => (
+                          <div key={s.id}
+                            className={`py-3.5 flex items-center justify-between group -mx-2 px-2 rounded-xl transition-colors ${rowHover}`}>
+                            {/* Student info — clickable to open profile */}
+                            <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => handleStudentClick(s.id)}>
+                              <Avatar student={s} />
+                              <div className="min-w-0">
+                                <p className={`text-sm font-semibold group-hover:text-orange-500 transition-colors truncate ${boldText}`}>
+                                  {s.first_name} {s.middle_name ? s.middle_name[0] + '. ' : ''}{s.last_name}
+                                </p>
+                                <div className={`flex items-center gap-3 mt-0.5 text-xs ${labelText}`}>
+                                  <span className="flex items-center gap-1"><AcademicCapIcon className="w-3 h-3" />{s.program || 'N/A'}</span>
+                                  <span className="flex items-center gap-1"><CalendarDaysIcon className="w-3 h-3" />{s.year_level || 'N/A'}</span>
+                                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>{s.student_type || 'N/A'}</span>
+                                  <span className="flex items-center gap-1 font-mono"><IdentificationIcon className="w-3 h-3" />{s.student_number || s.id}</span>
+                                </div>
                               </div>
                             </div>
+                            {/* Right side: status + edit + delete + checkbox */}
+                            <div className="flex items-center gap-1.5 shrink-0 ml-2" onClick={e => e.stopPropagation()}>
+                              {s.enrollment_status === 'Enrolled'
+                                ? <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-500/15 text-green-500">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />Enrolled
+                                  </span>
+                                : <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-800'}`}>{s.enrollment_status}</span>}
+                              {/* Edit */}
+                              <button
+                                onClick={async (e) => { e.stopPropagation(); await handleStudentClick(s.id); setIsEditModalOpen(true); }}
+                                title="Edit student"
+                                className={`p-1.5 rounded-lg transition-colors ${dark ? 'text-slate-500 hover:text-orange-400 hover:bg-orange-500/10' : 'text-slate-400 hover:text-orange-600 hover:bg-orange-50'}`}>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                              </button>
+                              {/* Delete */}
+                              <button
+                                onClick={e => { e.stopPropagation(); handleDeleteStudent(s.id); }}
+                                title="Delete student"
+                                className={`p-1.5 rounded-lg transition-colors ${dark ? 'text-slate-500 hover:text-red-400 hover:bg-red-500/10' : 'text-slate-400 hover:text-red-600 hover:bg-red-50'}`}>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                              </button>
+                              {/* Checkbox beside delete */}
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.has(s.id)}
+                                onChange={e => toggleSelect(s.id, e)}
+                                onClick={e => e.stopPropagation()}
+                                className="w-4 h-4 rounded accent-orange-500 cursor-pointer shrink-0"
+                              />
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {s.enrollment_status === 'Enrolled'
-                              ? <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-500/15 text-green-500">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />Enrolled
-                                </span>
-                              : <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-800'}`}>{s.enrollment_status}</span>}
-                            <ChevronRightIcon className={`w-4 h-4 transition-transform group-hover:translate-x-0.5 ${dark ? 'text-slate-600' : 'text-slate-300'}`} />
-                          </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                      <Sentinel />
+                      <LoadMore />
                     </div>
                   );
                 })()}
@@ -502,6 +756,7 @@ const StudentModule = ({ students: propStudents = [], skills: propSkills = [], c
               <StudentProfileTabs
                 activeTab={activeTab}
                 student={selectedStudent}
+                schedules={schedules}
                 onEditClick={handleEditStudent}
                 onDeleteClick={handleDeleteStudent}
               />
@@ -512,6 +767,12 @@ const StudentModule = ({ students: propStudents = [], skills: propSkills = [], c
       </div>
 
       <AddStudentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onStudentAdded={() => reloadStudents()} />
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        students={students}
+        selectedStudent={selectedStudent}
+      />
       <EditStudentModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
