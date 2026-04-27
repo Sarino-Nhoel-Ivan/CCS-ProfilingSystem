@@ -59,6 +59,8 @@ const SchedulingModule = ({ students = [], faculties = [] }) => {
   const [isEditModalOpen, setIsEditModalOpen]     = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule]   = useState(null);
+  const [selectedScheduleIds, setSelectedScheduleIds] = useState(new Set());
+  const [isBulkDeletingSchedules, setIsBulkDeletingSchedules] = useState(false);
 
   useEffect(() => { fetchSchedules(); }, []);
 
@@ -77,8 +79,29 @@ const SchedulingModule = ({ students = [], faculties = [] }) => {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this schedule?')) return;
-    try { await api.schedules.delete(id); fetchSchedules(); }
+    try {
+      await api.schedules.delete(id);
+      setSelectedScheduleIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+      fetchSchedules();
+    }
     catch (err) { alert(err.message || 'Failed to delete schedule'); }
+  };
+
+  const handleBulkDeleteSchedules = async () => {
+    if (selectedScheduleIds.size === 0) return;
+    if (!window.confirm(`Delete ${selectedScheduleIds.size} selected schedule${selectedScheduleIds.size > 1 ? 's' : ''}?`)) return;
+    setIsBulkDeletingSchedules(true);
+    try {
+      await Promise.all([...selectedScheduleIds].map(id => api.schedules.delete(id)));
+      setSelectedScheduleIds(new Set());
+      fetchSchedules();
+    } catch { alert('Some deletions failed.'); }
+    finally { setIsBulkDeletingSchedules(false); }
+  };
+
+  const toggleScheduleSelect = (id, e) => {
+    e.stopPropagation();
+    setSelectedScheduleIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   };
 
   // ── derived stats ─────────────────────────────────────────────────────────
@@ -180,7 +203,7 @@ const SchedulingModule = ({ students = [], faculties = [] }) => {
         </div>
       </td>
       <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
-        <div className="flex justify-end gap-1">
+        <div className="flex justify-end items-center gap-1">
           <button onClick={() => { setSelectedSchedule(s); setIsEditModalOpen(true); }}
             className={`p-1.5 rounded-lg transition-colors ${dark ? 'text-slate-400 hover:text-brand-400 hover:bg-brand-500/10' : 'text-slate-400 hover:text-brand-600 hover:bg-brand-50'}`}>
             <PencilSquareIcon className="w-4 h-4" />
@@ -189,6 +212,10 @@ const SchedulingModule = ({ students = [], faculties = [] }) => {
             className={`p-1.5 rounded-lg transition-colors ${dark ? 'text-slate-400 hover:text-red-400 hover:bg-red-500/10' : 'text-slate-400 hover:text-red-600 hover:bg-red-50'}`}>
             <TrashIcon className="w-4 h-4" />
           </button>
+          {/* Checkbox beside delete */}
+          <input type="checkbox" checked={selectedScheduleIds.has(s.id)}
+            onChange={e => toggleScheduleSelect(s.id, e)} onClick={e => e.stopPropagation()}
+            className="w-4 h-4 rounded accent-orange-500 cursor-pointer ml-0.5" />
         </div>
       </td>
     </tr>
@@ -328,7 +355,32 @@ const SchedulingModule = ({ students = [], faculties = [] }) => {
 
           {/* Results count */}
           <span className={`ml-auto text-xs font-semibold ${subText}`}>{filtered.length} result{filtered.length !== 1 ? 's' : ''}</span>
+          {/* Select All */}
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            <span className={`text-xs font-semibold ${subText}`}>Select All</span>
+            <input type="checkbox"
+              checked={filtered.length > 0 && filtered.every(s => selectedScheduleIds.has(s.id))}
+              onChange={() => {
+                const allIds = filtered.map(s => s.id);
+                const allSelected = allIds.every(id => selectedScheduleIds.has(id));
+                setSelectedScheduleIds(allSelected ? new Set() : new Set(allIds));
+              }}
+              className="w-4 h-4 rounded accent-orange-500 cursor-pointer" />
+          </label>
         </div>
+
+        {/* Bulk delete bar */}
+        {selectedScheduleIds.size > 0 && (
+          <div className={`flex items-center justify-between px-4 py-2 border-b ${dark ? 'bg-red-900/20 border-red-800/40' : 'bg-red-50 border-red-200'}`}>
+            <span className={`text-xs font-semibold ${dark ? 'text-red-300' : 'text-red-700'}`}>{selectedScheduleIds.size} schedule{selectedScheduleIds.size > 1 ? 's' : ''} selected</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setSelectedScheduleIds(new Set())} className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors ${dark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'}`}>Clear</button>
+              <button onClick={handleBulkDeleteSchedules} disabled={isBulkDeletingSchedules} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-50">
+                {isBulkDeletingSchedules ? <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />Deleting...</> : 'Delete Selected'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {error && <div className="m-4 p-4 bg-red-50 text-red-600 rounded-xl border border-red-100 text-sm">{error}</div>}
 

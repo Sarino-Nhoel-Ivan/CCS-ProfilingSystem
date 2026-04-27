@@ -9,7 +9,7 @@ import { useDarkMode } from '../../context/DarkModeContext';
 const YEAR_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
 const SEMESTERS   = ['1st Semester', '2nd Semester'];
 
-const CurriculumGrid = ({ subjects, dark, boldText, subText, onEdit, onDelete, onDetail }) => {
+const CurriculumGrid = ({ subjects, dark, boldText, subText, onEdit, onDelete, onDetail, selectedIds, onToggle }) => {
   // Collect all year levels present in the filtered subjects
   const presentYears = YEAR_LEVELS.filter(y => subjects.some(s => s.year_level === y));
   // If no year_level set, show an "Unassigned" bucket
@@ -21,19 +21,41 @@ const CurriculumGrid = ({ subjects, dark, boldText, subText, onEdit, onDelete, o
   const codeCls = dark ? 'bg-brand-900/40 text-brand-300' : 'bg-orange-50 text-orange-600';
   const preCls  = dark ? 'text-slate-400 bg-slate-800' : 'text-slate-500 bg-slate-100';
 
+  // Year-level color palette — matches the academic tracker color coding
+  const YEAR_COLORS = {
+    '1st Year': {
+      header: dark ? 'bg-green-800/90'  : 'bg-green-600',
+      badge:   dark ? 'bg-green-900/50 text-green-300 border-green-700' : 'bg-green-100 text-green-700 border-green-200',
+    },
+    '2nd Year': {
+      header: dark ? 'bg-orange-700/90' : 'bg-orange-500',
+      badge:   dark ? 'bg-orange-900/50 text-orange-300 border-orange-700' : 'bg-orange-100 text-orange-700 border-orange-200',
+    },
+    '3rd Year': {
+      header: dark ? 'bg-red-800/90'    : 'bg-red-600',
+      badge:   dark ? 'bg-red-900/50 text-red-300 border-red-700' : 'bg-red-100 text-red-700 border-red-200',
+    },
+    '4th Year': {
+      header: dark ? 'bg-blue-800/90'   : 'bg-blue-600',
+      badge:   dark ? 'bg-blue-900/50 text-blue-300 border-blue-700' : 'bg-blue-100 text-blue-700 border-blue-200',
+    },
+    'Unassigned': {
+      header: dark ? 'bg-slate-700'     : 'bg-slate-600',
+      badge:   dark ? 'bg-slate-700 text-slate-300 border-slate-600' : 'bg-slate-100 text-slate-600 border-slate-200',
+    },
+  };
+
   const SubjectTable = ({ subs, yearLabel, semLabel }) => {
     const totalUnits = subs.reduce((s, sub) => s + (sub.total_units || 0), 0);
-    const yearColor =
-      yearLabel === '1st Year'   ? (dark ? 'bg-slate-700' : 'bg-slate-600') :
-      yearLabel === '2nd Year'   ? (dark ? 'bg-slate-700' : 'bg-slate-600') :
-      yearLabel === '3rd Year'   ? (dark ? 'bg-slate-700' : 'bg-slate-600') :
-      yearLabel === '4th Year'   ? (dark ? 'bg-slate-700' : 'bg-slate-600') :
-                                   (dark ? 'bg-slate-700' : 'bg-slate-600');
+    const yc = YEAR_COLORS[yearLabel] || YEAR_COLORS['Unassigned'];
     return (
       <div className={`border-b ${dark ? 'border-slate-700' : 'border-slate-200'}`}>
-        {/* Year + Semester header — full width dark bar like the reference */}
-        <div className={`flex items-center justify-between px-5 py-3 ${dark ? 'bg-slate-700/80' : 'bg-slate-600'}`}>
-          <span className="text-sm font-extrabold text-white tracking-wide">{yearLabel}</span>
+        {/* Year + Semester header — color-coded by year level */}
+        <div className={`flex items-center justify-between px-5 py-3 ${yc.header}`}>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-extrabold text-white tracking-wide">{yearLabel}</span>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${yc.badge}`}>{yearLabel}</span>
+          </div>
           <span className="text-sm font-bold text-white/80">{semLabel}</span>
         </div>
         <table className="w-full text-sm">
@@ -62,7 +84,7 @@ const CurriculumGrid = ({ subjects, dark, boldText, subText, onEdit, onDelete, o
                     : <span className={`text-xs italic ${subText}`}>—</span>}
                 </td>
                 <td className="px-5 py-3 text-right" onClick={e => e.stopPropagation()}>
-                  <div className="flex justify-end gap-1">
+                  <div className="flex justify-end items-center gap-1">
                     <button onClick={() => onEdit(sub)}
                       className={`p-1.5 rounded-lg transition-colors ${dark ? 'text-slate-400 hover:text-brand-400 hover:bg-brand-500/10' : 'text-slate-400 hover:text-brand-600 hover:bg-brand-50'}`}>
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -71,6 +93,13 @@ const CurriculumGrid = ({ subjects, dark, boldText, subText, onEdit, onDelete, o
                       className={`p-1.5 rounded-lg transition-colors ${dark ? 'text-slate-400 hover:text-red-400 hover:bg-red-500/10' : 'text-slate-400 hover:text-red-600 hover:bg-red-50'}`}>
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
+                    {/* Checkbox beside delete */}
+                    {onToggle && (
+                      <input type="checkbox" checked={selectedIds?.has(sub.id) || false}
+                        onChange={e => { e.stopPropagation(); onToggle(sub.id); }}
+                        onClick={e => e.stopPropagation()}
+                        className="w-4 h-4 rounded accent-orange-500 cursor-pointer ml-0.5" />
+                    )}
                   </div>
                 </td>
               </tr>
@@ -140,6 +169,8 @@ const InstructionModule = ({ students = [] }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState(null);
+  const [selectedSubjectIds, setSelectedSubjectIds] = useState(new Set());
+  const [isBulkDeletingSubjects, setIsBulkDeletingSubjects] = useState(false);
 
   useEffect(() => {
     fetchSubjects();
@@ -163,11 +194,28 @@ const InstructionModule = ({ students = [] }) => {
     if (window.confirm('Are you sure you want to delete this subject?')) {
       try {
         await api.subjects.delete(id);
+        setSelectedSubjectIds(prev => { const n = new Set(prev); n.delete(id); return n; });
         fetchSubjects();
       } catch (err) {
         alert(err.message || 'Failed to delete subject');
       }
     }
+  };
+
+  const handleBulkDeleteSubjects = async () => {
+    if (selectedSubjectIds.size === 0) return;
+    if (!window.confirm(`Delete ${selectedSubjectIds.size} selected subject${selectedSubjectIds.size > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    setIsBulkDeletingSubjects(true);
+    try {
+      await Promise.all([...selectedSubjectIds].map(id => api.subjects.delete(id)));
+      setSelectedSubjectIds(new Set());
+      fetchSubjects();
+    } catch (err) { alert('Some deletions failed.'); }
+    finally { setIsBulkDeletingSubjects(false); }
+  };
+
+  const toggleSubjectSelect = (id) => {
+    setSelectedSubjectIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   };
 
   const openEditModal = (subject) => {
@@ -257,6 +305,20 @@ const InstructionModule = ({ students = [] }) => {
           <div className="flex-1 min-w-0">
             <h2 className={`text-xl font-bold transition-colors duration-300 ${boldText}`}>Curriculum Dashboard</h2>
             <p className={`text-sm mt-0.5 ${subText}`}>Manage departmental subjects, descriptive titles, and prerequisites.</p>
+            {/* Year-level color legend */}
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              {[
+                { label: '1st Year', color: 'bg-green-500' },
+                { label: '2nd Year', color: 'bg-orange-500' },
+                { label: '3rd Year', color: 'bg-red-600' },
+                { label: '4th Year', color: 'bg-blue-600' },
+              ].map(({ label, color }) => (
+                <span key={label} className="flex items-center gap-1.5 text-xs font-medium">
+                  <span className={`w-3 h-3 rounded-sm inline-block ${color}`} />
+                  <span className={subText}>{label}</span>
+                </span>
+              ))}
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             {/* Search */}
@@ -301,6 +363,18 @@ const InstructionModule = ({ students = [] }) => {
               </svg>
               Add Subject
             </button>
+            {/* Select All */}
+            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+              <span className={`text-xs font-semibold ${subText}`}>Select All</span>
+              <input type="checkbox"
+                checked={filteredSubjects.length > 0 && filteredSubjects.every(s => selectedSubjectIds.has(s.id))}
+                onChange={() => {
+                  const allIds = filteredSubjects.map(s => s.id);
+                  const allSelected = allIds.every(id => selectedSubjectIds.has(id));
+                  setSelectedSubjectIds(allSelected ? new Set() : new Set(allIds));
+                }}
+                className="w-4 h-4 rounded accent-orange-500 cursor-pointer" />
+            </label>
           </div>
         </div>
         {/* Results count */}
@@ -313,6 +387,19 @@ const InstructionModule = ({ students = [] }) => {
         {error && (
           <div className="m-6 p-4 bg-red-50 text-red-600 rounded-xl border border-red-100">
             {error}
+          </div>
+        )}
+
+        {/* Bulk delete bar for subjects */}
+        {selectedSubjectIds.size > 0 && (
+          <div className={`flex items-center justify-between px-5 py-2 border-b ${dark ? 'bg-red-900/20 border-red-800/40' : 'bg-red-50 border-red-200'}`}>
+            <span className={`text-xs font-semibold ${dark ? 'text-red-300' : 'text-red-700'}`}>{selectedSubjectIds.size} subject{selectedSubjectIds.size > 1 ? 's' : ''} selected</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setSelectedSubjectIds(new Set())} className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors ${dark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'}`}>Clear</button>
+              <button onClick={handleBulkDeleteSubjects} disabled={isBulkDeletingSubjects} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-50">
+                {isBulkDeletingSubjects ? <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />Deleting...</> : 'Delete Selected'}
+              </button>
+            </div>
           </div>
         )}
 
@@ -339,6 +426,8 @@ const InstructionModule = ({ students = [] }) => {
               onEdit={openEditModal}
               onDelete={handleDeleteSubject}
               onDetail={openDetailModal}
+              selectedIds={selectedSubjectIds}
+              onToggle={toggleSubjectSelect}
             />
           )}
         </div>

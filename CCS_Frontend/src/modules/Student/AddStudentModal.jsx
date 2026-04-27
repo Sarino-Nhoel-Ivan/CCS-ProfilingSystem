@@ -76,7 +76,27 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
   const [violations,   setViolations]   = useState([emptyViolation()]);
 
   useEffect(() => {
-    if (isOpen) api.skills.getAll().then(setAvailableSkills).catch(() => {});
+    if (isOpen) {
+      api.skills.getAll().then(setAvailableSkills).catch(() => {});
+      // Reset form state every time the modal opens
+      setError(null);
+      setFieldErrors({});
+      setSkillsText('');
+      setAffiliations([emptyAffil()]);
+      setActivities([emptyActivity()]);
+      setAcadHistories([emptyAcadHist()]);
+      setViolations([emptyViolation()]);
+      setForm({
+        student_number: '', first_name: '', last_name: '',
+        email: '', contact_number: '', birth_date: '',
+        gender: '', city: '',
+        program: '', year_level: '1st Year', section: '',
+        enrollment_status: 'Enrolled', student_type: 'Regular',
+        date_enrolled: new Date().toISOString().split('T')[0],
+        nationality: 'Filipino', civil_status: 'Single',
+        gender_val: '',
+      });
+    }
   }, [isOpen]);
 
   const ch = (e) => {
@@ -182,42 +202,57 @@ const AddStudentModal = ({ isOpen, onClose, onStudentAdded }) => {
 
       const sid = student.id;
 
+      // 2–5 are optional — errors here must NOT block the success flow
+      // (student is already saved; these are supplementary records)
+
       // 2. Skills — match by name
-      const skillNames = skillsText.split(',').map(s => s.trim()).filter(Boolean);
-      if (skillNames.length > 0) {
-        const matched = availableSkills.filter(s => skillNames.some(n => s.skill_name.toLowerCase() === n.toLowerCase()));
-        if (matched.length > 0) {
-          await api.students.syncSkills(sid, matched.map(s => ({ skill_id: s.id, skill_level: '', certification: false })));
+      try {
+        const skillNames = skillsText.split(',').map(s => s.trim()).filter(Boolean);
+        if (skillNames.length > 0) {
+          const matched = availableSkills.filter(s => skillNames.some(n => s.skill_name.toLowerCase() === n.toLowerCase()));
+          if (matched.length > 0) {
+            await api.students.syncSkills(sid, matched.map(s => ({ skill_id: s.id, skill_level: '', certification: false })));
+          }
         }
-      }
+      } catch (e) { console.warn('Skills sync skipped:', e.message); }
 
       // 3. Affiliations
-      for (const a of affiliations.filter(a => a.organization)) {
-        await api.students.addAffiliation(sid, {
-          organization_name: a.organization, position: a.role || 'Member',
-          date_joined: a.year ? `${a.year}-01-01` : new Date().toISOString().split('T')[0],
-          status: 'Active',
-        });
-      }
+      try {
+        for (const a of affiliations.filter(a => a.organization)) {
+          await api.students.addAffiliation(sid, {
+            organization_name: a.organization, position: a.role || 'Member',
+            date_joined: a.year ? `${a.year}-01-01` : new Date().toISOString().split('T')[0],
+            status: 'Active',
+          });
+        }
+      } catch (e) { console.warn('Affiliations skipped:', e.message); }
 
-      // 4. Academic histories
-      for (const h of acadHistories.filter(h => h.school || h.year)) {
-        await api.students.addAcademicHistory(sid, {
-          school_year: h.year || '', semester: '1st Semester',
-          gpa: h.gpa || null, academic_standing: 'Good Standing',
-          total_units: 0, completed_units: 0,
-        });
-      }
+      // 4. Academic histories (school_year is required — only submit rows that have a year)
+      try {
+        for (const h of acadHistories.filter(h => h.year)) {
+          await api.students.addAcademicHistory(sid, {
+            school_name: h.school || null,
+            school_year: h.year,
+            semester: '1st Semester',
+            gpa: h.gpa || null,
+            academic_standing: 'Good Standing',
+            total_units: 0,
+            completed_units: 0,
+          });
+        }
+      } catch (e) { console.warn('Academic history skipped:', e.message); }
 
       // 5. Violations
-      for (const v of violations.filter(v => v.offense)) {
-        await api.students.addViolation(sid, {
-          violation_type: v.offense, description: v.sanction || '',
-          date_reported: v.date || new Date().toISOString().split('T')[0],
-          reported_by: 'Administration',
-          severity_level: 'Low', status: 'Pending',
-        });
-      }
+      try {
+        for (const v of violations.filter(v => v.offense)) {
+          await api.students.addViolation(sid, {
+            violation_type: v.offense, description: v.sanction || '',
+            date_reported: v.date || new Date().toISOString().split('T')[0],
+            reported_by: 'Administration',
+            severity_level: 'Low', status: 'Pending',
+          });
+        }
+      } catch (e) { console.warn('Violations skipped:', e.message); }
 
       onStudentAdded(); onClose();
     } catch (err) {

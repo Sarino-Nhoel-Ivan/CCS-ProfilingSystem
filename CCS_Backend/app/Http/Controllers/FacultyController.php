@@ -65,20 +65,45 @@ class FacultyController extends Controller
         try {
             $fullName = trim($validated['first_name'] . ' ' . $validated['last_name']);
             $apiKey   = config('services.brevo.key', env('BREVO_API_KEY'));
-            Http::withHeaders([
-                'api-key'      => $apiKey,
-                'Content-Type' => 'application/json',
-            ])->post('https://api.brevo.com/v3/smtp/email', [
-                'sender' => [
-                    'name'  => config('mail.from.name'),
-                    'email' => config('mail.from.address'),
-                ],
-                'to'      => [['email' => $validated['email'], 'name' => $fullName]],
-                'subject' => 'Your CCS Profiling System Faculty Account Has Been Created',
-                'htmlContent' => $this->buildWelcomeEmail($fullName, $validated['email'], $tempPassword, $passwordNote),
-            ]);
+            $loginUrl = rtrim(env('FRONTEND_URL', 'https://ccs-profiling-system-iota.vercel.app'), '/') . '/faculty/login';
+            $htmlContent = $this->buildWelcomeEmail($fullName, $validated['email'], $tempPassword, $passwordNote);
+
+            $sent = false;
+
+            // Try Brevo HTTP API first (if API key is configured)
+            if (!empty($apiKey)) {
+                $response = \Illuminate\Support\Facades\Http::withHeaders([
+                    'api-key'      => $apiKey,
+                    'Content-Type' => 'application/json',
+                ])->post('https://api.brevo.com/v3/smtp/email', [
+                    'sender' => [
+                        'name'  => config('mail.from.name'),
+                        'email' => config('mail.from.address'),
+                    ],
+                    'to'      => [['email' => $validated['email'], 'name' => $fullName]],
+                    'subject' => 'Your CCS Profiling System Faculty Account Has Been Created',
+                    'htmlContent' => $htmlContent,
+                ]);
+                if ($response->successful()) {
+                    $sent = true;
+                    \Log::info('Faculty welcome email sent via Brevo API to: ' . $validated['email']);
+                } else {
+                    \Log::error('Brevo API faculty email failed [' . $response->status() . ']: ' . $response->body());
+                }
+            }
+
+            // Fallback: use Laravel Mail (SMTP) if API key is missing or API call failed
+            if (!$sent) {
+                \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($validated, $fullName, $htmlContent) {
+                    $message->to($validated['email'], $fullName)
+                        ->subject('Your CCS Profiling System Faculty Account Has Been Created')
+                        ->html($htmlContent);
+                });
+                \Log::info('Faculty welcome email sent via SMTP to: ' . $validated['email'] . ' | From: ' . config('mail.from.address') . ' | Host: ' . config('mail.mailers.smtp.host'));
+            }
         } catch (\Throwable $e) {
-            \Log::error('Faculty welcome email error: ' . $e->getMessage());
+            // Log the full error — check Railway logs to diagnose email issues
+            \Log::error('Faculty welcome email FAILED for ' . ($validated['email'] ?? 'unknown') . ': ' . $e->getMessage() . ' | ' . get_class($e));
         }
 
         \App\Http\Controllers\NotificationController::push(

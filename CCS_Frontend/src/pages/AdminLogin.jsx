@@ -110,7 +110,7 @@ const AdminLogin = ({ onLogin }) => {
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight">System Control</h1>
           <p className="text-xs mt-1.5 text-center" style={{ color: 'rgba(148,163,184,0.7)' }}>
-            ⚡ Only the chosen ones get in
+            Only the chosen ones get in
           </p>
         </div>
 
@@ -191,7 +191,7 @@ const AdminLogin = ({ onLogin }) => {
               style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 60%)' }} />
             {loading
               ? <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Gaining Access...</>
-              : <span className="relative">🔓 Enter the Vault</span>}
+              : <span className="relative">Enter the Vault</span>}
           </button>
 
           {/* Bottom orange line */}

@@ -79,25 +79,44 @@ class StudentController extends Controller
         try {
             $fullName = trim($validatedData['first_name'] . ' ' . $validatedData['last_name']);
             $apiKey   = config('services.brevo.key', env('BREVO_API_KEY'));
-            $response = \Illuminate\Support\Facades\Http::withHeaders([
-                'api-key'      => $apiKey,
-                'Content-Type' => 'application/json',
-            ])->post('https://api.brevo.com/v3/smtp/email', [
-                'sender'      => [
-                    'name'  => config('mail.from.name'),
-                    'email' => config('mail.from.address'),
-                ],
-                'to'          => [['email' => $validatedData['email'], 'name' => $fullName]],
-                'subject'     => 'Your CCS Profiling System Account Has Been Created',
-                'htmlContent' => $this->buildWelcomeEmail($fullName, $validatedData['student_number']),
-            ]);
-            if ($response->successful()) {
-                \Log::info('Welcome email sent to: ' . $validatedData['email']);
-            } else {
-                \Log::error('Welcome email failed: ' . $response->body());
+            $htmlContent = $this->buildWelcomeEmail($fullName, $validatedData['student_number']);
+
+            $sent = false;
+
+            // Try Brevo HTTP API first (if API key is configured)
+            if (!empty($apiKey)) {
+                $response = \Illuminate\Support\Facades\Http::withHeaders([
+                    'api-key'      => $apiKey,
+                    'Content-Type' => 'application/json',
+                ])->post('https://api.brevo.com/v3/smtp/email', [
+                    'sender'      => [
+                        'name'  => config('mail.from.name'),
+                        'email' => config('mail.from.address'),
+                    ],
+                    'to'          => [['email' => $validatedData['email'], 'name' => $fullName]],
+                    'subject'     => 'Your CCS Profiling System Account Has Been Created',
+                    'htmlContent' => $htmlContent,
+                ]);
+                if ($response->successful()) {
+                    $sent = true;
+                    \Log::info('Welcome email sent via Brevo API to: ' . $validatedData['email']);
+                } else {
+                    \Log::error('Brevo API email failed [' . $response->status() . ']: ' . $response->body());
+                }
+            }
+
+            // Fallback: use Laravel Mail (SMTP) if API key is missing or API call failed
+            if (!$sent) {
+                \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($validatedData, $fullName, $htmlContent) {
+                    $message->to($validatedData['email'], $fullName)
+                        ->subject('Your CCS Profiling System Account Has Been Created')
+                        ->html($htmlContent);
+                });
+                \Log::info('Welcome email sent via SMTP to: ' . $validatedData['email'] . ' | From: ' . config('mail.from.address') . ' | Host: ' . config('mail.mailers.smtp.host'));
             }
         } catch (\Throwable $e) {
-            \Log::error('Welcome email error: ' . $e->getMessage());
+            // Log the full error — check Railway logs to diagnose email issues
+            \Log::error('Welcome email FAILED for ' . ($validatedData['email'] ?? 'unknown') . ': ' . $e->getMessage() . ' | ' . get_class($e));
         }
 
         \App\Http\Controllers\NotificationController::push(
