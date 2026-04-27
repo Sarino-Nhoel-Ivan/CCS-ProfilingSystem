@@ -300,7 +300,7 @@ const InstructionModule = ({ students = [] }) => {
       </div>
 
       {/* Main Content Area */}
-      <div className={`rounded-2xl shadow-sm border overflow-hidden flex flex-col h-[calc(100vh-280px)] transition-colors duration-300 ${card}`}>
+      <div className={`rounded-2xl shadow-sm border overflow-hidden transition-colors duration-300 ${card}`}>
         <div className={`p-4 border-b flex flex-wrap gap-3 items-center transition-colors duration-300 ${tableBar}`}>
           <div className="flex-1 min-w-0">
             <h2 className={`text-xl font-bold transition-colors duration-300 ${boldText}`}>Curriculum Dashboard</h2>
@@ -390,20 +390,7 @@ const InstructionModule = ({ students = [] }) => {
           </div>
         )}
 
-        {/* Bulk delete bar for subjects */}
-        {selectedSubjectIds.size > 0 && (
-          <div className={`flex items-center justify-between px-5 py-2 border-b ${dark ? 'bg-red-900/20 border-red-800/40' : 'bg-red-50 border-red-200'}`}>
-            <span className={`text-xs font-semibold ${dark ? 'text-red-300' : 'text-red-700'}`}>{selectedSubjectIds.size} subject{selectedSubjectIds.size > 1 ? 's' : ''} selected</span>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setSelectedSubjectIds(new Set())} className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors ${dark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'}`}>Clear</button>
-              <button onClick={handleBulkDeleteSubjects} disabled={isBulkDeletingSubjects} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-50">
-                {isBulkDeletingSubjects ? <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />Deleting...</> : 'Delete Selected'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="flex-1 overflow-y-auto relative">
+        <div className="relative">
           {isLoading ? (
             <div className={`absolute inset-0 flex items-center justify-center z-10 ${loadBg}`}>
               <div className="w-10 h-10 border-4 border-slate-200 border-t-brand-500 rounded-full animate-spin"></div>
