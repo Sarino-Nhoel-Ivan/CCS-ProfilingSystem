@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../utils/api';
 import AddEventModal from './AddEventModal';
 import EditEventModal from './EditEventModal';
-import EventAttendeesModal from './EventAttendeesModal';
 import { useDarkMode } from '../../context/DarkModeContext';
 import {
   CalendarDaysIcon, MegaphoneIcon, PlusIcon, MapPinIcon,
-  PencilSquareIcon, TrashIcon, ChevronRightIcon, UsersIcon,
+  PencilSquareIcon, TrashIcon,
   AcademicCapIcon, TrophyIcon, SparklesIcon, HeartIcon, StarIcon,
 } from '@heroicons/react/24/outline';
 
@@ -27,7 +26,6 @@ const EventsModule = ({ events: propEvents = [], loading: propLoading = false, o
   const [error, setError] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isAttendeesModalOpen, setIsAttendeesModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedEventIds, setSelectedEventIds] = useState(new Set());
   const [isBulkDeletingEvents, setIsBulkDeletingEvents] = useState(false);
@@ -89,11 +87,6 @@ const EventsModule = ({ events: propEvents = [], loading: propLoading = false, o
   const openEditModal = (event) => {
     setSelectedEvent(event);
     setIsEditModalOpen(true);
-  };
-
-  const openAttendeesModal = (event) => {
-    setSelectedEvent(event);
-    setIsAttendeesModalOpen(true);
   };
 
   const getStatusColor = (status) => {
@@ -158,25 +151,27 @@ const EventsModule = ({ events: propEvents = [], loading: propLoading = false, o
             <h2 className={`text-xl font-bold ${boldText}`}>Events Dashboard</h2>
             <p className={`text-sm mt-1 ${subText}`}>Track departmental activities and student participation.</p>
           </div>
-          <button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-medium transition-colors shadow-sm shadow-brand-500/30 flex items-center"
-          >
-            <PlusIcon className="w-4 h-4 mr-2" />
-            Add Event
-          </button>
-          {/* Select All */}
-          <label className="flex items-center gap-1.5 cursor-pointer select-none">
-            <span className={`text-xs font-semibold ${subText}`}>Select All</span>
-            <input type="checkbox"
-              checked={events.length > 0 && events.every(e => selectedEventIds.has(e.id))}
-              onChange={() => {
-                const allIds = events.map(e => e.id);
-                const allSelected = allIds.every(id => selectedEventIds.has(id));
-                setSelectedEventIds(allSelected ? new Set() : new Set(allIds));
-              }}
-              className="w-4 h-4 rounded accent-orange-500 cursor-pointer" />
-          </label>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsAddModalOpen(true)}
+              className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-medium transition-colors shadow-sm shadow-brand-500/30 flex items-center"
+            >
+              <PlusIcon className="w-4 h-4 mr-2" />
+              Add Event
+            </button>
+            {/* Select All */}
+            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+              <span className={`text-xs font-semibold ${subText}`}>Select All</span>
+              <input type="checkbox"
+                checked={events.length > 0 && events.every(e => selectedEventIds.has(e.id))}
+                onChange={() => {
+                  const allIds = events.map(e => e.id);
+                  const allSelected = allIds.every(id => selectedEventIds.has(id));
+                  setSelectedEventIds(allSelected ? new Set() : new Set(allIds));
+                }}
+                className="w-4 h-4 rounded accent-orange-500 cursor-pointer" />
+            </label>
+          </div>
         </div>
 
         {error && (
@@ -262,13 +257,7 @@ const EventsModule = ({ events: propEvents = [], loading: propLoading = false, o
                       </div>
 
                       {/* Footer */}
-                      <div className={`mt-4 pt-3 border-t flex justify-between items-center ${footerBdr}`}>
-                        <button className={`flex items-center gap-1 text-xs font-semibold transition-colors ${dark ? 'text-brand-400 hover:text-brand-300' : 'text-brand-500 hover:text-brand-600'}`}
-                          onClick={() => openAttendeesModal(event)}>
-                          <UsersIcon className="w-3.5 h-3.5" />
-                          View Attendees
-                          <ChevronRightIcon className="w-3 h-3" />
-                        </button>
+                      <div className={`mt-4 pt-3 border-t flex justify-end items-center ${footerBdr}`}>
                         <div className="flex items-center gap-1">
                           <button onClick={() => openEditModal(event)}
                             className={`p-1.5 rounded-lg transition-colors ${dark ? 'text-slate-400 hover:text-brand-400 hover:bg-brand-500/10' : 'text-slate-400 hover:text-brand-600 hover:bg-brand-50'}`}>
@@ -314,17 +303,6 @@ const EventsModule = ({ events: propEvents = [], loading: propLoading = false, o
             setSelectedEvent(null);
           }}
           onSuccess={handleSuccess}
-        />
-      )}
-
-      {isAttendeesModalOpen && selectedEvent && (
-        <EventAttendeesModal
-          isOpen={isAttendeesModalOpen}
-          event={selectedEvent}
-          onClose={() => {
-            setIsAttendeesModalOpen(false);
-            setSelectedEvent(null);
-          }}
         />
       )}
     </div>
