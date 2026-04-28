@@ -181,3 +181,16 @@ Route::get('/admin/seed-demo', function () {
     \Artisan::call('db:seed', ['--class' => 'DemoSeeder', '--force' => true]);
     return response()->json(['message' => 'Demo data seeded.', 'output' => \Artisan::output()]);
 });
+
+Route::get('/admin/clear-demo', function () {
+    // Remove only seeded demo data (non-admin users + their students/faculties)
+    $demoStudentIds = \DB::table('students')->where('email', 'like', '%@student.pnc.edu.ph')->pluck('id');
+    $demoFacultyIds = \DB::table('faculties')->where('email', 'like', '%@pnc.edu.ph')->pluck('id');
+    \DB::table('users')->whereIn('student_id', $demoStudentIds)->delete();
+    \DB::table('users')->whereIn('faculty_id', $demoFacultyIds)->delete();
+    \DB::table('student_skill')->whereIn('student_id', $demoStudentIds)->delete();
+    \DB::table('violations')->whereIn('student_id', $demoStudentIds)->delete();
+    \DB::table('students')->whereIn('id', $demoStudentIds)->delete();
+    \DB::table('faculties')->whereIn('id', $demoFacultyIds)->delete();
+    return response()->json(['message' => 'Demo data cleared.', 'students' => count($demoStudentIds), 'faculties' => count($demoFacultyIds)]);
+});
