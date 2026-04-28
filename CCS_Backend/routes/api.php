@@ -174,3 +174,9 @@ Route::post('/students/{student}/tasks',                      [TaskController::c
 Route::put('/students/{student}/tasks/{task}',                [TaskController::class, 'update']);
 Route::delete('/students/{student}/tasks/{task}',             [TaskController::class, 'destroy']);
 
+
+// ── TEMP: one-time demo seeder (DELETE AFTER USE) ─────────────────────────
+Route::get('/admin/seed-demo', function () {
+    \Artisan::call('db:seed', ['--class' => 'DemoSeeder', '--force' => true]);
+    return response()->json(['message' => 'Demo data seeded.', 'output' => \Artisan::output()]);
+});
