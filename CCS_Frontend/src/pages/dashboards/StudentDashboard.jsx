@@ -29,6 +29,7 @@ const NAV = [
   { id: 'dashboard',    label: 'Dashboard',            Icon: HomeIcon },
   { id: 'profile',      label: 'My Profile',           Icon: UserIcon },
   { id: 'subjects',     label: 'My Subjects',          Icon: BookOpenIcon },
+  { id: 'curriculum',   label: 'My Curriculum',        Icon: AcademicCapIcon },
   { id: 'skills',       label: 'My Skills',            Icon: LightBulbIcon },
   { id: 'affiliations', label: 'My Affiliations',      Icon: BuildingLibraryIcon },
   { id: 'violations',   label: 'My Violations',        Icon: ExclamationTriangleIcon },
@@ -1012,10 +1013,12 @@ const StudentDashboard = ({ user, onLogout }) => {
   const navigateTo = (section) => {
     setActive(section);
     setSearchParams({ section }, { replace: true });
+    setSidebarMobileOpen(false);
   };
   const [tasks, setTasks]               = useState([]);
   const [sidebarPinned, setSidebarPinned] = useState(false);
   const [sidebarHovered, setSidebarHovered] = useState(false);
+  const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const [profileTab, setProfileTab] = useState('personal');
   const [student, setStudent]           = useState(null);
   const [mustChangePassword, setMustChangePassword] = useState(() => user?.must_change_password === true);
@@ -1178,25 +1181,25 @@ const StudentDashboard = ({ user, onLogout }) => {
   useEffect(() => { loadSchedules(); }, [loadSchedules]);
 
   const sidebarExpanded = sidebarPinned || sidebarHovered;
+  const sidebarShowLabels = sidebarExpanded || sidebarMobileOpen;
 
-  /* ── sidebar nav link ── */
   const NavLink = ({ item }) => {
     const isActive = active === item.id;
     const IconComp = item.Icon;
     return (
       <button onClick={() => navigateTo(item.id)}
-        title={!sidebarExpanded ? item.label : ''}
-        className={`w-full flex items-center py-3 rounded-xl transition-all duration-300 group relative ${sidebarExpanded ? 'px-4' : 'px-0 justify-center'} ${isActive
+        title={!sidebarShowLabels ? item.label : ''}
+        className={`w-full flex items-center py-3 rounded-xl transition-all duration-300 group relative ${sidebarShowLabels ? 'px-4' : 'px-0 justify-center'} ${isActive
           ? 'bg-brand-600/10 text-brand-400 ring-1 ring-brand-500/50'
           : dark ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}>
         {isActive && (
           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-brand-500 rounded-r-full shadow-[0_0_10px_rgba(242,101,34,0.6)]" />
         )}
-        <IconComp className={`w-5 h-5 shrink-0 transition-all duration-300 ${sidebarExpanded ? 'mr-3' : 'mr-0'} ${isActive ? 'text-brand-400' : dark ? 'text-slate-500 group-hover:text-slate-300' : 'text-slate-400 group-hover:text-slate-700'}`} />
-        <span className={`font-medium tracking-wide whitespace-nowrap transition-all duration-300 text-sm ${sidebarExpanded ? 'opacity-100 w-auto inline-block' : 'opacity-0 w-0 hidden'}`}>
+        <IconComp className={`w-5 h-5 shrink-0 transition-all duration-300 ${sidebarShowLabels ? 'mr-3' : 'mr-0'} ${isActive ? 'text-brand-400' : dark ? 'text-slate-500 group-hover:text-slate-300' : 'text-slate-400 group-hover:text-slate-700'}`} />
+        <span className={`font-medium tracking-wide whitespace-nowrap transition-all duration-300 text-sm ${sidebarShowLabels ? 'opacity-100 w-auto inline-block' : 'opacity-0 w-0 hidden'}`}>
           {item.label}
         </span>
-        {item.id === 'tasks' && tasks.filter(t => !t.done).length > 0 && sidebarExpanded && (
+        {item.id === 'tasks' && tasks.filter(t => !t.done).length > 0 && sidebarShowLabels && (
           <span className="ml-auto text-xs bg-red-500 text-white rounded-full px-1.5 py-0.5 font-bold min-w-[20px] text-center">{tasks.filter(t => !t.done).length}</span>
         )}
       </button>
@@ -1238,7 +1241,7 @@ const StudentDashboard = ({ user, onLogout }) => {
             </div>
             {/* Identity — admin style */}
             <div className="flex-1 min-w-0">
-              <h2 className={`text-2xl font-bold tracking-tight ${dark ? 'text-slate-100' : 'text-slate-800'}`}>
+              <h2 className={`text-xl sm:text-2xl font-bold tracking-tight ${dark ? 'text-slate-100' : 'text-slate-800'}`}>
                 {s ? `${s.first_name}${s.middle_name ? ' ' + s.middle_name : ''} ${s.last_name}${s.suffix ? ' ' + s.suffix : ''}` : (user?.name ?? '—')}
               </h2>
               <div className={`flex flex-wrap items-center gap-4 mt-1.5 text-sm ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -3148,20 +3151,10 @@ const StudentDashboard = ({ user, onLogout }) => {
                     </div>
                     <div>
                       <p className={`text-sm font-bold ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{facultyName}</p>
-                      {faculty?.department && <p className={`text-xs ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{faculty.department}</p>}
+                      {faculty?.position && <p className={`text-xs font-medium ${dark ? 'text-orange-400' : 'text-orange-500'}`}>{faculty.position}</p>}
                       {faculty?.email && <p className={`text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{faculty.email}</p>}
                     </div>
                   </div>
-                  {/* Consultation Hours */}
-                  {faculty?.office_hours && (
-                    <div className={`mt-3 flex items-start gap-2.5 p-3 rounded-xl border ${dark ? 'bg-amber-900/20 border-amber-700/40' : 'bg-amber-50 border-amber-200'}`}>
-                      <svg className={`w-4 h-4 shrink-0 mt-0.5 ${dark ? 'text-amber-400' : 'text-amber-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                      <div>
-                        <p className={`text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-amber-400' : 'text-amber-600'}`}>Consultation Hours</p>
-                        <p className={`text-xs font-semibold mt-0.5 ${dark ? 'text-amber-200' : 'text-amber-900'}`}>{faculty.office_hours}</p>
-                      </div>
-                    </div>
-                  )}
                 </div>
                 {/* Footer */}
                 <div className={`px-6 py-4 border-t flex justify-end ${dark ? 'border-slate-700/60 bg-slate-900' : 'border-slate-100 bg-slate-50'}`}>
@@ -3285,6 +3278,285 @@ const StudentDashboard = ({ user, onLogout }) => {
           <InformationCircleIcon className={`w-4 h-4 shrink-0 mt-0.5 ${dark ? 'text-blue-400' : 'text-blue-500'}`} />
           <span>Your subjects are based on your assigned section. Contact the admin if your schedule looks incorrect.</span>
         </div>
+
+        {/* ── My Instructors & Consultation Hours ── */}
+        {schedules.length > 0 && (() => {
+          // Deduplicate faculty by id
+          const seen = new Set();
+          const uniqueFaculty = schedules
+            .map(sc => sc.faculty)
+            .filter(f => f && !seen.has(f.id) && seen.add(f.id));
+          if (uniqueFaculty.length === 0) return null;
+          return (
+            <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
+              <div className={`flex items-center gap-2 px-5 py-3.5 border-b ${dark ? 'border-slate-700/60 bg-slate-900' : 'border-slate-100 bg-slate-50'}`}>
+                <ClockIcon className="w-4 h-4 text-emerald-500" />
+                <h4 className="text-xs font-bold uppercase tracking-widest text-emerald-500">My Instructors & Consultation Hours</h4>
+              </div>
+              <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {uniqueFaculty.map(faculty => {
+                  const photoSrc = faculty.profile_photo
+                    ? (faculty.profile_photo.startsWith('http') ? faculty.profile_photo : `${STORAGE_URL}/${faculty.profile_photo}`)
+                    : null;
+                  const initials = `${faculty.first_name?.[0] ?? ''}${faculty.last_name?.[0] ?? ''}`.toUpperCase();
+                  const fullName = [faculty.first_name, faculty.last_name].filter(Boolean).join(' ');
+                  // Subjects this faculty handles for the student
+                  const theirSubjects = schedules.filter(sc => String(sc.faculty_id) === String(faculty.id));
+                  return (
+                    <div key={faculty.id} className={`rounded-xl border p-4 ${dark ? 'bg-slate-800/50 border-slate-700/60' : 'bg-slate-50 border-slate-200'}`}>
+                      {/* Faculty identity */}
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-full overflow-hidden shrink-0">
+                          {photoSrc
+                            ? <img src={photoSrc} alt={initials} className="w-full h-full object-cover" />
+                            : <div className={`w-full h-full flex items-center justify-center text-sm font-bold ${dark ? 'bg-orange-900/40 text-orange-300' : 'bg-orange-100 text-orange-600'}`}>{initials}</div>}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-bold truncate ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{fullName}</p>
+                          {faculty.position && <p className={`text-xs font-medium ${dark ? 'text-orange-400' : 'text-orange-500'}`}>{faculty.position}</p>}
+                        </div>
+                      </div>
+                      {/* Subjects handled */}
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {theirSubjects.map(sc => (
+                          <span key={sc.id} className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${dark ? 'bg-blue-900/40 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
+                            {sc.subject?.subject_code ?? '—'}
+                          </span>
+                        ))}
+                      </div>
+                      {/* Consultation hours */}
+                      {(faculty.office_hours || faculty.office_location) ? (
+                        <div className={`rounded-lg p-2.5 space-y-1.5 ${dark ? 'bg-emerald-900/20 border border-emerald-700/40' : 'bg-emerald-50 border border-emerald-200'}`}>
+                          {faculty.office_hours && (
+                            <div className="flex items-start gap-2">
+                              <ClockIcon className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${dark ? 'text-emerald-400' : 'text-emerald-500'}`} />
+                              <p className={`text-xs font-medium ${dark ? 'text-emerald-300' : 'text-emerald-700'}`}>{faculty.office_hours}</p>
+                            </div>
+                          )}
+                          {faculty.office_location && (
+                            <div className="flex items-start gap-2">
+                              <BuildingOfficeIcon className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${dark ? 'text-emerald-400' : 'text-emerald-500'}`} />
+                              <p className={`text-xs ${dark ? 'text-emerald-300/80' : 'text-emerald-600'}`}>{faculty.office_location}</p>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className={`text-xs italic ${dark ? 'text-slate-600' : 'text-slate-400'}`}>No consultation hours set.</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+    );
+  };
+
+  /* ════════════════════════════════
+     PANEL: MY CURRICULUM
+  ════════════════════════════════ */
+  const CurriculumPanel = () => {
+    const [allSubjects, setAllSubjects] = useState([]);
+    const [loading, setLoading]         = useState(true);
+    const [activeSem, setActiveSem]     = useState(null);
+
+    const yearLevel = student?.year_level;
+    // Map student program name to subject program code
+    const programCode = student?.program === 'Computer Science' ? 'BSCS'
+      : student?.program === 'Information Technology' ? 'BSIT'
+      : null;
+
+    useEffect(() => {
+      const load = async () => {
+        setLoading(true);
+        try {
+          const data = await api.subjects.getAll();
+          setAllSubjects(Array.isArray(data) ? data : []);
+        } catch { setAllSubjects([]); }
+        finally { setLoading(false); }
+      };
+      load();
+    }, []);
+
+    if (loading) return <Spinner />;
+
+    // Filter by year level and program
+    const forYear = allSubjects.filter(s => {
+      const matchYear    = !yearLevel   || s.year_level === yearLevel;
+      const matchProgram = !programCode || s.program    === programCode;
+      return matchYear && matchProgram && s.year_level;
+    });
+
+    // Group by semester
+    const SEM_ORDER = ['1st Semester', '2nd Semester', 'Summer'];
+    const grouped = {};
+    forYear.forEach(s => {
+      const sem = s.semester || 'Other';
+      if (!grouped[sem]) grouped[sem] = [];
+      grouped[sem].push(s);
+    });
+    const semesters = SEM_ORDER.filter(s => grouped[s]);
+
+    // Set default active semester
+    const effectiveSem = activeSem && grouped[activeSem] ? activeSem : (semesters[0] || null);
+
+    // Enrolled subject IDs for this student (from schedules as proxy)
+    const enrolledSubjectIds = new Set(schedules.map(sc => sc.subject_id));
+
+    // Stats
+    const totalSubjects = forYear.length;
+    const totalUnits    = forYear.reduce((sum, s) => sum + (s.total_units ?? 0), 0);
+    const enrolledCount = forYear.filter(s => enrolledSubjectIds.has(s.id)).length;
+
+    const semColors = {
+      '1st Semester': { bg: dark ? 'bg-blue-900/30 border-blue-500/30' : 'bg-blue-50 border-blue-200', text: dark ? 'text-blue-300' : 'text-blue-700', dot: 'bg-blue-500' },
+      '2nd Semester': { bg: dark ? 'bg-purple-900/30 border-purple-500/30' : 'bg-purple-50 border-purple-200', text: dark ? 'text-purple-300' : 'text-purple-700', dot: 'bg-purple-500' },
+      'Summer':       { bg: dark ? 'bg-amber-900/30 border-amber-500/30' : 'bg-amber-50 border-amber-200', text: dark ? 'text-amber-300' : 'text-amber-700', dot: 'bg-amber-500' },
+    };
+
+    return (
+      <div className="space-y-5">
+        {/* Header banner */}
+        <div className={`relative overflow-hidden rounded-2xl border p-5 ${dark ? 'bg-gradient-to-br from-violet-600/15 via-brand-600/10 to-slate-900/0 border-violet-500/20' : 'bg-gradient-to-br from-violet-50 via-orange-50 to-white border-violet-100'}`}>
+          <div className="absolute right-0 top-0 w-48 h-48 bg-violet-500/10 rounded-full -translate-y-1/3 translate-x-1/3 blur-3xl pointer-events-none" />
+          <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${dark ? 'bg-violet-500/20' : 'bg-violet-100'}`}>
+                <AcademicCapIcon className="w-6 h-6 text-violet-500" />
+              </div>
+              <div>
+                <h2 className={`text-lg font-black ${dark ? 'text-white' : 'text-slate-800'}`}>My Curriculum</h2>
+                <p className={`text-xs mt-0.5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  {yearLevel && programCode
+                    ? `${yearLevel} — ${programCode} Curriculum`
+                    : yearLevel
+                    ? `${yearLevel} — All Programs`
+                    : 'Full Curriculum'}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {[
+                { label: 'Subjects',  val: totalSubjects,  c: dark ? 'bg-violet-500/20 text-violet-300' : 'bg-violet-100 text-violet-700' },
+                { label: 'Total Units', val: totalUnits,   c: dark ? 'bg-orange-500/20 text-orange-300' : 'bg-orange-100 text-orange-700' },
+                { label: 'Enrolled',  val: enrolledCount,  c: dark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-100 text-emerald-700' },
+              ].map(st => (
+                <div key={st.label} className={`px-3 py-1.5 rounded-xl text-center ${st.c}`}>
+                  <p className="text-xl font-black leading-none">{st.val}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide mt-0.5">{st.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Warnings */}
+        {!yearLevel && (
+          <div className={`flex items-start gap-3 p-4 rounded-xl border text-xs ${dark ? 'bg-amber-900/20 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-700'}`}>
+            <InformationCircleIcon className={`w-4 h-4 shrink-0 mt-0.5 ${dark ? 'text-amber-400' : 'text-amber-500'}`} />
+            <span>Your year level hasn't been set yet. Contact the admin to update your profile.</span>
+          </div>
+        )}
+        {yearLevel && !programCode && (
+          <div className={`flex items-start gap-3 p-4 rounded-xl border text-xs ${dark ? 'bg-amber-900/20 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-700'}`}>
+            <InformationCircleIcon className={`w-4 h-4 shrink-0 mt-0.5 ${dark ? 'text-amber-400' : 'text-amber-500'}`} />
+            <span>Your program hasn't been set yet. Showing all subjects for your year level. Contact the admin to update your profile.</span>
+          </div>
+        )}
+
+        {/* No curriculum data */}
+        {forYear.length === 0 ? (
+          <div className={`rounded-2xl border-2 border-dashed p-12 text-center ${dark ? 'border-slate-700' : 'border-slate-200'}`}>
+            <AcademicCapIcon className={`w-14 h-14 mb-3 mx-auto ${dark ? 'text-slate-600' : 'text-slate-300'}`} />
+            <p className={`text-sm font-bold ${dark ? 'text-slate-400' : 'text-slate-600'}`}>No curriculum subjects found</p>
+            <p className={`text-xs mt-1 ${dark ? 'text-slate-600' : 'text-slate-400'}`}>
+              {yearLevel ? `No subjects defined for ${yearLevel} yet.` : 'The admin has not set up the curriculum yet.'}
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Semester tabs */}
+            <div className="flex gap-2 flex-wrap">
+              {semesters.map(sem => {
+                const sc = semColors[sem] || semColors['1st Semester'];
+                const isActive = effectiveSem === sem;
+                return (
+                  <button key={sem} onClick={() => setActiveSem(sem)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
+                      isActive
+                        ? `${sc.bg} ${sc.text} shadow-sm`
+                        : dark ? 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                    }`}>
+                    <span className={`w-2 h-2 rounded-full ${isActive ? sc.dot : dark ? 'bg-slate-600' : 'bg-slate-300'}`} />
+                    {sem}
+                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${isActive ? (dark ? 'bg-white/10' : 'bg-white/60') : dark ? 'bg-slate-700 text-slate-500' : 'bg-slate-100 text-slate-400'}`}>
+                      {(grouped[sem] || []).length}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Subject table for active semester */}
+            {effectiveSem && grouped[effectiveSem] && (
+              <div className={`rounded-2xl border overflow-hidden ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}>
+                <div className={`flex items-center justify-between px-5 py-3.5 border-b ${dark ? 'border-slate-700/60 bg-slate-900' : 'border-slate-100 bg-slate-50'}`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${(semColors[effectiveSem] || semColors['1st Semester']).dot}`} />
+                    <h4 className={`text-xs font-bold uppercase tracking-widest ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{effectiveSem}</h4>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${dark ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
+                      {grouped[effectiveSem].length} subject{grouped[effectiveSem].length !== 1 ? 's' : ''} · {grouped[effectiveSem].reduce((s, cs) => s + (cs.total_units ?? 0), 0)} units
+                    </span>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className={`border-b ${dark ? 'border-slate-700/60' : 'border-slate-100'}`}>
+                        {['Code', 'Subject', 'Lec', 'Lab', 'Units', 'Pre-requisites', 'Status'].map(h => (
+                          <th key={h} className={`px-4 py-3 text-left font-bold uppercase tracking-wider text-[10px] ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className={`divide-y ${dark ? 'divide-slate-700/30' : 'divide-slate-100'}`}>
+                      {grouped[effectiveSem].map(s => {
+                        const isEnrolled = enrolledSubjectIds.has(s.id);
+                        return (
+                          <tr key={s.id} className={`transition-colors ${dark ? 'hover:bg-slate-800/60' : 'hover:bg-slate-50'}`}>
+                            <td className="px-4 py-3 font-bold text-orange-400 whitespace-nowrap">{s.subject_code ?? '—'}</td>
+                            <td className={`px-4 py-3 font-medium max-w-[220px] ${dark ? 'text-slate-200' : 'text-slate-700'}`}>{s.descriptive_title ?? '—'}</td>
+                            <td className={`px-4 py-3 text-center ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{s.lec_units ?? '—'}</td>
+                            <td className={`px-4 py-3 text-center ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{s.lab_units ?? '—'}</td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] ${dark ? 'bg-orange-500/20 text-orange-300' : 'bg-orange-100 text-orange-700'}`}>{s.total_units ?? '—'}</span>
+                            </td>
+                            <td className={`px-4 py-3 max-w-[160px] truncate ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{s.pre_requisites || '—'}</td>
+                            <td className="px-4 py-3">
+                              {isEnrolled ? (
+                                <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${dark ? 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/50' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'}`}>
+                                  <CheckCircleIcon className="w-3 h-3" /> Enrolled
+                                </span>
+                              ) : (
+                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${dark ? 'bg-slate-700 text-slate-500' : 'bg-slate-100 text-slate-400'}`}>—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        <div className={`flex items-start gap-3 p-4 rounded-xl border text-xs ${dark ? 'bg-violet-900/20 border-violet-500/30 text-violet-300' : 'bg-violet-50 border-violet-300 text-violet-700'}`}>
+          <InformationCircleIcon className={`w-4 h-4 shrink-0 mt-0.5 ${dark ? 'text-violet-400' : 'text-violet-500'}`} />
+          <span>This shows the official curriculum for your year level. "Enrolled" status reflects your currently assigned subjects this semester.</span>
+        </div>
       </div>
     );
   };
@@ -3293,6 +3565,7 @@ const StudentDashboard = ({ user, onLogout }) => {
   const panels = {
     dashboard: <DashboardPanel />, profile: <ProfilePanel />,
     subjects: <SubjectsPanel />,
+    curriculum: <CurriculumPanel />,
     skills: <SkillsPanel />, affiliations: <AffiliationsPanel />, violations: <ViolationsPanel />,
     tasks: <TasksPanel />,
   };
@@ -3315,21 +3588,32 @@ const StudentDashboard = ({ user, onLogout }) => {
         <div className="fixed bottom-0 left-0 w-[400px] h-[400px] bg-purple-600/5 rounded-full blur-[120px] pointer-events-none" />
       </>}
 
-      {/* Sidebar — sits as a sibling to the right column, full height */}
+      {/* Mobile sidebar overlay */}
+      {sidebarMobileOpen && (
+        <div className="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm md:hidden"
+          onClick={() => setSidebarMobileOpen(false)} />
+      )}
+
+      {/* Sidebar */}
       <aside
-        className={`relative z-50 flex flex-col h-full border-r transition-all duration-300 ease-in-out shrink-0 ${sidebarExpanded ? 'w-64 shadow-2xl shadow-slate-900/50' : 'w-16'} ${dark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}
+        className={`
+          fixed md:relative z-50 flex flex-col h-full border-r transition-all duration-300 ease-in-out shrink-0
+          ${sidebarMobileOpen ? 'translate-x-0 w-64 shadow-2xl shadow-slate-900/50' : '-translate-x-full md:translate-x-0'}
+          ${sidebarExpanded ? 'md:w-64 md:shadow-2xl md:shadow-slate-900/50' : 'md:w-16'}
+          ${dark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}
+        `}
         onMouseEnter={() => setSidebarHovered(true)}
         onMouseLeave={() => setSidebarHovered(false)}
       >
         {/* User profile header */}
-        <div className={`flex items-center border-b h-20 overflow-hidden shrink-0 transition-all duration-300 ${sidebarExpanded ? 'px-4 justify-between' : 'px-0 justify-center'} ${dark ? 'border-slate-800' : 'border-slate-100'}`}>
+        <div className={`flex items-center border-b h-20 overflow-hidden shrink-0 transition-all duration-300 ${sidebarShowLabels ? 'px-4 justify-between' : 'px-0 justify-center'} ${dark ? 'border-slate-800' : 'border-slate-100'}`}>
           <div className="flex items-center">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-md shrink-0 overflow-hidden">
               {photoUrl
                 ? <img src={photoUrl} alt="Profile" className="w-full h-full object-cover object-top" />
                 : <span className="text-sm">{initials}</span>}
             </div>
-            <div className={`flex flex-col whitespace-nowrap transition-all duration-300 ml-3 ${sidebarExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 hidden'}`}>
+            <div className={`flex flex-col whitespace-nowrap transition-all duration-300 ml-3 ${sidebarShowLabels ? 'opacity-100 w-auto' : 'opacity-0 w-0 hidden'}`}>
               <p className={`text-sm font-semibold leading-tight ${dark ? 'text-slate-100' : 'text-slate-800'}`}>
                 {student
                   ? `${student.first_name}${student.middle_name ? ' ' + student.middle_name : ''} ${student.last_name}${student.suffix ? ' ' + student.suffix : ''}`
@@ -3338,11 +3622,11 @@ const StudentDashboard = ({ user, onLogout }) => {
               <p className={`text-[10px] mt-0.5 capitalize ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{user?.role} · CCS</p>
             </div>
           </div>
-          {sidebarExpanded && (
+          {sidebarShowLabels && (
             <button
               onClick={() => setSidebarPinned(p => !p)}
               title={sidebarPinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
-              className={`p-1.5 rounded-lg transition-colors focus:outline-none shrink-0 ${
+              className={`p-1.5 rounded-lg transition-colors focus:outline-none shrink-0 hidden md:flex ${
                 sidebarPinned
                   ? dark ? 'bg-slate-800 text-brand-400' : 'bg-brand-50 text-brand-500'
                   : dark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
@@ -3358,7 +3642,7 @@ const StudentDashboard = ({ user, onLogout }) => {
 
         {/* Nav items */}
         <div className="flex-1 overflow-y-auto px-3 py-6 space-y-2 overflow-x-hidden">
-          <p className={`px-2 text-xs font-semibold uppercase tracking-wider mb-4 transition-all duration-300 whitespace-nowrap ${sidebarExpanded ? 'opacity-100' : 'opacity-0 h-0 hidden'} ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
+          <p className={`px-2 text-xs font-semibold uppercase tracking-wider mb-4 transition-all duration-300 whitespace-nowrap ${sidebarShowLabels ? 'opacity-100' : 'opacity-0 h-0 hidden'} ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
             Navigation
           </p>
           {NAV.map(item => <NavLink key={item.id} item={item} />)}
@@ -3367,9 +3651,9 @@ const StudentDashboard = ({ user, onLogout }) => {
         {/* Bottom: logout only */}
         <div className={`p-3 border-t ${dark ? 'border-slate-800' : 'border-slate-100'}`}>
           <button onClick={onLogout} title="Log Out"
-            className={`w-full flex items-center rounded-xl transition-all duration-300 group text-slate-400 hover:bg-red-500/10 hover:text-red-400 border border-transparent hover:border-red-500/20 ${sidebarExpanded ? 'px-4 py-3' : 'px-0 py-3 justify-center'}`}>
-            <ArrowRightOnRectangleIcon className={`w-5 h-5 shrink-0 transition-all duration-300 group-hover:text-red-400 ${sidebarExpanded ? 'mr-3' : 'mr-0'}`} />
-            <span className={`font-medium tracking-wide whitespace-nowrap transition-all duration-300 text-sm ${sidebarExpanded ? 'opacity-100 w-auto inline-block' : 'opacity-0 w-0 hidden'}`}>Log Out</span>
+            className={`w-full flex items-center rounded-xl transition-all duration-300 group text-slate-400 hover:bg-red-500/10 hover:text-red-400 border border-transparent hover:border-red-500/20 ${sidebarShowLabels ? 'px-4 py-3' : 'px-0 py-3 justify-center'}`}>
+            <ArrowRightOnRectangleIcon className={`w-5 h-5 shrink-0 transition-all duration-300 group-hover:text-red-400 ${sidebarShowLabels ? 'mr-3' : 'mr-0'}`} />
+            <span className={`font-medium tracking-wide whitespace-nowrap transition-all duration-300 text-sm ${sidebarShowLabels ? 'opacity-100 w-auto inline-block' : 'opacity-0 w-0 hidden'}`}>Log Out</span>
           </button>
         </div>
       </aside>
@@ -3380,6 +3664,14 @@ const StudentDashboard = ({ user, onLogout }) => {
         {/* Top nav */}
         <header className={`relative z-30 flex items-center justify-between px-5 py-4 border-b shrink-0 ${dark ? 'border-slate-800/60 bg-slate-900 backdrop-blur-xl' : 'border-slate-200 bg-white shadow-sm'}`}>
           <div className="flex items-center gap-3">
+            {/* Hamburger — mobile only */}
+            <button onClick={() => setSidebarMobileOpen(v => !v)}
+              className={`md:hidden p-2 rounded-xl border transition-all ${dark ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'}`}
+              aria-label="Open menu">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-500 to-amber-400 flex items-center justify-center shadow-[0_0_15px_rgba(242,101,34,0.4)]">
               <img src="/ccs_logo.jpg" alt="CCS" className="w-6 h-6 object-contain rounded-lg" onError={e => { e.target.style.display = 'none'; }} />
             </div>
@@ -3409,7 +3701,7 @@ const StudentDashboard = ({ user, onLogout }) => {
 
               {/* Notification Dropdown */}
               {notifOpen && (
-                <div className={`absolute right-0 top-full mt-2 w-96 rounded-2xl shadow-2xl border overflow-hidden z-50 ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200'}`}>
+                <div className={`absolute right-0 top-full mt-2 w-80 sm:w-96 rounded-2xl shadow-2xl border overflow-hidden z-50 ${dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200'}`}>
                   {/* Header */}
                   <div className={`flex items-center justify-between px-4 py-3 border-b ${dark ? 'bg-slate-800/60 border-slate-700/60' : 'bg-slate-50 border-slate-100'}`}>
                     <div className="flex items-center gap-2">
@@ -3494,11 +3786,11 @@ const StudentDashboard = ({ user, onLogout }) => {
 
         {/* Main content */}
         <main className={`flex-1 overflow-x-hidden overflow-y-auto transition-colors duration-300 ${dark ? 'bg-slate-950' : 'bg-slate-50'}`}>
-          <div className={`sticky top-0 z-10 px-6 py-4 border-b flex items-center gap-3 ${dark ? 'bg-slate-900 border-slate-800/50 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'}`}>
+          <div className={`sticky top-0 z-10 px-4 sm:px-6 py-4 border-b flex items-center gap-3 ${dark ? 'bg-slate-900 border-slate-800/50 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'}`}>
             {activeNav?.Icon && <activeNav.Icon className="w-5 h-5 text-brand-500" />}
             <h2 className={`text-base font-bold ${dark ? 'text-slate-100' : 'text-slate-800'}`}>{activeNav?.label}</h2>
           </div>
-          <div className="p-6">{panels[active]}</div>
+          <div className="p-3 sm:p-6">{panels[active]}</div>
         </main>
       </div>
     </div>
