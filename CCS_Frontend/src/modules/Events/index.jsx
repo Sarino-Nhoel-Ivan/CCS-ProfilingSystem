@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../utils/api';
 import AddEventModal from './AddEventModal';
 import EditEventModal from './EditEventModal';
-import EventAttendeesModal from './EventAttendeesModal';
 import { useDarkMode } from '../../context/DarkModeContext';
 import {
   CalendarDaysIcon, MegaphoneIcon, PlusIcon, MapPinIcon,
-  PencilSquareIcon, TrashIcon, ChevronRightIcon, UsersIcon,
+  PencilSquareIcon, TrashIcon,
   AcademicCapIcon, TrophyIcon, SparklesIcon, HeartIcon, StarIcon,
 } from '@heroicons/react/24/outline';
 
@@ -27,8 +26,9 @@ const EventsModule = ({ events: propEvents = [], loading: propLoading = false, o
   const [error, setError] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isAttendeesModalOpen, setIsAttendeesModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedEventIds, setSelectedEventIds] = useState(new Set());
+  const [isBulkDeletingEvents, setIsBulkDeletingEvents] = useState(false);
 
   // If parent provides events via props, use those; otherwise use local state
   const events = onReload ? propEvents : localEvents;
@@ -59,6 +59,7 @@ const EventsModule = ({ events: propEvents = [], loading: propLoading = false, o
     if (window.confirm('Are you sure you want to delete this event?')) {
       try {
         await api.events.delete(id);
+        setSelectedEventIds(prev => { const n = new Set(prev); n.delete(id); return n; });
         handleSuccess();
       } catch (err) {
         alert(err.message || 'Failed to delete event');
@@ -66,14 +67,26 @@ const EventsModule = ({ events: propEvents = [], loading: propLoading = false, o
     }
   };
 
+  const handleBulkDeleteEvents = async () => {
+    if (selectedEventIds.size === 0) return;
+    if (!window.confirm(`Delete ${selectedEventIds.size} selected event${selectedEventIds.size > 1 ? 's' : ''}?`)) return;
+    setIsBulkDeletingEvents(true);
+    try {
+      await Promise.all([...selectedEventIds].map(id => api.events.delete(id)));
+      setSelectedEventIds(new Set());
+      handleSuccess();
+    } catch { alert('Some deletions failed.'); }
+    finally { setIsBulkDeletingEvents(false); }
+  };
+
+  const toggleEventSelect = (id, e) => {
+    e.stopPropagation();
+    setSelectedEventIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  };
+
   const openEditModal = (event) => {
     setSelectedEvent(event);
     setIsEditModalOpen(true);
-  };
-
-  const openAttendeesModal = (event) => {
-    setSelectedEvent(event);
-    setIsAttendeesModalOpen(true);
   };
 
   const getStatusColor = (status) => {
@@ -138,13 +151,27 @@ const EventsModule = ({ events: propEvents = [], loading: propLoading = false, o
             <h2 className={`text-xl font-bold ${boldText}`}>Events Dashboard</h2>
             <p className={`text-sm mt-1 ${subText}`}>Track departmental activities and student participation.</p>
           </div>
-          <button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-medium transition-colors shadow-sm shadow-brand-500/30 flex items-center"
-          >
-            <PlusIcon className="w-4 h-4 mr-2" />
-            Add Event
-          </button>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsAddModalOpen(true)}
+              className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-medium transition-colors shadow-sm shadow-brand-500/30 flex items-center"
+            >
+              <PlusIcon className="w-4 h-4 mr-2" />
+              Add Event
+            </button>
+            {/* Select All */}
+            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+              <span className={`text-xs font-semibold ${subText}`}>Select All</span>
+              <input type="checkbox"
+                checked={events.length > 0 && events.every(e => selectedEventIds.has(e.id))}
+                onChange={() => {
+                  const allIds = events.map(e => e.id);
+                  const allSelected = allIds.every(id => selectedEventIds.has(id));
+                  setSelectedEventIds(allSelected ? new Set() : new Set(allIds));
+                }}
+                className="w-4 h-4 rounded accent-orange-500 cursor-pointer" />
+            </label>
+          </div>
         </div>
 
         {error && (
@@ -154,6 +181,18 @@ const EventsModule = ({ events: propEvents = [], loading: propLoading = false, o
         )}
 
         <div className={`flex-1 overflow-y-auto p-6 ${dark ? 'bg-slate-950/30' : 'bg-slate-50/30'}`}>
+          {/* Bulk delete bar */}
+          {selectedEventIds.size > 0 && (
+            <div className={`flex items-center justify-between px-3 py-2 mb-4 rounded-xl border ${dark ? 'bg-red-900/20 border-red-800/40' : 'bg-red-50 border-red-200'}`}>
+              <span className={`text-xs font-semibold ${dark ? 'text-red-300' : 'text-red-700'}`}>{selectedEventIds.size} event{selectedEventIds.size > 1 ? 's' : ''} selected</span>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setSelectedEventIds(new Set())} className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors ${dark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'}`}>Clear</button>
+                <button onClick={handleBulkDeleteEvents} disabled={isBulkDeletingEvents} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-50">
+                  {isBulkDeletingEvents ? <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />Deleting...</> : 'Delete Selected'}
+                </button>
+              </div>
+            </div>
+          )}
           {(onReload ? propLoading : isLoading) ? (
             <div className="h-full flex items-center justify-center">
               <div className="w-10 h-10 border-4 border-slate-700 border-t-brand-500 rounded-full animate-spin"></div>
@@ -218,14 +257,8 @@ const EventsModule = ({ events: propEvents = [], loading: propLoading = false, o
                       </div>
 
                       {/* Footer */}
-                      <div className={`mt-4 pt-3 border-t flex justify-between items-center ${footerBdr}`}>
-                        <button className={`flex items-center gap-1 text-xs font-semibold transition-colors ${dark ? 'text-brand-400 hover:text-brand-300' : 'text-brand-500 hover:text-brand-600'}`}
-                          onClick={() => openAttendeesModal(event)}>
-                          <UsersIcon className="w-3.5 h-3.5" />
-                          View Attendees
-                          <ChevronRightIcon className="w-3 h-3" />
-                        </button>
-                        <div className="flex gap-1">
+                      <div className={`mt-4 pt-3 border-t flex justify-end items-center ${footerBdr}`}>
+                        <div className="flex items-center gap-1">
                           <button onClick={() => openEditModal(event)}
                             className={`p-1.5 rounded-lg transition-colors ${dark ? 'text-slate-400 hover:text-brand-400 hover:bg-brand-500/10' : 'text-slate-400 hover:text-brand-600 hover:bg-brand-50'}`}>
                             <PencilSquareIcon className="w-4 h-4" />
@@ -234,6 +267,10 @@ const EventsModule = ({ events: propEvents = [], loading: propLoading = false, o
                             className={`p-1.5 rounded-lg transition-colors ${dark ? 'text-slate-400 hover:text-red-400 hover:bg-red-500/10' : 'text-slate-400 hover:text-red-600 hover:bg-red-50'}`}>
                             <TrashIcon className="w-4 h-4" />
                           </button>
+                          {/* Checkbox beside delete */}
+                          <input type="checkbox" checked={selectedEventIds.has(event.id)}
+                            onChange={e => toggleEventSelect(event.id, e)} onClick={e => e.stopPropagation()}
+                            className="w-4 h-4 rounded accent-orange-500 cursor-pointer ml-0.5" />
                         </div>
                       </div>
                     </div>
@@ -266,17 +303,6 @@ const EventsModule = ({ events: propEvents = [], loading: propLoading = false, o
             setSelectedEvent(null);
           }}
           onSuccess={handleSuccess}
-        />
-      )}
-
-      {isAttendeesModalOpen && selectedEvent && (
-        <EventAttendeesModal
-          isOpen={isAttendeesModalOpen}
-          event={selectedEvent}
-          onClose={() => {
-            setIsAttendeesModalOpen(false);
-            setSelectedEvent(null);
-          }}
         />
       )}
     </div>

@@ -317,9 +317,19 @@ const exportAllXLSX = async (students) => {
   const types = [...new Set(students.map(s => s.student_type).filter(Boolean))];
   const typeOrder = types.map(t => ({ t, c: students.filter(s => s.student_type === t).length })).sort((a, b) => b.c - a.c);
 
+  // Skills breakdown — count how many students have each skill
+  const skillMap = {};
+  students.forEach(s => {
+    (s.skills || []).forEach(sk => {
+      const name = sk.skill_name || sk.name || 'Unknown';
+      skillMap[name] = (skillMap[name] || 0) + 1;
+    });
+  });
+  const skillOrder = Object.entries(skillMap).sort((a, b) => b[1] - a[1]).slice(0, 15); // top 15
+  const skillLabels = skillOrder.map(([name]) => name);
+  const skillVals   = skillOrder.map(([, count]) => count);
+
   // ── Sheet 2: Analytics ─────────────────────────────────────────────────────
-  // Layout: summary table on left (cols A-C), chart data on right (cols E-F)
-  // Charts will be embedded as XML below.
   const analyticsAoa = [
     ['CCS PROFILING SYSTEM — DATA ANALYTICS REPORT', '', ''],
     [`Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, '', ''],
@@ -338,6 +348,9 @@ const exportAllXLSX = async (students) => {
     [],
     ['STUDENTS BY TYPE', 'Count', '%'],
     ...typeOrder.map(({ t, c }) => [t, c, `${Math.round((c/total)*100)}%`]),
+    [],
+    ['TOP SKILLS', 'Students', '%'],
+    ...skillLabels.map((sk, i) => [sk, skillVals[i], `${Math.round((skillVals[i]/total)*100)}%`]),
   ];
 
   const ws2 = XLSX.utils.aoa_to_sheet(analyticsAoa);
@@ -403,6 +416,10 @@ const exportAllXLSX = async (students) => {
     const ptCount = categories.length;
     const axCat = chartId * 1000 + 1;
     const axVal = chartId * 1000 + 2;
+    // Compute a clean max for the Y axis (next round number above max value)
+    const maxVal = Math.max(...values, 1);
+    const yMax = Math.ceil(maxVal / Math.max(1, Math.pow(10, Math.floor(Math.log10(maxVal))))) *
+                 Math.max(1, Math.pow(10, Math.floor(Math.log10(maxVal))));
 
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
@@ -443,23 +460,17 @@ const exportAllXLSX = async (students) => {
             <c:showBubbleSize val="0"/>
           </c:dLbls>
           <c:cat>
-            <c:strRef>
-              <c:f>Sheet1!$A$1</c:f>
-              <c:strCache>
-                <c:ptCount val="${ptCount}"/>
-                ${catXml}
-              </c:strCache>
-            </c:strRef>
+            <c:strLit>
+              <c:ptCount val="${ptCount}"/>
+              ${catXml}
+            </c:strLit>
           </c:cat>
           <c:val>
-            <c:numRef>
-              <c:f>Sheet1!$B$1</c:f>
-              <c:numCache>
-                <c:formatCode>General</c:formatCode>
-                <c:ptCount val="${ptCount}"/>
-                ${valXml}
-              </c:numCache>
-            </c:numRef>
+            <c:numLit>
+              <c:formatCode>General</c:formatCode>
+              <c:ptCount val="${ptCount}"/>
+              ${valXml}
+            </c:numLit>
           </c:val>
         </c:ser>
         <c:axId val="${axCat}"/>
@@ -482,7 +493,11 @@ const exportAllXLSX = async (students) => {
       </c:catAx>
       <c:valAx>
         <c:axId val="${axVal}"/>
-        <c:scaling><c:orientation val="minMax"/></c:scaling>
+        <c:scaling>
+          <c:orientation val="minMax"/>
+          <c:min val="0"/>
+          <c:max val="${yMax}"/>
+        </c:scaling>
         <c:delete val="0"/>
         <c:axPos val="l"/>
         <c:numFmt formatCode="General" sourceLinked="0"/>
@@ -491,6 +506,7 @@ const exportAllXLSX = async (students) => {
         <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900"/></a:pPr></a:p></c:txPr>
         <c:crossAx val="${axCat}"/>
         <c:crossBetween val="between"/>
+        <c:majorUnit val="1"/>
       </c:valAx>
     </c:plotArea>
     <c:plotVisOnly val="1"/>
@@ -507,18 +523,25 @@ const exportAllXLSX = async (students) => {
   const chart1Xml = buildBarChartXml(1, 'Students by Year Level', yearLabels, yearCounts, 'F26522');
   // Program chart
   const chart2Xml = buildBarChartXml(2, 'Students by Program', progLabels, progVals, '3B82F6');
+  // Skills chart (only if there are skills)
+  const chart3Xml = skillLabels.length > 0
+    ? buildBarChartXml(3, 'Top Skills', skillLabels, skillVals, '22C55E')
+    : null;
 
   // Add chart files to zip
   zip.file('xl/charts/chart1.xml', chart1Xml);
   zip.file('xl/charts/chart2.xml', chart2Xml);
+  if (chart3Xml) zip.file('xl/charts/chart3.xml', chart3Xml);
 
   // Chart relationships
   zip.file('xl/charts/_rels/chart1.xml.rels',
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`);
   zip.file('xl/charts/_rels/chart2.xml.rels',
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`);
+  if (chart3Xml) zip.file('xl/charts/_rels/chart3.xml.rels',
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`);
 
-  // Drawing XML for sheet 2 (Analytics) — positions both charts
+  // Drawing XML for sheet 2 (Analytics) — positions all 3 charts side by side
   const drawingXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"
   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -545,26 +568,45 @@ const exportAllXLSX = async (students) => {
     <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
       <c:chart r:id="rId2"/>
     </a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/>
-  </xdr:twoCellAnchor>
+  </xdr:twoCellAnchor>${chart3Xml ? `
+  <xdr:twoCellAnchor moveWithCells="1" sizeWithCells="1">
+    <xdr:from><xdr:col>4</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>28</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
+    <xdr:to><xdr:col>11</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>40</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
+    <xdr:graphicFrame macro=""><xdr:nvGraphicFramePr>
+      <xdr:cNvPr id="4" name="Chart 3"/><xdr:cNvGraphicFramePr/>
+    </xdr:nvGraphicFramePr>
+    <xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm>
+    <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+      <c:chart r:id="rId3"/>
+    </a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/>
+  </xdr:twoCellAnchor>` : ''}
 </xdr:wsDr>`;
 
   zip.file('xl/drawings/drawing1.xml', drawingXml);
 
-  // Drawing relationships (chart1 and chart2)
-  zip.file('xl/drawings/_rels/drawing1.xml.rels',
-    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  // Drawing relationships
+  const drawingRelsContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart2.xml"/>
-</Relationships>`);
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart2.xml"/>${chart3Xml ? `
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart3.xml"/>` : ''}
+</Relationships>`;
+  zip.file('xl/drawings/_rels/drawing1.xml.rels', drawingRelsContent);
 
   // Patch sheet2 XML to reference the drawing
   const sheet2Path = 'xl/worksheets/sheet2.xml';
   let sheet2Xml = await zip.file(sheet2Path)?.async('string') || '';
   if (sheet2Xml && !sheet2Xml.includes('<drawing')) {
+    // Ensure xmlns:r is declared on the root <worksheet> element so r:id is valid
+    if (!sheet2Xml.includes('xmlns:r=')) {
+      sheet2Xml = sheet2Xml.replace(
+        '<worksheet ',
+        '<worksheet xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '
+      );
+    }
     // Insert drawing reference before </worksheet>
     sheet2Xml = sheet2Xml.replace('</worksheet>',
-      '<drawing r:id="rId_drawing1"/></worksheet>');
+      '<drawing r:id="rId1"/></worksheet>');
     zip.file(sheet2Path, sheet2Xml);
   }
 
@@ -574,8 +616,16 @@ const exportAllXLSX = async (students) => {
   if (!sheet2Rels) {
     sheet2Rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`;
   }
+  // Use rId1 — must not conflict with existing rels; check and use a safe ID
+  const drawingRelId = sheet2Rels.includes('rId1') ? 'rId99' : 'rId1';
+  // Fix the drawing reference in sheet XML to use the actual ID chosen
+  if (drawingRelId !== 'rId1') {
+    sheet2Xml = (await zip.file(sheet2Path)?.async('string')) || sheet2Xml;
+    sheet2Xml = sheet2Xml.replace('r:id="rId1"', `r:id="${drawingRelId}"`);
+    zip.file(sheet2Path, sheet2Xml);
+  }
   sheet2Rels = sheet2Rels.replace('</Relationships>',
-    `<Relationship Id="rId_drawing1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>`);
+    `<Relationship Id="${drawingRelId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>`);
   zip.file(sheet2RelsPath, sheet2Rels);
 
   // Patch [Content_Types].xml to register chart and drawing content types
@@ -586,6 +636,7 @@ const exportAllXLSX = async (students) => {
     contentTypes = contentTypes.replace('</Types>',
       `<Override PartName="/xl/charts/chart1.xml" ContentType="${chartType}"/>` +
       `<Override PartName="/xl/charts/chart2.xml" ContentType="${chartType}"/>` +
+      (chart3Xml ? `<Override PartName="/xl/charts/chart3.xml" ContentType="${chartType}"/>` : '') +
       `<Override PartName="/xl/drawings/drawing1.xml" ContentType="${drawingType}"/>` +
       `</Types>`);
     zip.file('[Content_Types].xml', contentTypes);
