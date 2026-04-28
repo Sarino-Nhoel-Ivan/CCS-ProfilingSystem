@@ -11,7 +11,7 @@ import {
   UsersIcon, CheckCircleIcon, ClockIcon,
   MagnifyingGlassIcon, PlusIcon, ArrowUpTrayIcon,
   ChevronRightIcon, BuildingOfficeIcon, EnvelopeIcon,
-  Squares2X2Icon, TableCellsIcon, ListBulletIcon, XMarkIcon,
+  Squares2X2Icon, TableCellsIcon, ListBulletIcon, XMarkIcon, FunnelIcon,
 } from '@heroicons/react/24/outline';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -527,6 +527,10 @@ const FacultyModule = ({ faculties: propFaculties = [], loading: propLoading = f
   const [viewMode, setViewMode]     = useState('list');
   const [listSearch, setListSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [showFacultyFilters, setShowFacultyFilters] = useState(false);
+  const [filterPosition, setFilterPosition] = useState('');
+  const [filterDept, setFilterDept] = useState('');
+  const [filterGender, setFilterGender] = useState('');
   const [isModalOpen, setIsModalOpen]         = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -555,7 +559,7 @@ const FacultyModule = ({ faculties: propFaculties = [], loading: propLoading = f
   const [isBulkDeletingFaculty, setIsBulkDeletingFaculty] = useState(false);
 
   // Reset pagination when search/filter/view changes
-  useEffect(() => { setVisibleCount(50); setCurrentFacultyPage(1); }, [listSearch, statusFilter, viewMode]);
+  useEffect(() => { setVisibleCount(50); setCurrentFacultyPage(1); }, [listSearch, statusFilter, filterPosition, filterDept, filterGender, viewMode]);
 
   const tabs = [
     { id: 'overview',         label: 'Overview' },
@@ -627,11 +631,16 @@ const FacultyModule = ({ faculties: propFaculties = [], loading: propLoading = f
 
   const fullTimePct = stats.total ? Math.round((stats.fullTime / stats.total) * 100) : 0;
 
+  const activeFilterCount = [filterPosition, filterDept, filterGender].filter(Boolean).length;
+
   const filtered = faculties.filter(f => {
     const matchSearch = !listSearch ||
       `${f.first_name} ${f.last_name} ${f.email || ''} ${f.position || ''}`.toLowerCase().includes(listSearch.toLowerCase());
-    const matchStatus = statusFilter === 'All' || f.employment_status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchStatus   = statusFilter === 'All' || f.employment_status === statusFilter;
+    const matchPosition = !filterPosition || (f.position || '').toLowerCase().includes(filterPosition.toLowerCase());
+    const matchDept     = !filterDept || String(f.department?.id || f.department_id) === filterDept;
+    const matchGender   = !filterGender || f.gender === filterGender;
+    return matchSearch && matchStatus && matchPosition && matchDept && matchGender;
   });
 
   return (
@@ -737,24 +746,40 @@ const FacultyModule = ({ faculties: propFaculties = [], loading: propLoading = f
                   {faculties.length} total
                 </span>
               </div>
-              {/* View toggle */}
-              <div className={`flex rounded-lg border overflow-hidden ${dark ? 'border-slate-700' : 'border-slate-200'}`}>
-                {[
-                  { id: 'cards', icon: <Squares2X2Icon className="w-3.5 h-3.5" /> },
-                  { id: 'table', icon: <TableCellsIcon className="w-3.5 h-3.5" /> },
-                  { id: 'list',  icon: <ListBulletIcon className="w-3.5 h-3.5" /> },
-                ].map(v => (
-                  <button key={v.id} onClick={() => setViewMode(v.id)}
-                    className={`px-2.5 py-1.5 transition-colors ${viewMode === v.id
-                      ? 'bg-orange-500 text-white'
-                      : dark ? 'bg-slate-800 text-slate-400 hover:bg-slate-700' : 'bg-white text-slate-500 hover:bg-slate-50'}`}>
-                    {v.icon}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2">
+                {/* Filters toggle — same position as Student module */}
+                <button onClick={() => setShowFacultyFilters(v => !v)}
+                  className={`relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors
+                    ${showFacultyFilters
+                      ? 'bg-orange-500 text-white border-orange-500'
+                      : dark ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                  <FunnelIcon className="w-3.5 h-3.5" />
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-orange-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+                {/* View toggle */}
+                <div className={`flex rounded-lg border overflow-hidden ${dark ? 'border-slate-700' : 'border-slate-200'}`}>
+                  {[
+                    { id: 'cards', icon: <Squares2X2Icon className="w-3.5 h-3.5" /> },
+                    { id: 'table', icon: <TableCellsIcon className="w-3.5 h-3.5" /> },
+                    { id: 'list',  icon: <ListBulletIcon className="w-3.5 h-3.5" /> },
+                  ].map(v => (
+                    <button key={v.id} onClick={() => setViewMode(v.id)}
+                      className={`px-2.5 py-1.5 transition-colors ${viewMode === v.id
+                        ? 'bg-orange-500 text-white'
+                        : dark ? 'bg-slate-800 text-slate-400 hover:bg-slate-700' : 'bg-white text-slate-500 hover:bg-slate-50'}`}>
+                      {v.icon}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* Search + filter */}
+            {/* Search + status filter */}
             <div className={`flex gap-3 px-5 py-3 border-b ${dark ? 'border-slate-700/60' : 'border-slate-100'}`}>
               <div className="relative flex-1">
                 <MagnifyingGlassIcon className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${dark ? 'text-slate-500' : 'text-slate-400'}`} />
@@ -775,6 +800,34 @@ const FacultyModule = ({ faculties: propFaculties = [], loading: propLoading = f
                 <option value="Contract">Contract</option>
               </select>
             </div>
+
+            {/* Advanced filters — same grid/select pattern as Student module */}
+            {showFacultyFilters && (
+              <div className={`grid grid-cols-2 sm:grid-cols-4 gap-2 px-5 py-3 border-b ${dark ? 'border-slate-700/60 bg-slate-800/40' : 'border-slate-100 bg-slate-50/60'}`}>
+                {[
+                  { value: filterPosition, setter: setFilterPosition, placeholder: 'All Positions',
+                    options: [...new Set(faculties.map(f => f.position).filter(Boolean))].sort().map(p => ({ value: p, label: p })) },
+                  { value: filterDept, setter: setFilterDept, placeholder: 'All Departments',
+                    options: [...new Map(faculties.filter(f => f.department).map(f => [f.department.id || f.department_id, f.department])).values()]
+                      .map(d => ({ value: String(d.id || d.department_id), label: d.department_name })) },
+                  { value: filterGender, setter: setFilterGender, placeholder: 'All Genders',
+                    options: [{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }] },
+                ].map(({ value, setter, placeholder, options }) => (
+                  <select key={placeholder} value={value} onChange={e => setter(e.target.value)}
+                    className={`rounded-lg border text-xs px-2.5 py-2 outline-none transition-colors ${dark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-white border-slate-200 text-slate-700'}`}>
+                    <option value="">{placeholder}</option>
+                    {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                ))}
+                {activeFilterCount > 0 && (
+                  <button onClick={() => { setFilterPosition(''); setFilterDept(''); setFilterGender(''); }}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${dark ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                    <XMarkIcon className="w-3.5 h-3.5" />
+                    Clear ({activeFilterCount})
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Results */}
             <div className="p-5">

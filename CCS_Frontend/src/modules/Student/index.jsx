@@ -138,6 +138,7 @@ const StudentModule = ({ students: propStudents = [], skills: propSkills = [], c
   const [filterCourse, setFilterCourse] = useState('');
   const [filterAffil, setFilterAffil] = useState('');
   const [filterYear, setFilterYear] = useState('');
+  const [filterSubject, setFilterSubject] = useState('');
   const [visibleCount, setVisibleCount] = useState(50);
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 50;
@@ -164,7 +165,7 @@ const StudentModule = ({ students: propStudents = [], skills: propSkills = [], c
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   // Reset pagination whenever filters or search change
-  useEffect(() => { setVisibleCount(50); setCurrentPage(1); }, [listSearch, listFilter, filterSkill, filterCourse, filterAffil, filterYear, viewMode]);
+  useEffect(() => { setVisibleCount(50); setCurrentPage(1); }, [listSearch, listFilter, filterSkill, filterCourse, filterAffil, filterYear, filterSubject, viewMode]);
 
   const card      = dark ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-100';
   const tabBar    = dark ? 'bg-slate-800/50 border-slate-700/60' : 'bg-slate-50/50 border-slate-100';
@@ -264,7 +265,12 @@ const StudentModule = ({ students: propStudents = [], skills: propSkills = [], c
   ];
 
   const enrollPct = stats.total ? Math.round((stats.enrolled / stats.total) * 100) : 0;
-  const activeFiltersCount = [filterSkill, filterCourse, filterAffil, filterYear].filter(Boolean).length;
+  const activeFiltersCount = [filterSkill, filterCourse, filterAffil, filterYear, filterSubject].filter(Boolean).length;
+
+  // Derive unique subjects from schedules for the subject filter
+  const availableSubjects = [...new Map(
+    schedules.filter(s => s.subject).map(s => [s.subject.id, s.subject])
+  ).values()].sort((a, b) => (a.subject_code || '').localeCompare(b.subject_code || ''));
 
   return (
     <div className="flex flex-col h-full w-full space-y-5">
@@ -436,12 +442,17 @@ const StudentModule = ({ students: propStudents = [], skills: propSkills = [], c
                   {[
                     { value: filterSkill,  setter: setFilterSkill,  placeholder: 'All Skills',
                       options: availableSkills.map(s => ({ value: s.id, label: s.skill_name })) },
-                    { value: filterCourse, setter: setFilterCourse, placeholder: 'All Courses',
-                      options: availableCourses.map(c => ({ value: c.id, label: c.course_code })) },
+                    { value: filterCourse, setter: setFilterCourse, placeholder: 'All Programs',
+                      options: [
+                        { value: 'Information Technology', label: 'BSIT - Information Technology' },
+                        { value: 'Computer Science',       label: 'BSCS - Computer Science' },
+                      ] },
                     { value: filterAffil,  setter: setFilterAffil,  placeholder: 'All Affiliations',
                       options: [...new Set(students.flatMap(s => s.affiliations?.map(a => a.organization_name) ?? []))].sort().map(o => ({ value: o, label: o })) },
                     { value: filterYear,   setter: setFilterYear,   placeholder: 'All Years',
                       options: ['1st Year','2nd Year','3rd Year','4th Year'].map(y => ({ value: y, label: y })) },
+                    { value: filterSubject, setter: setFilterSubject, placeholder: 'All Subjects',
+                      options: availableSubjects.map(s => ({ value: String(s.id), label: `${s.subject_code} — ${s.descriptive_title || s.subject_name || ''}` })) },
                   ].map(({ value, setter, placeholder, options }) => (
                     <select key={placeholder} value={value} onChange={e => setter(e.target.value)}
                       className={`rounded-lg border text-xs px-2.5 py-2 outline-none transition-colors ${dark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-white border-slate-200 text-slate-700'}`}>
@@ -449,6 +460,13 @@ const StudentModule = ({ students: propStudents = [], skills: propSkills = [], c
                       {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
                   ))}
+                  {activeFiltersCount > 0 && (
+                    <button onClick={() => { setFilterSkill(''); setFilterCourse(''); setFilterAffil(''); setFilterYear(''); setFilterSubject(''); }}
+                      className={`flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${dark ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                      <XMarkIcon className="w-3.5 h-3.5" />
+                      Clear ({activeFiltersCount})
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -469,10 +487,19 @@ const StudentModule = ({ students: propStudents = [], skills: propSkills = [], c
                     const matchSearch = !listSearch || `${s.first_name} ${s.last_name} ${s.student_number || ''}`.toLowerCase().includes(listSearch.toLowerCase());
                     const matchFilter = listFilter === 'All' || s.enrollment_status === listFilter;
                     const matchSkill  = !filterSkill  || s.skills?.some(sk => String(sk.id) === filterSkill);
-                    const matchCourse = !filterCourse || String(s.course_id) === filterCourse;
+                    const matchCourse = !filterCourse || s.program === filterCourse;
                     const matchAffil  = !filterAffil  || s.affiliations?.some(a => a.organization_name === filterAffil);
                     const matchYear   = !filterYear   || s.year_level === filterYear;
-                    return matchSearch && matchFilter && matchSkill && matchCourse && matchAffil && matchYear;
+                    // Subject filter — student must be in a section that has this subject scheduled
+                    const matchSubject = !filterSubject || (() => {
+                      const studentSection = s.section;
+                      if (!studentSection) return false;
+                      return schedules.some(sch =>
+                        (sch.section?.section_name === studentSection || String(sch.section_id) === String(s.section_id)) &&
+                        String(sch.subject_id) === filterSubject
+                      );
+                    })();
+                    return matchSearch && matchFilter && matchSkill && matchCourse && matchAffil && matchYear && matchSubject;
                   });
 
                   if (filtered.length === 0) return (
