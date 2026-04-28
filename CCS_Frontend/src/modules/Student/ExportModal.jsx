@@ -428,15 +428,26 @@ const exportAllXLSX = async (students) => {
   <c:chart>
     <c:title>
       <c:tx><c:rich><a:bodyPr/><a:lstStyle/>
-        <a:p><a:pPr><a:defRPr b="1" sz="1200"/></a:pPr>
-          <a:r><a:rPr lang="en-US" b="1"/><a:t>${escXml(title)}</a:t></a:r>
+        <a:p><a:pPr><a:defRPr b="1" sz="1300" spc="-100"/></a:pPr>
+          <a:r><a:rPr lang="en-US" b="1" dirty="0"><a:solidFill><a:srgbClr val="1E293B"/></a:solidFill></a:rPr>
+            <a:t>${escXml(title)}</a:t></a:r>
         </a:p>
       </c:rich></c:tx>
       <c:overlay val="0"/>
     </c:title>
     <c:autoTitleDeleted val="0"/>
     <c:plotArea>
-      <c:layout/>
+      <c:layout>
+        <c:manLayout>
+          <c:layoutTarget val="inner"/>
+          <c:xMode val="edge"/>
+          <c:yMode val="edge"/>
+          <c:x val="0.08"/>
+          <c:y val="0.08"/>
+          <c:w val="0.88"/>
+          <c:h val="0.78"/>
+        </c:manLayout>
+      </c:layout>
       <c:barChart>
         <c:barDir val="col"/>
         <c:grouping val="clustered"/>
@@ -446,12 +457,19 @@ const exportAllXLSX = async (students) => {
           <c:order val="0"/>
           <c:spPr>
             <a:solidFill><a:srgbClr val="${color}"/></a:solidFill>
-            <a:ln><a:noFill/></a:ln>
+            <a:ln w="0"><a:noFill/></a:ln>
+            <a:effectLst>
+              <a:softEdge rad="38100"/>
+            </a:effectLst>
           </c:spPr>
           <c:dLbls>
             <c:numFmt formatCode="General" sourceLinked="0"/>
             <c:spPr><a:noFill/><a:ln><a:noFill/></a:ln></c:spPr>
-            <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr b="1" sz="900"/></a:pPr></a:p></c:txPr>
+            <c:txPr><a:bodyPr/><a:lstStyle/>
+              <a:p><a:pPr><a:defRPr b="1" sz="900">
+                <a:solidFill><a:srgbClr val="1E293B"/></a:solidFill>
+              </a:defRPr></a:pPr></a:p>
+            </c:txPr>
             <c:showLegendKey val="0"/>
             <c:showVal val="1"/>
             <c:showCatName val="0"/>
@@ -483,13 +501,22 @@ const exportAllXLSX = async (students) => {
         <c:axPos val="b"/>
         <c:numFmt formatCode="General" sourceLinked="0"/>
         <c:tickLblPos val="nextTo"/>
-        <c:spPr><a:ln><a:solidFill><a:srgbClr val="D1D5DB"/></a:solidFill></a:ln></c:spPr>
-        <c:txPr><a:bodyPr rot="-2700000"/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900"/></a:pPr></a:p></c:txPr>
+        <c:spPr>
+          <a:ln w="9525"><a:solidFill><a:srgbClr val="E2E8F0"/></a:solidFill></a:ln>
+        </c:spPr>
+        <c:txPr>
+          <a:bodyPr rot="-2700000"/>
+          <a:lstStyle/>
+          <a:p><a:pPr><a:defRPr sz="850">
+            <a:solidFill><a:srgbClr val="64748B"/></a:solidFill>
+          </a:defRPr></a:pPr></a:p>
+        </c:txPr>
         <c:crossAx val="${axVal}"/>
         <c:auto val="1"/>
         <c:lblAlgn val="ctr"/>
         <c:lblOffset val="100"/>
         <c:noMultiLvlLbl val="0"/>
+        <c:tickMarkSkip val="1"/>
       </c:catAx>
       <c:valAx>
         <c:axId val="${axVal}"/>
@@ -500,13 +527,28 @@ const exportAllXLSX = async (students) => {
         </c:scaling>
         <c:delete val="0"/>
         <c:axPos val="l"/>
+        <c:majorGridlines>
+          <c:spPr>
+            <a:ln w="9525" cap="flat" cmpd="sng">
+              <a:solidFill><a:srgbClr val="F1F5F9"/></a:solidFill>
+              <a:prstDash val="solid"/>
+            </a:ln>
+          </c:spPr>
+        </c:majorGridlines>
         <c:numFmt formatCode="General" sourceLinked="0"/>
         <c:tickLblPos val="nextTo"/>
-        <c:spPr><a:ln><a:solidFill><a:srgbClr val="D1D5DB"/></a:solidFill></a:ln></c:spPr>
-        <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900"/></a:pPr></a:p></c:txPr>
+        <c:spPr>
+          <a:ln w="9525"><a:solidFill><a:srgbClr val="E2E8F0"/></a:solidFill></a:ln>
+        </c:spPr>
+        <c:txPr>
+          <a:bodyPr/>
+          <a:lstStyle/>
+          <a:p><a:pPr><a:defRPr sz="850">
+            <a:solidFill><a:srgbClr val="64748B"/></a:solidFill>
+          </a:defRPr></a:pPr></a:p>
+        </c:txPr>
         <c:crossAx val="${axCat}"/>
         <c:crossBetween val="between"/>
-        <c:majorUnit val="1"/>
       </c:valAx>
     </c:plotArea>
     <c:plotVisOnly val="1"/>
@@ -514,7 +556,12 @@ const exportAllXLSX = async (students) => {
   </c:chart>
   <c:spPr>
     <a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill>
-    <a:ln><a:solidFill><a:srgbClr val="E2E8F0"/></a:solidFill></a:ln>
+    <a:ln w="9525"><a:solidFill><a:srgbClr val="E2E8F0"/></a:solidFill></a:ln>
+    <a:effectLst>
+      <a:outerShdw blurRad="38100" dist="12700" dir="5400000" algn="t" rotWithShape="0">
+        <a:srgbClr val="000000"><a:alpha val="8000"/></a:srgbClr>
+      </a:outerShdw>
+    </a:effectLst>
   </c:spPr>
 </c:chartSpace>`;
   };
@@ -541,18 +588,18 @@ const exportAllXLSX = async (students) => {
   if (chart3Xml) zip.file('xl/charts/_rels/chart3.xml.rels',
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`);
 
-  // Drawing XML for sheet 2 (Analytics) — charts stacked vertically, starting after data
+  // Drawing XML for sheet 2 (Analytics) — charts placed below data, starting at col B to avoid row number gutter
   const chartCount = chart3Xml ? 3 : 2;
   const analyticsRowCount = analyticsAoa.length;
-  // Place charts below the data table with proper spacing
-  const chartStartRow = analyticsRowCount + 2;
-  const chartHeight = 18; // rows per chart
+  const chartStartRow = analyticsRowCount + 3;
+  const chartHeight = 20;
   const chartGap = 2;
 
+  // col 1 = column B (avoids the row-number gutter that causes black bar glitch)
   const makeAnchor = (id, rId, startRow) => `
   <xdr:twoCellAnchor moveWithCells="0" sizeWithCells="0">
-    <xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${startRow}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
-    <xdr:to><xdr:col>8</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${startRow + chartHeight}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
+    <xdr:from><xdr:col>1</xdr:col><xdr:colOff>114300</xdr:colOff><xdr:row>${startRow}</xdr:row><xdr:rowOff>38100</xdr:rowOff></xdr:from>
+    <xdr:to><xdr:col>9</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${startRow + chartHeight}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
     <xdr:graphicFrame macro=""><xdr:nvGraphicFramePr>
       <xdr:cNvPr id="${id}" name="Chart ${id - 1}"/><xdr:cNvGraphicFramePr/>
     </xdr:nvGraphicFramePr>
