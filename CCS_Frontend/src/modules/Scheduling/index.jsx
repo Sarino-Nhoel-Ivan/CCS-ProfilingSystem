@@ -384,7 +384,7 @@ const SchedulingModule = ({ students = [], faculties = [] }) => {
         {error && <div className="m-4 p-4 bg-red-50 text-red-600 rounded-xl border border-red-100 text-sm">{error}</div>}
 
         {/* Content */}
-        <div className="overflow-x-auto max-h-[calc(100vh-520px)] overflow-y-auto">
+        <div className="overflow-x-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
               <div className={`w-10 h-10 border-4 rounded-full animate-spin ${dark ? 'border-slate-700 border-t-brand-500' : 'border-slate-200 border-t-brand-600'}`} />

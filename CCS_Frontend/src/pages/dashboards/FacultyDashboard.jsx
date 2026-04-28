@@ -40,28 +40,30 @@ const fmtTime = (t) => { if(!t) return '—'; const [h,m]=t.split(':'); const hr
 const Spinner = () => { const dark=useTheme(); return <div className="flex items-center justify-center py-16"><div className={`w-8 h-8 border-4 rounded-full animate-spin border-t-brand-500 ${dark?'border-slate-700':'border-slate-200'}`}/></div>; };
 const ErrMsg = ({msg}) => msg ? <div className="mb-4 p-3 rounded-xl bg-red-900/30 border border-red-800/50 text-red-400 text-sm">{msg}</div> : null;
 
-const SectionCard = ({title,action,children}) => {
+const SectionCard = ({title,action,children,icon}) => {
   const dark=useTheme();
   return (
     <div className={`rounded-2xl border overflow-hidden ${dark?'bg-slate-900 border-slate-700/60':'bg-white border-slate-200 shadow-sm'}`}>
-      <div className={`flex items-center justify-between px-5 py-3.5 border-b ${dark?'border-slate-700/60':'border-slate-100'}`}>
-        <div className="flex items-center gap-2.5">
-          <span className="w-4 h-px bg-orange-400 shrink-0"/>
-          <h4 className={`text-xs font-bold uppercase tracking-widest ${dark?'text-orange-400':'text-orange-500'}`}>{title}</h4>
+      <div className={`px-5 py-3.5 border-b ${dark?'border-slate-700/60':'border-slate-100'}`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {icon&&<span className="text-sm">{icon}</span>}
+            <h4 className={`text-xs font-bold uppercase tracking-widest ${dark?'text-orange-400':'text-orange-500'}`}>{title}</h4>
+          </div>
+          {action}
         </div>
-        {action}
       </div>
       <div className="px-5 py-4">{children}</div>
     </div>
   );
 };
 
-const Row = ({label,value}) => {
+const Row = ({label,value,highlight}) => {
   const dark=useTheme();
   return (
-    <div className="flex justify-between items-center gap-4 py-2 border-b last:border-0" style={{borderColor:dark?'rgba(100,116,139,0.15)':'rgba(226,232,240,0.8)'}}>
-      <span className={`text-xs shrink-0 ${dark?'text-slate-500':'text-slate-400'}`}>{label}</span>
-      <span className={`text-xs font-semibold text-right break-words ${dark?'text-slate-200':'text-slate-800'}`}>{value}</span>
+    <div className="flex justify-between items-start gap-4 py-2.5">
+      <span className={`text-xs font-medium ${dark?'text-slate-500':'text-slate-400'}`}>{label}</span>
+      <span className={`text-xs font-semibold text-right break-words ${highlight?dark?'text-orange-400':'text-orange-600':dark?'text-slate-200':'text-slate-800'}`}>{value||'—'}</span>
     </div>
   );
 };
@@ -125,12 +127,182 @@ const NavLink = ({item,active,sidebarExpanded,onSelect}) => {
   );
 };
 
+/* ════ ANALYTICS COMPONENTS ════ */
+
+// Simple Bar Chart Component
+const BarChart = ({data,height=200,color='#f26522'}) => {
+  const dark=useTheme();
+  if(!data||data.length===0) return null;
+  const maxVal=Math.max(...data.map(d=>d.value),1);
+  return (
+    <div className="flex items-end justify-between gap-2" style={{height:`${height}px`}}>
+      {data.map((item,i)=>(
+        <div key={i} className="flex-1 flex flex-col items-center gap-2">
+          <div className="relative w-full flex flex-col justify-end" style={{height:`${height-30}px`}}>
+            <div className={`w-full rounded-t-lg transition-all duration-500 hover:opacity-80 relative group`}
+              style={{height:`${(item.value/maxVal)*100}%`,background:`linear-gradient(to top, ${color}, ${color}dd)`}}>
+              <div className={`absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity ${dark?'text-slate-200':'text-slate-700'}`}>
+                {item.value}
+              </div>
+            </div>
+          </div>
+          <span className={`text-[10px] font-semibold text-center ${dark?'text-slate-400':'text-slate-500'}`}>{item.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// Donut Chart Component
+const DonutChart = ({data,size=120}) => {
+  const dark=useTheme();
+  if(!data||data.length===0) return null;
+  const total=data.reduce((sum,d)=>sum+d.value,0);
+  if(total===0) return null;
+  
+  let currentAngle=0;
+  const segments=data.map(item=>{
+    const percentage=(item.value/total)*100;
+    const angle=(item.value/total)*360;
+    const startAngle=currentAngle;
+    currentAngle+=angle;
+    return {...item,percentage,startAngle,angle};
+  });
+
+  const radius=size/2;
+  const innerRadius=radius*0.6;
+  const center=size/2;
+
+  const polarToCartesian=(angle)=>{
+    const rad=(angle-90)*Math.PI/180;
+    return {
+      x:center+radius*Math.cos(rad),
+      y:center+radius*Math.sin(rad)
+    };
+  };
+
+  return (
+    <div className="flex items-center gap-4">
+      <svg width={size} height={size} className="transform -rotate-90">
+        {segments.map((seg,i)=>{
+          const start=polarToCartesian(seg.startAngle);
+          const end=polarToCartesian(seg.startAngle+seg.angle);
+          const largeArc=seg.angle>180?1:0;
+          const outerPath=`M ${center} ${center} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
+          const startInner=polarToCartesian(seg.startAngle);
+          const endInner=polarToCartesian(seg.startAngle+seg.angle);
+          const innerPath=`M ${center} ${center} L ${startInner.x} ${startInner.y} A ${radius} ${radius} 0 ${largeArc} 1 ${endInner.x} ${endInner.y} Z`;
+          
+          return (
+            <g key={i}>
+              <path d={outerPath} fill={seg.color} opacity="0.9" className="hover:opacity-100 transition-opacity"/>
+              <circle cx={center} cy={center} r={innerRadius} fill={dark?'#0f172a':'#ffffff'}/>
+            </g>
+          );
+        })}
+      </svg>
+      <div className="space-y-2">
+        {segments.map((seg,i)=>(
+          <div key={i} className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-sm" style={{backgroundColor:seg.color}}/>
+            <span className={`text-xs ${dark?'text-slate-300':'text-slate-600'}`}>
+              {seg.label}: <span className="font-bold">{seg.percentage.toFixed(1)}%</span>
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Line Chart Component
+const LineChart = ({data,height=150,color='#f26522'}) => {
+  const dark=useTheme();
+  if(!data||data.length<2) return null;
+  const maxVal=Math.max(...data.map(d=>d.value),1);
+  const minVal=Math.min(...data.map(d=>d.value),0);
+  const range=maxVal-minVal||1;
+  const width=300;
+  const padding=20;
+  const chartWidth=width-padding*2;
+  const chartHeight=height-padding*2;
+  
+  const points=data.map((d,i)=>{
+    const x=padding+(i/(data.length-1))*chartWidth;
+    const y=padding+chartHeight-((d.value-minVal)/range)*chartHeight;
+    return {x,y,value:d.value,label:d.label};
+  });
+  
+  const pathD=points.map((p,i)=>`${i===0?'M':'L'} ${p.x} ${p.y}`).join(' ');
+  const areaD=`${pathD} L ${points[points.length-1].x} ${height-padding} L ${padding} ${height-padding} Z`;
+  
+  return (
+    <div>
+      <svg width={width} height={height} className="overflow-visible">
+        <defs>
+          <linearGradient id="lineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={color} stopOpacity="0.3"/>
+            <stop offset="100%" stopColor={color} stopOpacity="0.05"/>
+          </linearGradient>
+        </defs>
+        <path d={areaD} fill="url(#lineGradient)"/>
+        <path d={pathD} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+        {points.map((p,i)=>(
+          <g key={i}>
+            <circle cx={p.x} cy={p.y} r="4" fill={color} className="hover:r-6 transition-all"/>
+            <text x={p.x} y={height-5} textAnchor="middle" className={`text-[10px] font-semibold ${dark?'fill-slate-400':'fill-slate-500'}`}>
+              {p.label}
+            </text>
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+};
+
+// Analytics Card Component
+const AnalyticsCard = ({title,value,change,icon,trend='up',color='orange'}) => {
+  const dark=useTheme();
+  const colorMap={
+    orange:{bg:dark?'bg-orange-900/40':'bg-orange-50',text:dark?'text-orange-400':'text-orange-500',border:'border-orange-500'},
+    blue:{bg:dark?'bg-blue-900/40':'bg-blue-50',text:dark?'text-blue-400':'text-blue-500',border:'border-blue-500'},
+    green:{bg:dark?'bg-green-900/40':'bg-green-50',text:dark?'text-green-400':'text-green-500',border:'border-green-500'},
+    purple:{bg:dark?'bg-purple-900/40':'bg-purple-50',text:dark?'text-purple-400':'text-purple-500',border:'border-purple-500'},
+  };
+  const c=colorMap[color]||colorMap.orange;
+  
+  return (
+    <div className={`p-5 rounded-2xl border-l-4 border shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${c.border} ${dark?'bg-slate-900 border-slate-700/60':'bg-white border-slate-200'}`}>
+      <div className="flex items-start justify-between mb-3">
+        <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${c.bg} ${c.text}`}>
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={icon}/>
+          </svg>
+        </div>
+        {change!==undefined&&(
+          <div className={`flex items-center gap-1 text-xs font-semibold ${trend==='up'?'text-green-500':'text-red-500'}`}>
+            <svg className={`w-3 h-3 ${trend==='down'?'rotate-180':''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+            </svg>
+            {Math.abs(change)}%
+          </div>
+        )}
+      </div>
+      <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${dark?'text-slate-400':'text-slate-500'}`}>{title}</p>
+      <p className={`text-3xl font-bold ${dark?'text-slate-100':'text-slate-800'}`}>{value}</p>
+    </div>
+  );
+};
+
 /* ════ DASHBOARD PANEL ════ */
-const DashboardPanel = ({user,faculty,facultyName,initials,subjectsCount,studentsCount,schedulesCount,eventsCount}) => {
+const DashboardPanel = ({user,faculty,facultyId,facultyName,initials,subjectsCount,studentsCount,schedulesCount,eventsCount,isActive}) => {
   const dark=useTheme();
   const [imgErr,setImgErr]=useState(false);
   const [events,setEvents]=useState([]);
   const [eventsLoading,setEventsLoading]=useState(true);
+  const [analytics,setAnalytics]=useState(null);
+  const [analyticsLoading,setAnalyticsLoading]=useState(true);
+  const hasLoadedAnalytics=useRef(false);
 
   useEffect(()=>{
     fetchApi('/events').then(data=>{
@@ -139,6 +311,115 @@ const DashboardPanel = ({user,faculty,facultyName,initials,subjectsCount,student
       setEvents(sorted);
     }).catch(()=>{}).finally(()=>setEventsLoading(false));
   },[]);
+
+  // Load analytics data function
+  const loadAnalytics=useCallback(async(silent=false)=>{
+    if(!silent){setAnalyticsLoading(true);}
+    try{
+      // Bust cache to ensure we get fresh data from admin/student changes
+      cache.bust('schedules');
+      cache.bust('students');
+      cache.bust('subjects');
+      
+      const [schedules,students,allSubjects]=await Promise.all([
+        fetchApi('/schedules'),
+        fetchApi('/students'),
+        fetchApi('/subjects')
+      ]);
+      
+      // Update cache with fresh data
+      cache.set('schedules',schedules);
+      cache.set('students',students);
+      cache.set('subjects',allSubjects);
+      
+      // Filter my schedules and students
+      const mySchedules=schedules.filter(s=>Number(s.faculty_id)===Number(facultyId));
+      const mySecNames=new Set(mySchedules.map(s=>s.section?.section_name).filter(Boolean));
+      const myStudents=students.filter(s=>s.section&&mySecNames.has(s.section));
+      
+      // Calculate analytics
+      const enrolledCount=myStudents.filter(s=>s.enrollment_status==='Enrolled').length;
+      const violationsCount=myStudents.reduce((sum,s)=>(sum+(s.violations?.length||0)),0);
+      
+      // Year level distribution
+      const yearDist={};
+      myStudents.forEach(s=>{
+        const year=s.year_level||'Unknown';
+        yearDist[year]=(yearDist[year]||0)+1;
+      });
+      
+      // Enrollment status distribution
+      const statusDist={};
+      myStudents.forEach(s=>{
+        const status=s.enrollment_status||'Unknown';
+        statusDist[status]=(statusDist[status]||0)+1;
+      });
+      
+      // Subject enrollment (students per subject)
+      const subjectEnrollment={};
+      mySchedules.forEach(sch=>{
+        if(sch.subject&&sch.section){
+          const key=sch.subject.subject_code;
+          if(!subjectEnrollment[key]){
+            subjectEnrollment[key]={
+              code:sch.subject.subject_code,
+              title:sch.subject.descriptive_title,
+              students:new Set()
+            };
+          }
+          myStudents.filter(s=>s.section===sch.section.section_name).forEach(s=>{
+            subjectEnrollment[key].students.add(s.id);
+          });
+        }
+      });
+      
+      // Weekly schedule distribution
+      const dayDist={Monday:0,Tuesday:0,Wednesday:0,Thursday:0,Friday:0,Saturday:0};
+      mySchedules.forEach(s=>{
+        if(dayDist[s.day_of_week]!==undefined){
+          dayDist[s.day_of_week]++;
+        }
+      });
+      
+      setAnalytics({
+        totalStudents:myStudents.length,
+        enrolledStudents:enrolledCount,
+        totalViolations:violationsCount,
+        yearDistribution:Object.entries(yearDist).map(([label,value])=>({label,value})),
+        statusDistribution:Object.entries(statusDist).map(([label,value])=>({
+          label,
+          value,
+          color:label==='Enrolled'?'#10b981':label==='Not Enrolled'?'#ef4444':'#6b7280'
+        })),
+        subjectEnrollment:Object.values(subjectEnrollment).map(s=>({
+          label:s.code,
+          value:s.students.size,
+          title:s.title
+        })),
+        weeklySchedule:Object.entries(dayDist).map(([label,value])=>({label:label.slice(0,3),value})),
+        avgStudentsPerSubject:subjectsCount>0?Math.round(myStudents.length/subjectsCount):0
+      });
+    }catch(err){
+      console.error('Analytics load error:',err);
+    }finally{
+      if(!silent){setAnalyticsLoading(false);}
+    }
+  },[facultyId,subjectsCount]);
+
+  // Initial load
+  useEffect(()=>{
+    if(facultyId){
+      loadAnalytics(false);
+      hasLoadedAnalytics.current=true;
+    }
+  },[facultyId,loadAnalytics]);
+
+  // Silent refresh whenever dashboard tab becomes active (picks up admin edits)
+  useEffect(()=>{
+    if(isActive&&hasLoadedAnalytics.current&&facultyId){
+      loadAnalytics(true);
+    }
+  },[isActive,facultyId,loadAnalytics]);
 
   const fmtEventDate=(raw)=>{
     if(!raw) return '—';
@@ -188,30 +469,183 @@ const DashboardPanel = ({user,faculty,facultyName,initials,subjectsCount,student
           </div>
           <div>
             <p className={`text-xs font-semibold uppercase tracking-wider ${dark?'text-orange-400':'text-orange-500'}`}>Welcome back</p>
-            <h2 className={`text-2xl font-bold mt-0.5 ${dark?'text-white':'text-slate-800'}`}>{facultyName||user?.name} 👋</h2>
+            <h2 className={`text-2xl font-bold mt-0.5 ${dark?'text-white':'text-slate-800'}`}>{facultyName||user?.name}</h2>
             <p className={`text-sm mt-1 ${dark?'text-slate-400':'text-slate-500'}`}>CCS Faculty Member · Profile Hub</p>
           </div>
         </div>
       </div>
 
-      {/* Stat cards — live data */}
+      {/* Analytics Cards — Enhanced with trends */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {stats.map(s=>(
-          <div key={s.label} className={`p-5 rounded-2xl border-l-4 border shadow-sm flex items-center gap-4 ${s.accent} ${dark?'bg-slate-900 border-slate-700/60':'bg-white border-slate-200'}`}>
-            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${s.iconBg}`}>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={s.icon}/></svg>
+        <AnalyticsCard
+          title="Subjects Handled"
+          value={subjectsCount}
+          icon="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+          color="blue"
+        />
+        <AnalyticsCard
+          title="Total Students"
+          value={studentsCount}
+          change={analytics?.enrolledStudents?Math.round((analytics.enrolledStudents/studentsCount)*100):undefined}
+          trend="up"
+          icon="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+          color="orange"
+        />
+        <AnalyticsCard
+          title="Class Schedules"
+          value={schedulesCount}
+          icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+          color="green"
+        />
+        <AnalyticsCard
+          title="Upcoming Events"
+          value={eventsCount}
+          icon="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+          color="purple"
+        />
+      </div>
+
+      {/* Data Analytics Section */}
+      {analyticsLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className={`w-8 h-8 border-4 rounded-full animate-spin border-t-brand-500 ${dark?'border-slate-700':'border-slate-200'}`}/>
+        </div>
+      ) : analytics && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Student Distribution by Year Level */}
+          <div className={`rounded-2xl border p-6 ${dark?'bg-slate-900 border-slate-700/60':'bg-white border-slate-200 shadow-sm'}`}>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className={`text-sm font-bold ${dark?'text-slate-100':'text-slate-800'}`}>Student Distribution</h3>
+                <p className={`text-xs mt-0.5 ${dark?'text-slate-400':'text-slate-500'}`}>By Year Level</p>
+              </div>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${dark?'bg-blue-900/40 text-blue-400':'bg-blue-50 text-blue-500'}`}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+              </div>
             </div>
-            <div>
-              <p className={`text-xs font-semibold uppercase tracking-wider ${dark?'text-slate-400':'text-slate-500'}`}>{s.label}</p>
-              <p className={`text-2xl font-bold mt-0.5 ${dark?'text-slate-100':'text-slate-800'}`}>{s.val}</p>
+            {analytics.yearDistribution.length>0 ? (
+              <BarChart data={analytics.yearDistribution} height={180} color="#3b82f6"/>
+            ) : (
+              <p className={`text-xs text-center py-8 ${dark?'text-slate-500':'text-slate-400'}`}>No data available</p>
+            )}
+          </div>
+
+          {/* Enrollment Status */}
+          <div className={`rounded-2xl border p-6 ${dark?'bg-slate-900 border-slate-700/60':'bg-white border-slate-200 shadow-sm'}`}>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className={`text-sm font-bold ${dark?'text-slate-100':'text-slate-800'}`}>Enrollment Status</h3>
+                <p className={`text-xs mt-0.5 ${dark?'text-slate-400':'text-slate-500'}`}>Current semester</p>
+              </div>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${dark?'bg-green-900/40 text-green-400':'bg-green-50 text-green-500'}`}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+            </div>
+            {analytics.statusDistribution.length>0 ? (
+              <div className="flex items-center justify-center">
+                <DonutChart data={analytics.statusDistribution} size={140}/>
+              </div>
+            ) : (
+              <p className={`text-xs text-center py-8 ${dark?'text-slate-500':'text-slate-400'}`}>No data available</p>
+            )}
+          </div>
+
+          {/* Subject Enrollment */}
+          <div className={`rounded-2xl border p-6 ${dark?'bg-slate-900 border-slate-700/60':'bg-white border-slate-200 shadow-sm'}`}>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className={`text-sm font-bold ${dark?'text-slate-100':'text-slate-800'}`}>Subject Enrollment</h3>
+                <p className={`text-xs mt-0.5 ${dark?'text-slate-400':'text-slate-500'}`}>Students per subject</p>
+              </div>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${dark?'bg-orange-900/40 text-orange-400':'bg-orange-50 text-orange-500'}`}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                </svg>
+              </div>
+            </div>
+            {analytics.subjectEnrollment.length>0 ? (
+              <BarChart data={analytics.subjectEnrollment} height={180} color="#f26522"/>
+            ) : (
+              <p className={`text-xs text-center py-8 ${dark?'text-slate-500':'text-slate-400'}`}>No subjects assigned</p>
+            )}
+          </div>
+
+          {/* Weekly Schedule Distribution */}
+          <div className={`rounded-2xl border p-6 ${dark?'bg-slate-900 border-slate-700/60':'bg-white border-slate-200 shadow-sm'}`}>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className={`text-sm font-bold ${dark?'text-slate-100':'text-slate-800'}`}>Weekly Schedule</h3>
+                <p className={`text-xs mt-0.5 ${dark?'text-slate-400':'text-slate-500'}`}>Classes per day</p>
+              </div>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${dark?'bg-purple-900/40 text-purple-400':'bg-purple-50 text-purple-500'}`}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+              </div>
+            </div>
+            {analytics.weeklySchedule.length>0 ? (
+              <BarChart data={analytics.weeklySchedule} height={180} color="#a855f7"/>
+            ) : (
+              <p className={`text-xs text-center py-8 ${dark?'text-slate-500':'text-slate-400'}`}>No schedule data</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Quick Stats Row */}
+      {analytics && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className={`p-5 rounded-2xl border ${dark?'bg-gradient-to-br from-blue-900/20 to-slate-900 border-blue-700/40':'bg-gradient-to-br from-blue-50 to-white border-blue-200'}`}>
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${dark?'bg-blue-900/60 text-blue-400':'bg-blue-100 text-blue-600'}`}>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                </svg>
+              </div>
+              <div>
+                <p className={`text-xs font-semibold uppercase tracking-wider ${dark?'text-blue-400':'text-blue-600'}`}>Avg Students/Subject</p>
+                <p className={`text-2xl font-bold ${dark?'text-slate-100':'text-slate-800'}`}>{analytics.avgStudentsPerSubject}</p>
+              </div>
             </div>
           </div>
-        ))}
-      </div>
+
+          <div className={`p-5 rounded-2xl border ${dark?'bg-gradient-to-br from-green-900/20 to-slate-900 border-green-700/40':'bg-gradient-to-br from-green-50 to-white border-green-200'}`}>
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${dark?'bg-green-900/60 text-green-400':'bg-green-100 text-green-600'}`}>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <div>
+                <p className={`text-xs font-semibold uppercase tracking-wider ${dark?'text-green-400':'text-green-600'}`}>Enrolled Students</p>
+                <p className={`text-2xl font-bold ${dark?'text-slate-100':'text-slate-800'}`}>{analytics.enrolledStudents}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className={`p-5 rounded-2xl border ${dark?'bg-gradient-to-br from-red-900/20 to-slate-900 border-red-700/40':'bg-gradient-to-br from-red-50 to-white border-red-200'}`}>
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${dark?'bg-red-900/60 text-red-400':'bg-red-100 text-red-600'}`}>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+              </div>
+              <div>
+                <p className={`text-xs font-semibold uppercase tracking-wider ${dark?'text-red-400':'text-red-600'}`}>Total Violations</p>
+                <p className={`text-2xl font-bold ${dark?'text-slate-100':'text-slate-800'}`}>{analytics.totalViolations}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Events / Announcements — live from API */}
       <div>
-        <h3 className={`text-xs font-bold uppercase tracking-wider mb-4 ${dark?'text-slate-400':'text-slate-500'}`}>📢 Upcoming Events</h3>
+        <h3 className={`text-xs font-bold uppercase tracking-wider mb-4 ${dark?'text-slate-400':'text-slate-500'}`}>Upcoming Events</h3>
         {eventsLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className={`w-6 h-6 border-4 rounded-full animate-spin border-t-brand-500 ${dark?'border-slate-700':'border-slate-200'}`}/>
@@ -760,7 +1194,7 @@ const SubjectDetailModal = ({subject,students,schedules,onClose}) => {
           ))}
         </div>
         {/* Schedules */}
-        <SectionCard title="Class Schedules" icon="🗓️">
+        <SectionCard title="Class Schedules">
           {subjectSchedules.length===0?<p className={`text-xs text-center py-3 ${dark?'text-slate-500':'text-slate-400'}`}>No schedules found.</p>:(
             <div className="space-y-2">
               {subjectSchedules.map(s=>(
@@ -774,7 +1208,7 @@ const SubjectDetailModal = ({subject,students,schedules,onClose}) => {
           )}
         </SectionCard>
         {/* Enrolled Students */}
-        <SectionCard title={`Enrolled Students (${enrolledStudents.length})`} icon="👥">
+        <SectionCard title={`Enrolled Students (${enrolledStudents.length})`}>
           {enrolledStudents.length===0?<p className={`text-xs text-center py-3 ${dark?'text-slate-500':'text-slate-400'}`}>No students found in assigned sections.</p>:(
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {enrolledStudents.map(s=>{
@@ -861,7 +1295,6 @@ const SubjectsPanel = ({facultyId, isActive}) => {
       </div>
       {filtered.length===0?(
         <div className={`rounded-2xl border p-12 flex flex-col items-center justify-center text-center ${dark?'bg-slate-900/60 border-slate-700/50':'bg-white border-slate-200'}`}>
-          <span className="text-5xl mb-3">📚</span>
           <p className={`text-sm font-semibold ${dark?'text-slate-300':'text-slate-600'}`}>{search?'No subjects match your search.':'No subjects assigned yet.'}</p>
         </div>
       ):(
@@ -999,7 +1432,6 @@ const SchedulePanel = ({facultyId, isActive}) => {
 
   if(schedules.length===0) return (
     <div className={`rounded-2xl border p-12 flex flex-col items-center justify-center text-center ${dark?'bg-slate-900/60 border-slate-700/50':'bg-white border-slate-200'}`}>
-      <span className="text-5xl mb-3">📅</span>
       <p className={`text-sm font-semibold ${dark?'text-slate-300':'text-slate-600'}`}>No schedule assigned yet.</p>
       <p className={`text-xs mt-1 ${dark?'text-slate-500':'text-slate-400'}`}>Your schedule will appear here once the admin assigns it.</p>
     </div>
@@ -1203,17 +1635,17 @@ const StudentDetailModal = ({student:initialStudent,facultyName,onClose}) => {
         {/* Tab: Info */}
         {tab==='info'&&(
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <SectionCard title="Personal Info" icon="👤">
+            <SectionCard title="Personal Info">
               <Row label="Gender" value={val(s.gender)}/><Row label="Date of Birth" value={fmt(s.birth_date)}/><Row label="Nationality" value={val(s.nationality)}/><Row label="Civil Status" value={val(s.civil_status)}/><Row label="Religion" value={val(s.religion)}/>
             </SectionCard>
-            <SectionCard title="Contact" icon="📞">
+            <SectionCard title="Contact">
               <Row label="Email" value={val(s.email)}/><Row label="Mobile" value={val(s.contact_number)}/><Row label="Alt. Contact" value={val(s.alternate_contact_number)}/><Row label="Address" value={val([s.barangay,s.city,s.province].filter(Boolean).join(', ')||null)}/>
             </SectionCard>
-            <SectionCard title="Enrollment" icon="🎓">
+            <SectionCard title="Enrollment">
               <Row label="Program" value={val(s.program)}/><Row label="Year Level" value={val(s.year_level)}/><Row label="Section" value={val(s.section)}/><Row label="Student Type" value={val(s.student_type)}/><Row label="Date Enrolled" value={fmt(s.date_enrolled)}/>
             </SectionCard>
             {s.guardians?.length>0&&(
-              <SectionCard title="Guardian" icon="👨‍👩‍👦">
+              <SectionCard title="Guardian">
                 <Row label="Name" value={val(s.guardians[0].full_name)}/><Row label="Relationship" value={val(s.guardians[0].relationship)}/><Row label="Contact" value={val(s.guardians[0].contact_number)}/><Row label="Email" value={val(s.guardians[0].email)}/>
               </SectionCard>
             )}
@@ -1226,7 +1658,6 @@ const StudentDetailModal = ({student:initialStudent,facultyName,onClose}) => {
             <div className="flex justify-end"><AddBtn onClick={()=>setViolModal('add')} label="Add Violation"/></div>
             {!s.violations?.length?(
               <div className={`rounded-2xl border p-10 text-center ${dark?'bg-slate-900/60 border-slate-700/50':'bg-white border-slate-200'}`}>
-                <span className="text-4xl mb-2 block">✅</span>
                 <p className={`text-sm ${dark?'text-slate-400':'text-slate-500'}`}>No violations on record.</p>
               </div>
             ):(
@@ -1451,7 +1882,6 @@ const StudentsPanel = ({facultyId,facultyName,isActive}) => {
 
       {filtered.length===0?(
         <div className={`rounded-2xl border p-12 flex flex-col items-center justify-center text-center ${dark?'bg-slate-900/60 border-slate-700/50':'bg-white border-slate-200'}`}>
-          <span className="text-5xl mb-3">👥</span>
           <p className={`text-sm font-semibold ${dark?'text-slate-300':'text-slate-600'}`}>{search||activeYear!=='All'||activeSubject!=='All'?'No students match your filters.':'No students found in your sections.'}</p>
         </div>
       ):(
@@ -1617,8 +2047,8 @@ const AssignTaskModal = ({students, facultyId, facultyName, task, onClose, onSav
       {!task && (
         <div className={`flex rounded-xl border overflow-hidden mb-4 ${dark ? 'border-slate-700' : 'border-slate-200'}`}>
           {[
-            { id: 'individual', label: '👤 Individual Student' },
-            { id: 'section',    label: '👥 Entire Section' },
+            { id: 'individual', label: 'Individual Student' },
+            { id: 'section',    label: 'Entire Section' },
           ].map(m => (
             <button key={m.id} onClick={() => { setMode(m.id); setErr(null); }}
               className={`flex-1 py-2.5 text-xs font-bold transition-colors ${
@@ -1973,13 +2403,13 @@ const FacultyDashboard = ({user,onLogout}) => {
   // Faculty sees: task completions, new events, student updates, violations
   const FACULTY_NOTIF_TYPES=['task_completed','event_created','student_created','student_updated','violation_added'];
   const NOTIF_ICONS_F={
-    task_completed: {emoji:'✅',bg:dark?'bg-emerald-900/40':'bg-emerald-100'},
-    event_created:  {emoji:'📅',bg:dark?'bg-violet-900/40':'bg-violet-100'},
-    student_created:{emoji:'🎓',bg:dark?'bg-orange-900/40':'bg-orange-100'},
-    student_updated:{emoji:'✏️', bg:dark?'bg-blue-900/40':'bg-blue-100'},
-    violation_added:{emoji:'⚠️', bg:dark?'bg-yellow-900/40':'bg-yellow-100'},
+    task_completed: {emoji:'',bg:dark?'bg-emerald-900/40':'bg-emerald-100'},
+    event_created:  {emoji:'',bg:dark?'bg-violet-900/40':'bg-violet-100'},
+    student_created:{emoji:'',bg:dark?'bg-orange-900/40':'bg-orange-100'},
+    student_updated:{emoji:'', bg:dark?'bg-blue-900/40':'bg-blue-100'},
+    violation_added:{emoji:'', bg:dark?'bg-yellow-900/40':'bg-yellow-100'},
   };
-  const getFNotifIcon=(type)=>NOTIF_ICONS_F[type]||{emoji:'🔔',bg:dark?'bg-slate-700':'bg-slate-100'};
+  const getFNotifIcon=(type)=>NOTIF_ICONS_F[type]||{emoji:'',bg:dark?'bg-slate-700':'bg-slate-100'};
   const getFTimeAgo=(d)=>{if(!d)return'';const diff=Math.floor((Date.now()-new Date(d.includes(' ')?d.replace(' ','T'):d).getTime())/1000);if(diff<60)return'Just now';if(diff<3600)return`${Math.floor(diff/60)}m ago`;if(diff<86400)return`${Math.floor(diff/3600)}h ago`;return`${Math.floor(diff/86400)}d ago`;};
 
   const fetchNotifications=useCallback(async()=>{
@@ -2083,7 +2513,7 @@ const FacultyDashboard = ({user,onLogout}) => {
     const fid=user?.faculty_id;
     return (
       <>
-        <div style={{display:active==='dashboard'?undefined:'none'}}><DashboardPanel user={user} faculty={faculty} facultyName={facultyName} initials={initials} subjectsCount={subjectsCount} studentsCount={studentsCount} schedulesCount={schedulesCount} eventsCount={eventsCount}/></div>
+        <div style={{display:active==='dashboard'?undefined:'none'}}><DashboardPanel user={user} faculty={faculty} facultyId={fid} facultyName={facultyName} initials={initials} subjectsCount={subjectsCount} studentsCount={studentsCount} schedulesCount={schedulesCount} eventsCount={eventsCount} isActive={active==='dashboard'}/></div>
         <div style={{display:active==='profile'?undefined:'none'}}><ProfilePanel faculty={faculty} loading={loadingProfile} err={profileErr} onReload={loadFaculty}/></div>
         <div style={{display:active==='subjects'?undefined:'none'}}><SubjectsPanel facultyId={fid} isActive={active==='subjects'}/></div>
         <div style={{display:active==='schedule'?undefined:'none'}}><SchedulePanel facultyId={fid} isActive={active==='schedule'}/></div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../utils/api';
 import AddEventModal from './AddEventModal';
 import EditEventModal from './EditEventModal';
@@ -29,6 +29,23 @@ const EventsModule = ({ events: propEvents = [], loading: propLoading = false, o
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedEventIds, setSelectedEventIds] = useState(new Set());
   const [isBulkDeletingEvents, setIsBulkDeletingEvents] = useState(false);
+  const [visibleEventCount, setVisibleEventCount] = useState(50);
+  const [currentEventPage, setCurrentEventPage] = useState(1);
+  const EVENT_PAGE_SIZE = 50;
+  const EVENT_MAX_PER_PAGE = 100;
+  const eventSentinelRef = useRef(null);
+
+  // IntersectionObserver — auto-load more events on scroll
+  useEffect(() => {
+    const el = eventSentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) setVisibleEventCount(v => v + EVENT_PAGE_SIZE); },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  });
 
   // If parent provides events via props, use those; otherwise use local state
   const events = onReload ? propEvents : localEvents;
@@ -145,7 +162,7 @@ const EventsModule = ({ events: propEvents = [], loading: propLoading = false, o
       </div>
 
       {/* Main Content Area */}
-      <div className={`rounded-2xl shadow-sm border overflow-hidden flex flex-col h-[calc(100vh-280px)] transition-colors duration-300 ${card}`}>
+      <div className={`rounded-2xl shadow-sm border transition-colors duration-300 ${card}`}>
         <div className={`p-6 border-b flex justify-between items-center transition-colors duration-300 ${tableBar}`}>
           <div>
             <h2 className={`text-xl font-bold ${boldText}`}>Events Dashboard</h2>
@@ -180,7 +197,7 @@ const EventsModule = ({ events: propEvents = [], loading: propLoading = false, o
           </div>
         )}
 
-        <div className={`flex-1 overflow-y-auto p-6 ${dark ? 'bg-slate-950/30' : 'bg-slate-50/30'}`}>
+        <div className={`p-6 ${dark ? 'bg-slate-950/30' : 'bg-slate-50/30'}`}>
           {/* Bulk delete bar */}
           {selectedEventIds.size > 0 && (
             <div className={`flex items-center justify-between px-3 py-2 mb-4 rounded-xl border ${dark ? 'bg-red-900/20 border-red-800/40' : 'bg-red-50 border-red-200'}`}>
@@ -194,12 +211,23 @@ const EventsModule = ({ events: propEvents = [], loading: propLoading = false, o
             </div>
           )}
           {(onReload ? propLoading : isLoading) ? (
-            <div className="h-full flex items-center justify-center">
+            <div className="flex items-center justify-center py-16">
               <div className="w-10 h-10 border-4 border-slate-700 border-t-brand-500 rounded-full animate-spin"></div>
             </div>
-          ) : events.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {events.map((event) => {
+          ) : events.length > 0 ? (() => {
+            // Pagination logic — same pattern as Student/Faculty
+            const totalEventPages = Math.ceil(events.length / EVENT_MAX_PER_PAGE);
+            const safeEventPage   = Math.min(currentEventPage, Math.max(1, totalEventPages));
+            const pageStart       = (safeEventPage - 1) * EVENT_MAX_PER_PAGE;
+            const pageItems       = events.slice(pageStart, pageStart + EVENT_MAX_PER_PAGE);
+            const safeVisible     = Math.min(visibleEventCount, pageItems.length);
+            const pageEvents      = pageItems.slice(0, safeVisible);
+            const canLoadMore     = safeVisible < pageItems.length;
+
+            return (
+              <>
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {pageEvents.map((event) => {
                 const { Icon: TypeIcon, bg: typeBg } = getTypeIcon(event.eventType);
                 const statusGlow = getStatusGlow(event.status);
                 return (
@@ -277,9 +305,41 @@ const EventsModule = ({ events: propEvents = [], loading: propLoading = false, o
                   </div>
                 );
               })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-slate-500 py-12">
+                </div>
+                {/* Infinite scroll sentinel */}
+                {canLoadMore && (
+                  <div ref={eventSentinelRef} className="h-8 flex items-center justify-center mt-4">
+                    <div className={`w-5 h-5 border-2 rounded-full animate-spin ${dark ? 'border-slate-700 border-t-orange-400' : 'border-slate-200 border-t-orange-500'}`} />
+                  </div>
+                )}
+                {/* Page navigation */}
+                {totalEventPages > 1 && (
+                  <div className={`flex items-center justify-between pt-4 mt-4 border-t ${dark ? 'border-slate-700/60' : 'border-slate-100'}`}>
+                    <p className={`text-xs ${subText}`}>Page {safeEventPage} of {totalEventPages} · {events.length} total</p>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => { setCurrentEventPage(1); setVisibleEventCount(EVENT_PAGE_SIZE); }} disabled={safeEventPage === 1}
+                        className={`px-2 py-1.5 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-40 ${dark ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>«</button>
+                      <button onClick={() => { setCurrentEventPage(p => Math.max(1, p - 1)); setVisibleEventCount(EVENT_PAGE_SIZE); }} disabled={safeEventPage === 1}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-40 ${dark ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>‹ Prev</button>
+                      {Array.from({ length: totalEventPages }, (_, i) => i + 1)
+                        .filter(p => p === 1 || p === totalEventPages || Math.abs(p - safeEventPage) <= 2)
+                        .reduce((acc, p, idx, arr) => { if (idx > 0 && p - arr[idx-1] > 1) acc.push('…'); acc.push(p); return acc; }, [])
+                        .map((p, i) => p === '…'
+                          ? <span key={`e${i}`} className={`px-2 text-xs ${subText}`}>…</span>
+                          : <button key={p} onClick={() => { setCurrentEventPage(p); setVisibleEventCount(EVENT_PAGE_SIZE); }}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${p === safeEventPage ? 'bg-orange-500 border-orange-500 text-white' : dark ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>{p}</button>
+                        )}
+                      <button onClick={() => { setCurrentEventPage(p => Math.min(totalEventPages, p + 1)); setVisibleEventCount(EVENT_PAGE_SIZE); }} disabled={safeEventPage === totalEventPages}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-40 ${dark ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>Next ›</button>
+                      <button onClick={() => { setCurrentEventPage(totalEventPages); setVisibleEventCount(EVENT_PAGE_SIZE); }} disabled={safeEventPage === totalEventPages}
+                        className={`px-2 py-1.5 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-40 ${dark ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>»</button>
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })() : (
+            <div className="flex flex-col items-center justify-center py-12 text-slate-500">
               <CalendarDaysIcon className="w-16 h-16 text-slate-300 mb-4" />
               <p className="text-lg font-medium">No events logged</p>
               <p className="text-sm">Click "Add Event" to schedule an activity.</p>
