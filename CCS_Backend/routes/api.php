@@ -177,6 +177,7 @@ Route::delete('/students/{student}/tasks/{task}',             [TaskController::c
 
 // ── TEMP: one-time demo seeder (DELETE AFTER USE) ─────────────────────────
 Route::get('/admin/seed-demo', function () {
+    set_time_limit(300); // 5 minutes
     \Artisan::call('db:seed', ['--class' => 'DemoSeeder', '--force' => true]);
     return response()->json(['message' => 'Demo data seeded.', 'output' => \Artisan::output()]);
 });
