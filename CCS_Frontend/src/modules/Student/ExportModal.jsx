@@ -354,7 +354,7 @@ const exportAllXLSX = async (students) => {
   ];
 
   const ws2 = XLSX.utils.aoa_to_sheet(analyticsAoa);
-  ws2['!cols'] = [{ wch: 32 }, { wch: 12 }, { wch: 12 }];
+  ws2['!cols'] = [{ wch: 36 }, { wch: 14 }, { wch: 14 }];
 
   // Style section headers
   const sectionRows = [3, 9, 9 + yearLabels.length + 2, 9 + yearLabels.length + 2 + progLabels.length + 2];
@@ -541,45 +541,35 @@ const exportAllXLSX = async (students) => {
   if (chart3Xml) zip.file('xl/charts/_rels/chart3.xml.rels',
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`);
 
-  // Drawing XML for sheet 2 (Analytics) — positions all 3 charts side by side
+  // Drawing XML for sheet 2 (Analytics) — charts stacked vertically, starting after data
+  const chartCount = chart3Xml ? 3 : 2;
+  const analyticsRowCount = analyticsAoa.length;
+  // Place charts below the data table with proper spacing
+  const chartStartRow = analyticsRowCount + 2;
+  const chartHeight = 18; // rows per chart
+  const chartGap = 2;
+
+  const makeAnchor = (id, rId, startRow) => `
+  <xdr:twoCellAnchor moveWithCells="0" sizeWithCells="0">
+    <xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${startRow}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
+    <xdr:to><xdr:col>8</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${startRow + chartHeight}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
+    <xdr:graphicFrame macro=""><xdr:nvGraphicFramePr>
+      <xdr:cNvPr id="${id}" name="Chart ${id - 1}"/><xdr:cNvGraphicFramePr/>
+    </xdr:nvGraphicFramePr>
+    <xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm>
+    <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+      <c:chart r:id="${rId}"/>
+    </a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/>
+  </xdr:twoCellAnchor>`;
+
   const drawingXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"
   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
   xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
   xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-  <xdr:twoCellAnchor moveWithCells="1" sizeWithCells="1">
-    <xdr:from><xdr:col>4</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>2</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
-    <xdr:to><xdr:col>11</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>14</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
-    <xdr:graphicFrame macro=""><xdr:nvGraphicFramePr>
-      <xdr:cNvPr id="2" name="Chart 1"/><xdr:cNvGraphicFramePr/>
-    </xdr:nvGraphicFramePr>
-    <xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm>
-    <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
-      <c:chart r:id="rId1"/>
-    </a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/>
-  </xdr:twoCellAnchor>
-  <xdr:twoCellAnchor moveWithCells="1" sizeWithCells="1">
-    <xdr:from><xdr:col>4</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>15</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
-    <xdr:to><xdr:col>11</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>27</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
-    <xdr:graphicFrame macro=""><xdr:nvGraphicFramePr>
-      <xdr:cNvPr id="3" name="Chart 2"/><xdr:cNvGraphicFramePr/>
-    </xdr:nvGraphicFramePr>
-    <xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm>
-    <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
-      <c:chart r:id="rId2"/>
-    </a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/>
-  </xdr:twoCellAnchor>${chart3Xml ? `
-  <xdr:twoCellAnchor moveWithCells="1" sizeWithCells="1">
-    <xdr:from><xdr:col>4</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>28</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
-    <xdr:to><xdr:col>11</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>40</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
-    <xdr:graphicFrame macro=""><xdr:nvGraphicFramePr>
-      <xdr:cNvPr id="4" name="Chart 3"/><xdr:cNvGraphicFramePr/>
-    </xdr:nvGraphicFramePr>
-    <xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm>
-    <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
-      <c:chart r:id="rId3"/>
-    </a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/>
-  </xdr:twoCellAnchor>` : ''}
+  ${makeAnchor(2, 'rId1', chartStartRow)}
+  ${makeAnchor(3, 'rId2', chartStartRow + chartHeight + chartGap)}
+  ${chart3Xml ? makeAnchor(4, 'rId3', chartStartRow + (chartHeight + chartGap) * 2) : ''}
 </xdr:wsDr>`;
 
   zip.file('xl/drawings/drawing1.xml', drawingXml);
