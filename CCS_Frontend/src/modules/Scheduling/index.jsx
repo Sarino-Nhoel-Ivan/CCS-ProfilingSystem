@@ -294,9 +294,8 @@ const SchedulingModule = ({ students = [], faculties = [] }) => {
               <div key={day} className="flex flex-col items-center gap-2">
                 <span className={`text-xs font-bold ${boldText}`}>{count}</span>
                 <div className={`w-full rounded-full overflow-hidden ${dark ? 'bg-slate-800' : 'bg-slate-100'}`} style={{ height: '60px', display: 'flex', alignItems: 'flex-end' }}>
-                  <div className={`w-full rounded-full transition-all duration-700 ${dc.dot.replace('bg-', 'bg-')}`}
-                    style={{ height: `${Math.max(pct, 4)}%`, background: undefined }}
-                    className={`w-full rounded-t-full transition-all duration-700 ${dc.dot}`} />
+                  <div className={`w-full rounded-t-full transition-all duration-700 ${dc.dot}`}
+                    style={{ height: `${Math.max(pct, 4)}%` }} />
                 </div>
                 <span className={`text-[10px] font-semibold ${subText}`}>{day.slice(0, 3)}</span>
               </div>
